@@ -39,6 +39,7 @@
                 <div class="flex space-x-4">
                     <a href="{{ url_for('hq.dashboard') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">대시보드</a>
                     <a href="{{ url_for('hq.branches') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">지점 관리</a>
+                    <a href="{{ url_for('essays.manage') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">첨삭 관리</a>
                     <a href="{{ url_for('hq.revenue') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">정산 관리</a>
                     <a href="{{ url_for('cms.index') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">콘텐츠 관리</a>
                 </div>
@@ -47,9 +48,17 @@
                     <a href="{{ url_for('branch.dashboard') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">대시보드</a>
                     {% if current_user.role in ['branch_owner', 'branch_manager'] %}
                     <a href="{{ url_for('branch.members') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">회원 관리</a>
+                    {% endif %}
+                    <a href="{{ url_for('essays.manage') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">첨삭 관리</a>
+                    {% if current_user.role in ['branch_owner', 'branch_manager'] %}
                     <a href="{{ url_for('branch.my_revenue') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">정산 내역</a>
                     {% endif %}
                     <a href="{{ url_for('branch.notices') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">본사 공지</a>
+                </div>
+                {% elif current_user.role == 'student' %}
+                <div class="flex space-x-4">
+                    <a href="{{ url_for('essays.student_essays') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">내 과제</a>
+                    <a href="{{ url_for('essays.submit') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">과제 제출</a>
                 </div>
                 {% endif %}
             </div>

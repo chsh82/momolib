@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}논술 과제 제출 - MOMOLIB{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{{ url_for('essays.student_essays') }}" class="text-sm text-gray-500 hover:text-indigo-600">← 내 과제 목록</a>
+    <h2 class="text-2xl font-bold text-gray-800 mt-2">논술 과제 제출</h2>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 max-w-3xl">
+    <form method="POST" class="space-y-6">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">제목 <span class="text-red-500">*</span></label>
+            <input type="text" name="title" required
+                   class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                   placeholder="논술 주제나 제목을 입력하세요">
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">첨삭 모델</label>
+            <div class="flex gap-3">
+                {% for val, label, desc in [
+                    ('standard', '일반', '중학생 이상'),
+                    ('elementary', '초등 🌱', '초등 1~6학년')
+                ] %}
+                <label class="flex-1 cursor-pointer">
+                    <input type="radio" name="correction_model" value="{{ val }}" class="sr-only peer"
+                           {% if val == 'standard' %}checked{% endif %}>
+                    <div class="border-2 rounded-lg px-4 py-3 text-center text-sm transition
+                                peer-checked:border-indigo-500 peer-checked:bg-indigo-50 peer-checked:text-indigo-700
+                                border-gray-200 text-gray-600 hover:border-indigo-300">
+                        <div class="font-semibold">{{ label }}</div>
+                        <div class="text-xs text-gray-400 mt-0.5">{{ desc }}</div>
+                    </div>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+                논술 본문 <span class="text-red-500">*</span>
+                <span id="char-count" class="text-gray-400 font-normal ml-2 text-xs">0자</span>
+            </label>
+            <textarea name="original_text" id="essay-text" required rows="14"
+                      oninput="document.getElementById('char-count').textContent=this.value.length+'자'"
+                      class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y"
+                      placeholder="논술 글을 직접 입력하거나 복사하여 붙여넣기 하세요..."></textarea>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">선생님께 전달 사항 (선택)</label>
+            <textarea name="teacher_guide" rows="2"
+                      class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      placeholder="첨삭 시 특별히 살펴봐 주셨으면 하는 부분이 있다면 적어주세요."></textarea>
+        </div>
+
+        <div class="flex gap-3 pt-2">
+            <button type="submit"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-8 py-2.5 rounded-lg text-sm">
+                과제 제출
+            </button>
+            <a href="{{ url_for('essays.student_essays') }}"
+               class="border border-gray-300 text-gray-600 hover:bg-gray-50 font-medium px-6 py-2.5 rounded-lg text-sm">
+                취소
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

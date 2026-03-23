@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}내 과제 목록 - MOMOLIB{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">내 과제 목록</h2>
+    <a href="{{ url_for('essays.submit') }}"
+       class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 rounded-lg">+ 과제 제출</a>
+</div>
+
+<div class="space-y-3">
+    {% for essay in essays %}
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5 hover:border-indigo-200 transition">
+        <div class="flex items-start justify-between gap-4">
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="px-2 py-0.5 rounded text-xs font-medium
+                        {% if essay.status == 'completed' %}bg-green-100 text-green-700
+                        {% elif essay.status == 'processing' %}bg-blue-100 text-blue-700
+                        {% elif essay.status == 'reviewing' %}bg-purple-100 text-purple-700
+                        {% elif essay.status == 'failed' %}bg-red-100 text-red-700
+                        {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                        {{ essay.status_display }}
+                    </span>
+                    {% if essay.is_finalized %}
+                    <span class="px-2 py-0.5 rounded text-xs bg-indigo-100 text-indigo-700">확정됨</span>
+                    {% endif %}
+                    <span class="text-xs text-gray-300 font-mono">#{{ essay.essay_id[:8] | upper }}</span>
+                </div>
+                <div class="font-semibold text-gray-800">{{ essay.title }}</div>
+                <div class="text-xs text-gray-400 mt-1">제출일 {{ essay.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+            </div>
+            <div class="flex gap-2 flex-shrink-0">
+                {% if essay.status in ('reviewing', 'completed') and essay.latest_version %}
+                <a href="{{ url_for('essays.student_view', essay_id=essay.essay_id) }}"
+                   class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-4 py-2 rounded-lg">첨삭 보기</a>
+                {% elif essay.status == 'processing' %}
+                <span class="text-xs text-blue-500 px-4 py-2 animate-pulse">처리 중...</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-white rounded-xl border border-gray-100 p-12 text-center text-gray-400">
+        <div class="text-4xl mb-3">📝</div>
+        <div>제출한 과제가 없습니다.</div>
+        <a href="{{ url_for('essays.submit') }}" class="text-indigo-600 hover:underline text-sm mt-2 inline-block">첫 과제 제출하기</a>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

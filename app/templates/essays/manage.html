@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% block title %}첨삭 관리 - MOMOLIB{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">첨삭 관리</h2>
+</div>
+
+<!-- 상태 탭 -->
+<div class="flex flex-wrap gap-2 mb-5">
+    {% for s, label, color in [
+        ('', '전체', 'gray'),
+        ('draft', '제출됨', 'yellow'),
+        ('processing', '처리중', 'blue'),
+        ('reviewing', '검토중', 'purple'),
+        ('completed', '완료', 'green'),
+        ('failed', '실패', 'red'),
+    ] %}
+    <a href="{{ url_for('essays.manage', status=s, q=search) }}"
+       class="px-4 py-2 rounded-lg text-sm font-medium
+       {% if status_filter == s %}
+           {% if color == 'yellow' %}bg-yellow-500 text-white
+           {% elif color == 'blue' %}bg-blue-500 text-white
+           {% elif color == 'purple' %}bg-purple-500 text-white
+           {% elif color == 'green' %}bg-green-500 text-white
+           {% elif color == 'red' %}bg-red-500 text-white
+           {% else %}bg-gray-700 text-white{% endif %}
+       {% else %}bg-white border border-gray-200 text-gray-600 hover:border-gray-300{% endif %}">
+        {{ label }}
+        {% if s %}<span class="ml-1 text-xs opacity-80">{{ counts.get(s, 0) }}</span>{% endif %}
+    </a>
+    {% endfor %}
+</div>
+
+<!-- 검색 -->
+<form class="mb-5" method="GET">
+    {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+    <div class="flex gap-2 max-w-sm">
+        <input type="text" name="q" value="{{ search }}"
+               placeholder="제목 또는 학생 이름 검색"
+               class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <button type="submit" class="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg text-sm text-gray-700">검색</button>
+    </div>
+</form>
+
+<!-- 목록 -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50 border-b border-gray-100">
+            <tr class="text-left text-gray-500">
+                <th class="px-6 py-3 font-medium">번호</th>
+                <th class="px-6 py-3 font-medium">학생</th>
+                <th class="px-6 py-3 font-medium">제목</th>
+                <th class="px-6 py-3 font-medium">모델</th>
+                <th class="px-6 py-3 font-medium text-center">점수</th>
+                <th class="px-6 py-3 font-medium text-center">상태</th>
+                <th class="px-6 py-3 font-medium">제출일</th>
+                <th class="px-6 py-3 font-medium"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+            {% for essay in essays %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 font-mono text-xs text-gray-300">#{{ essay.essay_id[:8] | upper }}</td>
+                <td class="px-6 py-4 font-medium text-gray-800">
+                    {{ essay.student.name }}
+                    {% if essay.student.student_profile %}
+                    <div class="text-xs text-gray-400">{{ essay.student.student_profile.grade_display }}</div>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-gray-700 max-w-xs truncate">{{ essay.title }}</td>
+                <td class="px-6 py-4">
+                    <span class="text-xs px-2 py-1 rounded
+                        {% if essay.correction_model == 'elementary' %}bg-green-100 text-green-700
+                        {% else %}bg-gray-100 text-gray-500{% endif %}">
+                        {{ '초등' if essay.correction_model == 'elementary' else '일반' }}
+                    </span>
+                </td>
+                <td class="px-6 py-4 text-center font-semibold text-indigo-700">
+                    {% if essay.result and essay.result.total_score %}
+                    {{ essay.result.total_score }}
+                    {% else %}-{% endif %}
+                </td>
+                <td class="px-6 py-4 text-center">
+                    <span class="px-2 py-1 rounded text-xs font-medium
+                        {% if essay.status == 'completed' %}bg-green-100 text-green-700
+                        {% elif essay.status == 'processing' %}bg-blue-100 text-blue-700
+                        {% elif essay.status == 'reviewing' %}bg-purple-100 text-purple-700
+                        {% elif essay.status == 'failed' %}bg-red-100 text-red-700
+                        {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                        {{ essay.status_display }}
+                        {% if essay.is_finalized %}✓{% endif %}
+                    </span>
+                </td>
+                <td class="px-6 py-4 text-gray-400 text-xs">{{ essay.created_at.strftime('%m-%d %H:%M') }}</td>
+                <td class="px-6 py-4">
+                    <a href="{{ url_for('essays.view_submission', essay_id=essay.essay_id) }}"
+                       class="text-indigo-600 hover:underline text-sm">상세</a>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="8" class="px-6 py-10 text-center text-gray-400">과제가 없습니다.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
