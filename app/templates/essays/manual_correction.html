@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}수동 첨삭 - {{ essay.title }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{{ url_for('essays.view_submission', essay_id=essay.essay_id) }}" class="text-sm text-gray-500 hover:text-indigo-600">← 과제 상세</a>
+    <div class="flex items-center gap-3 mt-2">
+        <h2 class="text-xl font-bold text-gray-800">수동 첨삭</h2>
+        <span class="text-xs text-gray-400">{{ essay.student.name }} · {{ essay.title }}</span>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- 원문 참조 -->
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        <h3 class="font-semibold text-gray-700 mb-3 text-sm">원문</h3>
+        {% if essay.student.student_profile %}
+        <div class="text-xs text-gray-400 mb-2">{{ essay.student.student_profile.grade_display }}</div>
+        {% endif %}
+        <div class="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">{{ essay.original_text }}</div>
+    </div>
+
+    <!-- 첨삭 작성 -->
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        <h3 class="font-semibold text-gray-700 mb-4 text-sm">첨삭 내용 작성</h3>
+        <form method="POST" class="space-y-4">
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">첨삭 내용 (HTML 직접 입력 또는 텍스트)</label>
+                <textarea name="html_content" id="correction-content" rows="14" required
+                          class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 font-mono resize-y"
+                          placeholder="첨삭 내용을 입력하세요...&#10;&#10;HTML 태그 사용 가능:&#10;&lt;ins&gt;추가된 내용&lt;/ins&gt; (초록 표시)&#10;&lt;del&gt;삭제된 내용&lt;/del&gt; (빨간 표시)">{{ existing_content }}</textarea>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">총점 (선택)</label>
+                    <input type="number" name="total_score" min="0" max="100" step="0.5"
+                           value="{{ essay.result.total_score if essay.result and essay.result.total_score else '' }}"
+                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                           placeholder="예: 82.5">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">등급 (선택)</label>
+                    <select name="final_grade"
+                            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <option value="">선택 안함</option>
+                        {% for g in ['A+', 'A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F'] %}
+                        <option value="{{ g }}"
+                            {% if essay.result and essay.result.final_grade == g %}selected{% endif %}>
+                            {{ g }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- 미리보기 토글 -->
+            <div>
+                <button type="button" onclick="togglePreview()"
+                        class="text-xs text-indigo-600 hover:underline">
+                    👁 HTML 미리보기 토글
+                </button>
+                <div id="preview-box" class="hidden mt-2 border border-gray-200 rounded-lg p-4 bg-white max-h-64 overflow-y-auto text-sm"></div>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button type="submit"
+                        class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-lg text-sm">
+                    저장 (검토 중으로 변경)
+                </button>
+                <a href="{{ url_for('essays.view_submission', essay_id=essay.essay_id) }}"
+                   class="border border-gray-200 text-gray-600 hover:bg-gray-50 px-5 py-2.5 rounded-lg text-sm">
+                    취소
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function togglePreview() {
+    const box = document.getElementById('preview-box');
+    const content = document.getElementById('correction-content').value;
+    box.innerHTML = content;
+    box.classList.toggle('hidden');
+}
+</script>
+{% endblock %}

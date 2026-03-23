@@ -11,8 +11,10 @@ from app.models.notification import Notification
 from app.models.member import GRADE_CHOICES
 
 
-def _can_access(essay):
-    """현재 사용자가 해당 에세이에 접근 가능한지 확인"""
+# ─── 권한 헬퍼 ───────────────────────────────────────────────
+
+def _can_view(essay):
+    """조회 가능: HQ 전체 + 같은 지점 강사/운영진 + 본인 학생"""
     if current_user.is_hq:
         return True
     if current_user.role == 'student':
@@ -20,6 +22,60 @@ def _can_access(essay):
     if current_user.role in ('teacher', 'branch_owner', 'branch_manager'):
         return essay.branch_id == current_user.branch_id
     return False
+
+
+def _can_ai_correct(essay):
+    """AI 첨삭 시작: 본사(HQ)만 가능"""
+    return current_user.is_hq  # super_admin, hq_manager, hq_essay_manager
+
+
+def _can_manual_correct(essay):
+    """수동 첨삭: 강사(같은 지점) + 본사 모든 계정"""
+    if current_user.is_hq:
+        return True
+    return (current_user.role == 'teacher' and
+            essay.branch_id == current_user.branch_id)
+
+
+def _can_finalize(essay):
+    """확정: HQ + 지점 운영진 + 강사"""
+    if current_user.is_hq:
+        return True
+    if current_user.role in ('branch_owner', 'branch_manager'):
+        return essay.branch_id == current_user.branch_id
+    if current_user.role == 'teacher':
+        return essay.branch_id == current_user.branch_id
+    return False
+
+
+def _can_delete(essay):
+    """삭제: HQ + 지점장/매니저 + 강사"""
+    if current_user.is_hq:
+        return True
+    if current_user.role in ('branch_owner', 'branch_manager', 'teacher'):
+        return essay.branch_id == current_user.branch_id
+    return False
+
+
+# ─── 알림 발송 공통 ──────────────────────────────────────────
+
+def _notify_student_and_parents(essay, title, message=''):
+    Notification.create(
+        user_id=essay.student_id,
+        title=title,
+        notif_type='essay_finalized',
+        message=message,
+        link_url=url_for('essays.student_view', essay_id=essay.essay_id),
+    )
+    from app.models.member import ParentStudent
+    for link in ParentStudent.query.filter_by(
+            student_id=essay.student_id, is_active=True).all():
+        Notification.create(
+            user_id=link.parent_id,
+            title=f'{essay.student.name} 학생: {title}',
+            notif_type='essay_finalized',
+            message=message,
+        )
 
 
 # ─── 학생: 과제 제출 ──────────────────────────────────────────
@@ -68,7 +124,6 @@ def submit():
 def student_essays():
     if current_user.role != 'student':
         return redirect(url_for('index'))
-
     essays = Essay.query.filter_by(student_id=current_user.user_id)\
         .order_by(Essay.created_at.desc()).all()
     return render_template('essays/student_list.html', essays=essays)
@@ -83,14 +138,14 @@ def student_view(essay_id):
         return redirect(url_for('essays.student_essays'))
 
     html_content = None
-    if essay.latest_version:
+    if essay.is_finalized and essay.latest_version:
         html_content = essay.latest_version.html_content
 
     return render_template('essays/student_view.html', essay=essay,
                            html_content=html_content)
 
 
-# ─── 강사/지점: 첨삭 관리 ────────────────────────────────────
+# ─── 관리자/강사: 첨삭 관리 ──────────────────────────────────
 
 @essays_bp.route('/manage')
 @login_required
@@ -134,93 +189,135 @@ def manage():
 @login_required
 def view_submission(essay_id):
     essay = Essay.query.get_or_404(essay_id)
-    if not _can_access(essay):
+    if not _can_view(essay):
         flash('접근 권한이 없습니다.', 'error')
         return redirect(url_for('essays.manage'))
 
-    return render_template('essays/view_submission.html', essay=essay)
+    return render_template('essays/view_submission.html', essay=essay,
+                           can_ai_correct=_can_ai_correct(essay),
+                           can_manual_correct=_can_manual_correct(essay),
+                           can_finalize=_can_finalize(essay),
+                           can_delete=_can_delete(essay))
 
+
+# ─── AI 첨삭 (본사 전용) ─────────────────────────────────────
 
 @essays_bp.route('/<essay_id>/start', methods=['POST'])
 @login_required
 def start_correction(essay_id):
-    """AI 첨삭 시작"""
     essay = Essay.query.get_or_404(essay_id)
-    if not _can_access(essay):
-        return jsonify({'error': '권한 없음'}), 403
+    if not _can_ai_correct(essay):
+        flash('AI 첨삭은 본사 계정만 실행할 수 있습니다.', 'error')
+        return redirect(url_for('essays.view_submission', essay_id=essay_id))
 
     if essay.status == 'processing':
-        return jsonify({'error': '이미 처리 중입니다.'}), 400
+        flash('이미 처리 중입니다.', 'error')
+        return redirect(url_for('essays.view_submission', essay_id=essay_id))
 
-    # 선택적: 강사 가이드 업데이트
     guide = request.form.get('teacher_guide', '').strip()
     if guide:
         essay.teacher_guide = guide
 
-    # 담당 강사 지정
-    if current_user.role == 'teacher' and not essay.teacher_id:
-        essay.teacher_id = current_user.user_id
-
+    essay.teacher_id = current_user.user_id
     essay.status = 'processing'
     db.session.commit()
 
-    # 백그라운드 스레드로 AI 첨삭 실행
     api_key = os.environ.get('ANTHROPIC_API_KEY', '')
     t = threading.Thread(
-        target=_correction_worker,
-        args=(essay_id, api_key),
-        daemon=True,
-    )
+        target=_correction_worker, args=(essay_id, api_key), daemon=True)
     t.start()
 
-    flash('첨삭을 시작했습니다. 처리 완료 후 알림을 받으실 수 있습니다.', 'success')
+    flash('AI 첨삭을 시작했습니다. 처리 완료 후 알림이 전송됩니다.', 'success')
     return redirect(url_for('essays.view_submission', essay_id=essay_id))
 
 
 def _correction_worker(essay_id, api_key):
-    """백그라운드 첨삭 처리 + 완료 알림"""
     from app.services.correction_service import correct_essay
     correct_essay(essay_id, api_key)
 
-    # 완료 후 알림 발송
     from app import create_app
     app = create_app(os.environ.get('FLASK_ENV', 'development'))
     with app.app_context():
         essay = Essay.query.get(essay_id)
         if not essay or essay.status != 'reviewing':
             return
-
-        # 학생 알림
-        Notification.create(
-            user_id=essay.student_id,
-            title=f'"{essay.title}" 첨삭이 완료되었습니다',
-            notif_type='essay_completed',
-            message='선생님의 첨삭을 확인해보세요!',
-            link_url=url_for('essays.student_view', essay_id=essay_id),
+        _notify_student_and_parents(
+            essay,
+            title=f'"{essay.title}" AI 첨삭이 완료되었습니다',
+            message='선생님의 검토 후 최종 확정됩니다.',
         )
-
-        # 학부모 알림
-        from app.models.member import ParentStudent
-        for link in ParentStudent.query.filter_by(
-                student_id=essay.student_id, is_active=True).all():
-            Notification.create(
-                user_id=link.parent_id,
-                title=f'{essay.student.name} 학생의 첨삭이 완료되었습니다',
-                notif_type='essay_completed',
-                message=f'"{essay.title}"',
-                link_url=url_for('essays.parent_view',
-                                 essay_id=essay_id,
-                                 student_id=essay.student_id),
-            )
         db.session.commit()
 
+
+# ─── 수동 첨삭 (강사 전용) ────────────────────────────────────
+
+@essays_bp.route('/<essay_id>/manual', methods=['GET', 'POST'])
+@login_required
+def manual_correction(essay_id):
+    essay = Essay.query.get_or_404(essay_id)
+    if not _can_manual_correct(essay):
+        flash('수동 첨삭은 담당 강사만 작성할 수 있습니다.', 'error')
+        return redirect(url_for('essays.view_submission', essay_id=essay_id))
+
+    if request.method == 'POST':
+        html_content = request.form.get('html_content', '').strip()
+        if not html_content:
+            flash('첨삭 내용을 입력해주세요.', 'error')
+            return render_template('essays/manual_correction.html', essay=essay)
+
+        version_number = (essay.current_version or 0) + 1
+        version = EssayVersion(
+            essay_id=essay_id,
+            version_number=version_number,
+            html_content=html_content,
+            revision_note='수동 첨삭',
+        )
+        db.session.add(version)
+        db.session.flush()
+
+        # 결과 업데이트
+        total_score_str = request.form.get('total_score', '').strip()
+        final_grade = request.form.get('final_grade', '').strip()
+        total_score = float(total_score_str) if total_score_str else None
+
+        if essay.result:
+            essay.result.version_id = version.version_id
+            essay.result.total_score = total_score
+            essay.result.final_grade = final_grade or None
+        else:
+            result = EssayResult(
+                essay_id=essay_id,
+                version_id=version.version_id,
+                total_score=total_score,
+                final_grade=final_grade or None,
+            )
+            db.session.add(result)
+
+        essay.current_version = version_number
+        essay.teacher_id = current_user.user_id
+        essay.status = 'reviewing'
+        essay.completed_at = datetime.utcnow()
+        db.session.commit()
+
+        flash('수동 첨삭이 저장되었습니다. 확정 후 학생에게 전달됩니다.', 'success')
+        return redirect(url_for('essays.view_submission', essay_id=essay_id))
+
+    # 기존 버전이 있으면 불러오기
+    existing_content = ''
+    if essay.latest_version:
+        existing_content = essay.latest_version.html_content or ''
+
+    return render_template('essays/manual_correction.html', essay=essay,
+                           existing_content=existing_content)
+
+
+# ─── 공통: 상태/확정/재생성/삭제 ─────────────────────────────
 
 @essays_bp.route('/<essay_id>/status')
 @login_required
 def status(essay_id):
-    """AJAX 상태 조회"""
     essay = Essay.query.get_or_404(essay_id)
-    if not _can_access(essay):
+    if not _can_view(essay):
         return jsonify({'error': '권한 없음'}), 403
     return jsonify({
         'status': essay.status,
@@ -233,9 +330,8 @@ def status(essay_id):
 @essays_bp.route('/<essay_id>/result')
 @login_required
 def result(essay_id):
-    """첨삭 결과 뷰어"""
     essay = Essay.query.get_or_404(essay_id)
-    if not _can_access(essay):
+    if not _can_view(essay):
         flash('접근 권한이 없습니다.', 'error')
         return redirect(url_for('essays.manage'))
 
@@ -243,16 +339,18 @@ def result(essay_id):
     if essay.latest_version:
         html_content = essay.latest_version.html_content
 
-    return render_template('essays/result.html', essay=essay, html_content=html_content)
+    return render_template('essays/result.html', essay=essay,
+                           html_content=html_content,
+                           can_finalize=_can_finalize(essay))
 
 
 @essays_bp.route('/<essay_id>/finalize', methods=['POST'])
 @login_required
 def finalize(essay_id):
-    """최종 확정 → 학생/학부모 알림"""
     essay = Essay.query.get_or_404(essay_id)
-    if not _can_access(essay):
-        return jsonify({'error': '권한 없음'}), 403
+    if not _can_finalize(essay):
+        flash('확정 권한이 없습니다.', 'error')
+        return redirect(url_for('essays.view_submission', essay_id=essay_id))
 
     if essay.status not in ('reviewing', 'completed'):
         flash('검토 중 상태의 첨삭만 확정할 수 있습니다.', 'error')
@@ -262,38 +360,24 @@ def finalize(essay_id):
     essay.status = 'completed'
     essay.finalized_at = datetime.utcnow()
 
-    # 학생 알림
-    Notification.create(
-        user_id=essay.student_id,
+    _notify_student_and_parents(
+        essay,
         title=f'"{essay.title}" 첨삭이 최종 확정되었습니다',
-        notif_type='essay_finalized',
         message='첨삭 결과를 확인해보세요!',
-        link_url=url_for('essays.student_view', essay_id=essay_id),
     )
-
-    # 학부모 알림
-    from app.models.member import ParentStudent
-    for link in ParentStudent.query.filter_by(
-            student_id=essay.student_id, is_active=True).all():
-        Notification.create(
-            user_id=link.parent_id,
-            title=f'{essay.student.name} 학생 첨삭이 확정되었습니다',
-            notif_type='essay_finalized',
-            message=f'"{essay.title}"',
-        )
-
     db.session.commit()
-    flash('첨삭이 최종 확정되었습니다. 학생과 학부모에게 알림을 보냈습니다.', 'success')
+
+    flash('최종 확정되었습니다. 학생과 학부모에게 알림을 보냈습니다.', 'success')
     return redirect(url_for('essays.result', essay_id=essay_id))
 
 
 @essays_bp.route('/<essay_id>/regenerate', methods=['POST'])
 @login_required
 def regenerate(essay_id):
-    """첨삭 재생성"""
     essay = Essay.query.get_or_404(essay_id)
-    if not _can_access(essay):
-        return jsonify({'error': '권한 없음'}), 403
+    if not _can_ai_correct(essay):
+        flash('AI 첨삭 재생성은 본사 계정만 가능합니다.', 'error')
+        return redirect(url_for('essays.view_submission', essay_id=essay_id))
 
     if essay.status == 'processing':
         flash('이미 처리 중입니다.', 'error')
@@ -305,10 +389,7 @@ def regenerate(essay_id):
 
     api_key = os.environ.get('ANTHROPIC_API_KEY', '')
     t = threading.Thread(
-        target=_correction_worker,
-        args=(essay_id, api_key),
-        daemon=True,
-    )
+        target=_correction_worker, args=(essay_id, api_key), daemon=True)
     t.start()
 
     flash('첨삭을 재생성합니다.', 'info')
@@ -318,10 +399,9 @@ def regenerate(essay_id):
 @essays_bp.route('/<essay_id>/delete', methods=['POST'])
 @login_required
 def delete(essay_id):
-    """에세이 삭제 (관리자/강사/학생 본인)"""
     essay = Essay.query.get_or_404(essay_id)
-    if not _can_access(essay):
-        flash('권한이 없습니다.', 'error')
+    if not _can_delete(essay):
+        flash('삭제 권한이 없습니다.', 'error')
         return redirect(url_for('essays.manage'))
 
     db.session.delete(essay)
@@ -340,18 +420,14 @@ def delete(essay_id):
 def parent_essays(student_id):
     if current_user.role != 'parent':
         return redirect(url_for('index'))
-
     from app.models.member import ParentStudent
-    link = ParentStudent.query.filter_by(
+    ParentStudent.query.filter_by(
         parent_id=current_user.user_id, student_id=student_id,
         is_active=True).first_or_404()
-
-    essays = Essay.query.filter_by(student_id=student_id)\
-        .order_by(Essay.created_at.desc()).all()
-
     from app.models.user import User
     student = User.query.get_or_404(student_id)
-
+    essays = Essay.query.filter_by(student_id=student_id)\
+        .order_by(Essay.created_at.desc()).all()
     return render_template('essays/parent_list.html', essays=essays, student=student)
 
 
@@ -360,12 +436,10 @@ def parent_essays(student_id):
 def parent_view(student_id, essay_id):
     if current_user.role != 'parent':
         return redirect(url_for('index'))
-
     from app.models.member import ParentStudent
     ParentStudent.query.filter_by(
         parent_id=current_user.user_id, student_id=student_id,
         is_active=True).first_or_404()
-
     essay = Essay.query.filter_by(
         essay_id=essay_id, student_id=student_id).first_or_404()
 
