@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MOMOLIB{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Pretendard', 'Noto Sans KR', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+<!-- 플래시 메시지 -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="fixed top-4 right-4 z-50 space-y-2">
+    {% for category, message in messages %}
+    <div class="px-4 py-3 rounded shadow-lg text-sm font-medium
+        {% if category == 'error' %}bg-red-100 text-red-800 border border-red-300
+        {% elif category == 'success' %}bg-green-100 text-green-800 border border-green-300
+        {% elif category == 'warning' %}bg-yellow-100 text-yellow-800 border border-yellow-300
+        {% else %}bg-blue-100 text-blue-800 border border-blue-300{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+{% if current_user.is_authenticated %}
+<!-- 내비게이션 바 -->
+<nav class="bg-white shadow-sm border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+            <div class="flex items-center space-x-8">
+                <a href="/" class="text-xl font-bold text-indigo-700">MOMOLIB</a>
+                {% if current_user.is_hq %}
+                <div class="flex space-x-4">
+                    <a href="{{ url_for('hq.dashboard') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">대시보드</a>
+                    <a href="{{ url_for('hq.branches') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">지점 관리</a>
+                    <a href="{{ url_for('cms.index') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">콘텐츠 관리</a>
+                </div>
+                {% elif current_user.is_branch_owner or current_user.is_branch_staff %}
+                <div class="flex space-x-4">
+                    <a href="{{ url_for('branch.dashboard') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">대시보드</a>
+                    <a href="{{ url_for('branch.notices') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">본사 공지</a>
+                </div>
+                {% endif %}
+            </div>
+            <div class="flex items-center space-x-4">
+                <span class="text-sm text-gray-500">{{ current_user.name }}</span>
+                <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">{{ current_user.display_role }}</span>
+                <a href="{{ url_for('auth.logout') }}" class="text-sm text-gray-500 hover:text-red-600">로그아웃</a>
+            </div>
+        </div>
+    </div>
+</nav>
+{% endif %}
+
+<!-- 메인 콘텐츠 -->
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    {% block content %}{% endblock %}
+</main>
+
+</body>
+</html>

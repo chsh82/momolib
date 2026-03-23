@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}열람 현황 - {{ item.title }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{{ url_for('cms.index') }}" class="text-sm text-gray-500 hover:text-indigo-600">← 콘텐츠 목록</a>
+    <h2 class="text-2xl font-bold text-gray-800 mt-2">열람 현황</h2>
+    <p class="text-gray-500 text-sm mt-1">{{ item.title }}</p>
+</div>
+
+<!-- 요약 -->
+<div class="grid grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+        <div class="text-sm text-gray-500">총 열람 수</div>
+        <div class="text-2xl font-bold text-indigo-700">{{ views|length }}</div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+        <div class="text-sm text-gray-500">열람 지점 수</div>
+        <div class="text-2xl font-bold text-green-600">{{ views|map(attribute='branch_id')|unique|list|length }}</div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+        <div class="text-sm text-gray-500">전체 대상 지점</div>
+        <div class="text-2xl font-bold text-gray-700">{{ branches|length if item.is_global else item.permissions|length }}</div>
+    </div>
+</div>
+
+<!-- 열람 목록 -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50 border-b border-gray-100">
+            <tr class="text-left text-gray-500">
+                <th class="px-6 py-3 font-medium">이름</th>
+                <th class="px-6 py-3 font-medium">이메일</th>
+                <th class="px-6 py-3 font-medium">지점</th>
+                <th class="px-6 py-3 font-medium">열람 시각</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+            {% for view in views %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 font-medium text-gray-800">{{ view.viewer.name if view.viewer else '-' }}</td>
+                <td class="px-6 py-4 text-gray-500">{{ view.viewer.email if view.viewer else '-' }}</td>
+                <td class="px-6 py-4 text-gray-500">
+                    {% if view.branch %}
+                    <span class="font-mono text-xs text-indigo-600">{{ view.branch.code }}</span> {{ view.branch.name }}
+                    {% else %}-{% endif %}
+                </td>
+                <td class="px-6 py-4 text-gray-500">{{ view.viewed_at.strftime('%Y-%m-%d %H:%M') if view.viewed_at else '-' }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" class="px-6 py-10 text-center text-gray-400">열람 기록이 없습니다.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

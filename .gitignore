@@ -11,3 +11,7 @@ outputs/
 gcs-key.json
 .DS_Store
 *.log
+instance/
+*.db
+__pycache__/
+*.pyc

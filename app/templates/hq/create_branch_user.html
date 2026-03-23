@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %}계정 생성 - {{ branch.name }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{{ url_for('hq.branch_detail', branch_id=branch.branch_id) }}" class="text-sm text-gray-500 hover:text-indigo-600">← {{ branch.name }}</a>
+    <h2 class="text-2xl font-bold text-gray-800 mt-2">지점 계정 생성</h2>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 max-w-lg">
+    <form method="POST" class="space-y-5">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">이름 <span class="text-red-500">*</span></label>
+            <input type="text" name="name" required
+                   class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">이메일 <span class="text-red-500">*</span></label>
+            <input type="email" name="email" required
+                   class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">역할 <span class="text-red-500">*</span></label>
+            <select name="role" required
+                    class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="branch_owner">지점장</option>
+                <option value="branch_manager">지점 매니저</option>
+                <option value="teacher" selected>강사</option>
+                <option value="parent">학부모</option>
+                <option value="student">학생</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">초기 비밀번호 <span class="text-red-500">*</span></label>
+            <input type="password" name="password" required minlength="6"
+                   class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="flex gap-3 pt-2">
+            <button type="submit"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2.5 rounded-lg text-sm">
+                계정 생성
+            </button>
+            <a href="{{ url_for('hq.branch_detail', branch_id=branch.branch_id) }}"
+               class="border border-gray-300 text-gray-600 hover:bg-gray-50 font-medium px-6 py-2.5 rounded-lg text-sm">
+                취소
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

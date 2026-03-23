@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}본사 공지 - MOMOLIB{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">본사 공지 수신함</h2>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-100">
+    <div class="divide-y divide-gray-100">
+        {% for item in items %}
+        <a href="{{ url_for('branch.notice_detail', content_id=item.content_id) }}"
+           class="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition">
+            <div class="flex items-center gap-3">
+                {% if item.content_id not in read_ids %}
+                <span class="w-2 h-2 rounded-full bg-indigo-500 flex-shrink-0"></span>
+                {% else %}
+                <span class="w-2 h-2 flex-shrink-0"></span>
+                {% endif %}
+                <div>
+                    <div class="font-medium text-gray-800
+                        {% if item.content_id not in read_ids %}text-indigo-900{% endif %}">
+                        {{ item.title }}
+                    </div>
+                    <div class="text-xs text-gray-400 mt-0.5">
+                        {{ item.created_at.strftime('%Y-%m-%d') if item.created_at else '' }}
+                        {% if item.is_global %}<span class="ml-2 bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">전체 공지</span>{% endif %}
+                    </div>
+                </div>
+            </div>
+            <span class="text-gray-400 text-sm">→</span>
+        </a>
+        {% else %}
+        <div class="px-6 py-10 text-center text-gray-400">공지가 없습니다.</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}대시보드 - {{ branch.name }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">{{ branch.name }}</h2>
+    <p class="text-gray-500 text-sm mt-1">지점 운영 현황</p>
+</div>
+
+{% if unread_notices > 0 %}
+<div class="bg-indigo-50 border border-indigo-200 rounded-lg px-5 py-3 mb-6 flex items-center justify-between">
+    <span class="text-sm text-indigo-800">읽지 않은 본사 공지가 <strong>{{ unread_notices }}건</strong> 있습니다.</span>
+    <a href="{{ url_for('branch.notices') }}" class="text-sm text-indigo-600 font-semibold hover:underline">확인하기 →</a>
+</div>
+{% endif %}
+
+<!-- 통계 카드 -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div class="text-sm text-gray-500 mb-1">전체 회원</div>
+        <div class="text-3xl font-bold text-indigo-700">{{ total_users }}</div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div class="text-sm text-gray-500 mb-1">강사</div>
+        <div class="text-3xl font-bold text-green-600">{{ teachers }}</div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div class="text-sm text-gray-500 mb-1">학생</div>
+        <div class="text-3xl font-bold text-blue-600">{{ students }}</div>
+    </div>
+</div>
+
+<!-- 바로가기 -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <a href="{{ url_for('branch.notices') }}"
+       class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:border-indigo-300 transition">
+        <div class="text-lg font-semibold text-gray-800 mb-1">본사 공지 수신함</div>
+        <div class="text-sm text-gray-500">본사에서 보낸 공지 및 자료를 확인합니다.</div>
+    </a>
+</div>
+{% endblock %}

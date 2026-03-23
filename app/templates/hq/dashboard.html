@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block title %}본사 대시보드 - MOMOLIB{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">본사 대시보드</h2>
+    <p class="text-gray-500 text-sm mt-1">MOMOLIB 전국 지점 현황</p>
+</div>
+
+<!-- 통계 카드 -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div class="text-sm text-gray-500 mb-1">운영 지점 수</div>
+        <div class="text-3xl font-bold text-indigo-700">{{ total_branches }}</div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div class="text-sm text-gray-500 mb-1">전체 지점 회원</div>
+        <div class="text-3xl font-bold text-green-600">{{ total_users }}</div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div class="text-sm text-gray-500 mb-1">이번 달 매출</div>
+        <div class="text-3xl font-bold text-gray-800">-</div>
+    </div>
+</div>
+
+<!-- 최근 지점 -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-100">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <h3 class="font-semibold text-gray-700">지점 목록</h3>
+        <a href="{{ url_for('hq.new_branch') }}"
+           class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 rounded-lg">+ 지점 추가</a>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50">
+                <tr class="text-left text-gray-500">
+                    <th class="px-6 py-3 font-medium">코드</th>
+                    <th class="px-6 py-3 font-medium">지점명</th>
+                    <th class="px-6 py-3 font-medium">주소</th>
+                    <th class="px-6 py-3 font-medium">상태</th>
+                    <th class="px-6 py-3 font-medium">등록일</th>
+                    <th class="px-6 py-3 font-medium"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for branch in branches %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 font-mono font-semibold text-indigo-600">{{ branch.code }}</td>
+                    <td class="px-6 py-4 font-medium text-gray-800">{{ branch.name }}</td>
+                    <td class="px-6 py-4 text-gray-500">{{ branch.address or '-' }}</td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 rounded text-xs font-medium
+                            {% if branch.status == 'active' %}bg-green-100 text-green-700
+                            {% elif branch.status == 'suspended' %}bg-red-100 text-red-700
+                            {% else %}bg-gray-100 text-gray-600{% endif %}">
+                            {{ branch.status }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-gray-500">{{ branch.created_at.strftime('%Y-%m-%d') if branch.created_at else '-' }}</td>
+                    <td class="px-6 py-4">
+                        <a href="{{ url_for('hq.branch_detail', branch_id=branch.branch_id) }}"
+                           class="text-indigo-600 hover:underline">상세</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="px-6 py-8 text-center text-gray-400">등록된 지점이 없습니다.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

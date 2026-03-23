@@ -53,7 +53,7 @@ class Config:
 class DevelopmentConfig(Config):
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = os.environ.get(
-        'DATABASE_URL', 'postgresql://localhost/momolib_dev'
+        'DATABASE_URL', 'sqlite:///momolib_dev.db'
     )
 
 
