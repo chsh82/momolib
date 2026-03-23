@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+{% block title %}{{ member.name }} - MOMOLIB{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{{ url_for('branch.members', role=member.role) }}" class="text-sm text-gray-500 hover:text-indigo-600">← 회원 목록</a>
+    <div class="flex items-center justify-between mt-2">
+        <div class="flex items-center gap-3">
+            <h2 class="text-2xl font-bold text-gray-800">{{ member.name }}</h2>
+            <span class="px-3 py-1 rounded-full text-sm font-medium
+                {% if member.role == 'teacher' %}bg-violet-100 text-violet-700
+                {% elif member.role == 'student' %}bg-blue-100 text-blue-700
+                {% elif member.role == 'parent' %}bg-green-100 text-green-700
+                {% else %}bg-gray-100 text-gray-600{% endif %}">
+                {{ member.display_role }}
+            </span>
+            {% if not member.is_active %}
+            <span class="px-3 py-1 rounded-full text-sm bg-red-100 text-red-600">비활성</span>
+            {% endif %}
+        </div>
+        <button onclick="toggleActive('{{ member.user_id }}')"
+                class="text-sm px-4 py-2 rounded-lg border
+                {% if member.is_active %}border-red-200 text-red-600 hover:bg-red-50{% else %}border-green-200 text-green-600 hover:bg-green-50{% endif %}"
+                id="toggle-btn">
+            {{ '비활성화' if member.is_active else '활성화' }}
+        </button>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- 기본 정보 -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <h3 class="font-semibold text-gray-700 mb-4">기본 정보</h3>
+        <form method="POST" action="{{ url_for('branch.edit_member', user_id=member.user_id) }}" class="space-y-4">
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">이름</label>
+                <input type="text" name="name" value="{{ member.name }}" required
+                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">이메일</label>
+                <input type="text" value="{{ member.email }}" disabled
+                       class="w-full border border-gray-100 bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-400">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">연락처</label>
+                <input type="text" name="phone" value="{{ member.phone or '' }}"
+                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">비밀번호 변경 (빈칸이면 유지)</label>
+                <input type="password" name="new_password" minlength="6"
+                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                       placeholder="새 비밀번호">
+            </div>
+
+            {% if member.role == 'student' and member.student_profile %}
+            <hr class="border-gray-100">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">학년</label>
+                    <select name="grade"
+                            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">선택 안함</option>
+                        {% for val, label in grade_choices %}
+                        <option value="{{ val }}" {% if member.student_profile.grade == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">학교명</label>
+                    <input type="text" name="school" value="{{ member.student_profile.school or '' }}"
+                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">학생 코드</label>
+                <input type="text" name="student_code" value="{{ member.student_profile.student_code or '' }}"
+                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">메모</label>
+                <textarea name="notes" rows="2"
+                          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ member.student_profile.notes or '' }}</textarea>
+            </div>
+            {% endif %}
+
+            <button type="submit"
+                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg text-sm">
+                저장
+            </button>
+        </form>
+    </div>
+
+    <!-- 학부모-자녀 연결 -->
+    <div class="space-y-4">
+        {% if member.role == 'student' %}
+        <!-- 연결된 학부모 -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 class="font-semibold text-gray-700 mb-4">연결된 학부모</h3>
+            {% for link in parents %}
+            <div class="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                <div>
+                    <span class="font-medium text-gray-800 text-sm">{{ link.parent.name }}</span>
+                    <span class="text-xs text-gray-400 ml-2">{{ link.parent.email }}</span>
+                </div>
+                <form method="POST" action="{{ url_for('branch.unlink_parent_student', link_id=link.link_id) }}">
+                    <button type="submit" class="text-xs text-red-500 hover:underline"
+                            onclick="return confirm('연결을 해제할까요?')">해제</button>
+                </form>
+            </div>
+            {% else %}
+            <p class="text-sm text-gray-400">연결된 학부모가 없습니다.</p>
+            {% endfor %}
+
+            <!-- 학부모 연결 추가 -->
+            <form method="POST" action="{{ url_for('branch.link_parent_student') }}" class="mt-4 flex gap-2">
+                <input type="hidden" name="student_id" value="{{ member.user_id }}">
+                <select name="parent_id"
+                        class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="">학부모 선택</option>
+                    {% for p in all_parents %}
+                    <option value="{{ p.user_id }}">{{ p.name }} ({{ p.email }})</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm">연결</button>
+            </form>
+        </div>
+
+        {% elif member.role == 'parent' %}
+        <!-- 연결된 자녀 -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 class="font-semibold text-gray-700 mb-4">연결된 자녀</h3>
+            {% for link in children %}
+            <div class="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                <div>
+                    <span class="font-medium text-gray-800 text-sm">{{ link.student.name }}</span>
+                    {% if link.student.student_profile %}
+                    <span class="text-xs text-blue-500 ml-2">{{ link.student.student_profile.grade_display }}</span>
+                    {% endif %}
+                </div>
+                <form method="POST" action="{{ url_for('branch.unlink_parent_student', link_id=link.link_id) }}">
+                    <button type="submit" class="text-xs text-red-500 hover:underline"
+                            onclick="return confirm('연결을 해제할까요?')">해제</button>
+                </form>
+            </div>
+            {% else %}
+            <p class="text-sm text-gray-400">연결된 자녀가 없습니다.</p>
+            {% endfor %}
+
+            <!-- 자녀 연결 추가 -->
+            <form method="POST" action="{{ url_for('branch.link_parent_student') }}" class="mt-4 flex gap-2">
+                <input type="hidden" name="parent_id" value="{{ member.user_id }}">
+                <select name="student_id"
+                        class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="">학생 선택</option>
+                    {% for s in all_students %}
+                    <option value="{{ s.user_id }}">{{ s.name }}
+                        {% if s.student_profile %} ({{ s.student_profile.grade_display }}){% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm">연결</button>
+            </form>
+        </div>
+        {% endif %}
+
+        <!-- 계정 정보 -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 class="font-semibold text-gray-700 mb-3">계정 정보</h3>
+            <dl class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                    <dt class="text-gray-500">가입일</dt>
+                    <dd class="text-gray-700">{{ member.created_at.strftime('%Y-%m-%d') if member.created_at else '-' }}</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-gray-500">마지막 로그인</dt>
+                    <dd class="text-gray-700">{{ member.last_login_at.strftime('%Y-%m-%d %H:%M') if member.last_login_at else '없음' }}</dd>
+                </div>
+            </dl>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleActive(userId) {
+    if (!confirm('계정 상태를 변경할까요?')) return;
+    fetch(`/branch/members/${userId}/toggle-active`, {method: 'POST'})
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert(data.error || '오류가 발생했습니다.');
+            }
+        });
+}
+</script>
+{% endblock %}

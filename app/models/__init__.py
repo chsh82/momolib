@@ -7,3 +7,4 @@ from app.models.user import User
 from app.models.branch import Branch, BranchContract
 from app.models.content import ContentItem, ContentPermission, ContentView
 from app.models.revenue import RevenueRecord
+from app.models.member import StudentProfile, ParentStudent

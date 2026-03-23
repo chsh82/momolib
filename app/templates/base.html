@@ -44,6 +44,9 @@
                 {% elif current_user.is_branch_owner or current_user.is_branch_staff %}
                 <div class="flex space-x-4">
                     <a href="{{ url_for('branch.dashboard') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">대시보드</a>
+                    {% if current_user.role in ['branch_owner', 'branch_manager'] %}
+                    <a href="{{ url_for('branch.members') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">회원 관리</a>
+                    {% endif %}
                     <a href="{{ url_for('branch.notices') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">본사 공지</a>
                 </div>
                 {% endif %}
