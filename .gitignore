@@ -1,0 +1,13 @@
+.env
+*.pyc
+__pycache__/
+instance/
+.venv/
+venv/
+*.db
+*.sqlite3
+uploads/
+outputs/
+gcs-key.json
+.DS_Store
+*.log
