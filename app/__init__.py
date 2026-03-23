@@ -46,6 +46,9 @@ def create_app(config_name='default'):
     from app.cms import cms_bp
     app.register_blueprint(cms_bp, url_prefix='/cms')
 
+    from app.notifications import notif_bp
+    app.register_blueprint(notif_bp, url_prefix='/notifications')
+
     # 메인 라우트
     from flask import redirect, url_for
     from flask_login import current_user

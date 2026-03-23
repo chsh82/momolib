@@ -56,6 +56,37 @@
             <div class="flex items-center space-x-4">
                 <span class="text-sm text-gray-500">{{ current_user.name }}</span>
                 <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">{{ current_user.display_role }}</span>
+
+                <!-- 알림 벨 -->
+                <div class="relative" id="notif-wrapper">
+                    <button onclick="toggleNotifDropdown()"
+                            class="relative p-2 text-gray-500 hover:text-indigo-600 focus:outline-none">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                        </svg>
+                        <span id="notif-badge"
+                              class="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center hidden">
+                        </span>
+                    </button>
+
+                    <!-- 드롭다운 -->
+                    <div id="notif-dropdown"
+                         class="hidden absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
+                        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                            <span class="font-semibold text-gray-700 text-sm">알림</span>
+                            <button onclick="markAllRead()" class="text-xs text-indigo-600 hover:underline">모두 읽음</button>
+                        </div>
+                        <div id="notif-list" class="max-h-72 overflow-y-auto divide-y divide-gray-50">
+                            <div class="px-4 py-6 text-center text-xs text-gray-400">로딩 중...</div>
+                        </div>
+                        <a href="{{ url_for('notif.index') }}"
+                           class="block text-center text-xs text-indigo-600 hover:bg-gray-50 py-3 border-t border-gray-100 rounded-b-xl">
+                            전체 알림 보기
+                        </a>
+                    </div>
+                </div>
+
                 <a href="{{ url_for('auth.logout') }}" class="text-sm text-gray-500 hover:text-red-600">로그아웃</a>
             </div>
         </div>
@@ -68,5 +99,77 @@
     {% block content %}{% endblock %}
 </main>
 
+<script>
+// ── 알림 시스템 ──────────────────────────────────────────
+let notifOpen = false;
+
+function toggleNotifDropdown() {
+    notifOpen = !notifOpen;
+    document.getElementById('notif-dropdown').classList.toggle('hidden', !notifOpen);
+    if (notifOpen) loadNotifications();
+}
+
+// 외부 클릭 시 닫기
+document.addEventListener('click', function(e) {
+    if (!document.getElementById('notif-wrapper').contains(e.target)) {
+        notifOpen = false;
+        document.getElementById('notif-dropdown').classList.add('hidden');
+    }
+});
+
+function loadNotifications() {
+    fetch('/notifications/api/recent')
+        .then(r => r.json())
+        .then(items => {
+            const list = document.getElementById('notif-list');
+            if (!items.length) {
+                list.innerHTML = '<div class="px-4 py-6 text-center text-xs text-gray-400">알림이 없습니다.</div>';
+                return;
+            }
+            list.innerHTML = items.map(n => `
+                <a href="${n.link_url || '#'}"
+                   onclick="readNotif('${n.id}', event)"
+                   class="flex gap-3 px-4 py-3 hover:bg-gray-50 transition ${n.is_read ? '' : 'bg-indigo-50'}">
+                    <div class="flex-shrink-0 mt-0.5">
+                        <div class="w-2 h-2 rounded-full mt-1 ${n.is_read ? 'bg-gray-200' : 'bg-indigo-500'}"></div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-xs font-medium text-gray-800 truncate">${n.title}</div>
+                        ${n.message ? `<div class="text-xs text-gray-400 truncate mt-0.5">${n.message}</div>` : ''}
+                        <div class="text-xs text-gray-300 mt-1">${n.created_at}</div>
+                    </div>
+                </a>
+            `).join('');
+        });
+}
+
+function readNotif(id, e) {
+    fetch(`/notifications/api/read/${id}`, {method: 'POST'});
+    updateBadge();
+}
+
+function markAllRead() {
+    fetch('/notifications/api/read-all', {method: 'POST'})
+        .then(() => { loadNotifications(); updateBadge(); });
+}
+
+function updateBadge() {
+    fetch('/notifications/api/unread-count')
+        .then(r => r.json())
+        .then(data => {
+            const badge = document.getElementById('notif-badge');
+            if (data.count > 0) {
+                badge.textContent = data.count > 9 ? '9+' : data.count;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        });
+}
+
+// 페이지 로드 시 배지 갱신, 이후 60초마다 폴링
+updateBadge();
+setInterval(updateBadge, 60000);
+</script>
 </body>
 </html>

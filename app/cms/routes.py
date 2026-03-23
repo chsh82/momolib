@@ -6,6 +6,7 @@ from app.models import db
 from app.models.branch import Branch
 from app.models.content import ContentItem, ContentPermission, ContentView
 from app.utils.decorators import requires_role
+from app.models.notification import Notification
 
 
 @cms_bp.route('/')
@@ -57,8 +58,30 @@ def new_content():
                 )
                 db.session.add(perm)
 
+        db.session.flush()
+
+        # 발행 시 알림 전송
+        if is_published:
+            notif_link = url_for('branch.notice_detail', content_id=item.content_id)
+            if is_global:
+                Notification.send_to_all_branches(
+                    title=f'[본사 공지] {title}',
+                    notif_type='new_notice',
+                    link_url=notif_link,
+                    roles=['branch_owner', 'branch_manager', 'teacher'],
+                )
+            elif target_branches:
+                for bid in target_branches:
+                    Notification.send_to_branch(
+                        branch_id=bid,
+                        title=f'[본사 공지] {title}',
+                        notif_type='new_notice',
+                        link_url=notif_link,
+                        roles=['branch_owner', 'branch_manager', 'teacher'],
+                    )
+
         db.session.commit()
-        flash(f'콘텐츠 "{title}"이 {'발행' if is_published else '저장'}되었습니다.', 'success')
+        flash(f'콘텐츠 "{title}"이 {"발행" if is_published else "저장"}되었습니다.', 'success')
         return redirect(url_for('cms.index'))
 
     return render_template('cms/new_content.html', branches=branches)

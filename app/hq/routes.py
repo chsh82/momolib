@@ -6,6 +6,7 @@ from app.models import db
 from app.models.user import User
 from app.models.branch import Branch, BranchContract
 from app.models.revenue import RevenueRecord
+from app.models.notification import Notification
 from app.utils.decorators import requires_role
 from datetime import datetime
 
@@ -253,6 +254,16 @@ def revenue_confirm(record_id):
     record = RevenueRecord.query.get_or_404(record_id)
     if record.status == 'pending':
         record.status = 'confirmed'
+        db.session.flush()
+        # 지점 운영진에게 알림 발송
+        Notification.send_to_branch(
+            branch_id=record.branch_id,
+            title=f'{record.period_label} 정산이 확정되었습니다',
+            notif_type='revenue_confirmed',
+            message=f'수금액 {record.gross_amount:,}원 / 로열티 {record.royalty_amount:,}원 / 지급액 {record.net_amount:,}원',
+            link_url='/branch/revenue',
+            roles=['branch_owner', 'branch_manager'],
+        )
         db.session.commit()
         return jsonify({'success': True, 'status': 'confirmed', 'label': '확정'})
     return jsonify({'success': False, 'message': '이미 처리된 정산입니다.'})
@@ -267,6 +278,16 @@ def revenue_pay(record_id):
     if record.status == 'confirmed':
         record.status = 'paid'
         record.paid_at = datetime.utcnow()
+        db.session.flush()
+        # 지급 알림
+        Notification.send_to_branch(
+            branch_id=record.branch_id,
+            title=f'{record.period_label} 정산금이 지급 처리되었습니다',
+            notif_type='revenue_paid',
+            message=f'지급액 {record.net_amount:,}원',
+            link_url='/branch/revenue',
+            roles=['branch_owner', 'branch_manager'],
+        )
         db.session.commit()
         return jsonify({'success': True, 'status': 'paid', 'label': '지급 완료'})
     return jsonify({'success': False, 'message': '확정된 정산만 지급 처리할 수 있습니다.'})
