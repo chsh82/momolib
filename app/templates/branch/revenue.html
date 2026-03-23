@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}정산 내역 - MOMOLIB{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-800">정산 내역</h2>
+        <p class="text-gray-500 text-sm mt-1">{{ year }}년</p>
+    </div>
+    <form class="flex gap-2" method="GET">
+        <select name="year" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            {% for y in years %}
+            <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}년</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg text-sm text-gray-700">조회</button>
+    </form>
+</div>
+
+<!-- 연간 합계 -->
+<div class="grid grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+        <div class="text-xs text-gray-500 mb-1">총 수금액</div>
+        <div class="text-2xl font-bold text-gray-800">{{ total_gross | format_number }}원</div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+        <div class="text-xs text-gray-500 mb-1">본사 납부 (로열티+가맹비)</div>
+        <div class="text-2xl font-bold text-orange-600">{{ total_royalty | format_number }}원</div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+        <div class="text-xs text-gray-500 mb-1">지점 수령액</div>
+        <div class="text-2xl font-bold text-blue-600">{{ total_net | format_number }}원</div>
+    </div>
+</div>
+
+<!-- 월별 내역 -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50 border-b border-gray-100">
+            <tr class="text-left text-gray-500">
+                <th class="px-6 py-3 font-medium">기간</th>
+                <th class="px-6 py-3 font-medium text-right">총 수금액</th>
+                <th class="px-6 py-3 font-medium text-right">로열티</th>
+                <th class="px-6 py-3 font-medium text-right">가맹비</th>
+                <th class="px-6 py-3 font-medium text-right">지점 수령액</th>
+                <th class="px-6 py-3 font-medium text-center">상태</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+            {% for r in records %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 font-medium text-gray-800">{{ r.period_label }}</td>
+                <td class="px-6 py-4 text-right text-gray-700">{{ r.gross_amount | format_number }}</td>
+                <td class="px-6 py-4 text-right text-orange-600">{{ r.royalty_amount | format_number }}</td>
+                <td class="px-6 py-4 text-right text-gray-500">{{ r.monthly_fee | format_number }}</td>
+                <td class="px-6 py-4 text-right font-semibold text-blue-700">{{ r.net_amount | format_number }}</td>
+                <td class="px-6 py-4 text-center">
+                    <span class="px-2 py-1 rounded text-xs font-medium
+                        {% if r.status == 'paid' %}bg-blue-100 text-blue-700
+                        {% elif r.status == 'confirmed' %}bg-green-100 text-green-700
+                        {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                        {{ r.display_status }}
+                    </span>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="px-6 py-10 text-center text-gray-400">{{ year }}년 정산 내역이 없습니다.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

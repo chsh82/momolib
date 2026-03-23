@@ -7,6 +7,8 @@ from app.models.user import User
 from app.models.branch import Branch
 from app.models.content import ContentItem, ContentView
 from app.models.member import StudentProfile, ParentStudent, GRADE_CHOICES
+from app.models.revenue import RevenueRecord
+from datetime import datetime
 from app.utils.decorators import requires_role
 
 
@@ -312,6 +314,33 @@ def link_parent_student():
     db.session.commit()
     flash(f'{parent.name} ↔ {student.name} 연결이 완료되었습니다.', 'success')
     return redirect(request.referrer or url_for('branch.members'))
+
+
+@branch_bp.route('/revenue')
+@login_required
+@requires_role('branch_owner', 'branch_manager')
+def my_revenue():
+    """지점 정산 내역 확인"""
+    branch_id = current_user.branch_id
+    now = datetime.utcnow()
+    year = int(request.args.get('year', now.year))
+
+    records = RevenueRecord.query.filter_by(branch_id=branch_id)\
+        .filter_by(period_year=year)\
+        .order_by(RevenueRecord.period_month.desc()).all()
+
+    total_gross = sum(r.gross_amount for r in records)
+    total_royalty = sum(r.royalty_amount for r in records)
+    total_net = sum(r.net_amount for r in records)
+
+    years = list(range(now.year - 2, now.year + 1))
+
+    return render_template('branch/revenue.html',
+                           records=records,
+                           year=year, years=years,
+                           total_gross=total_gross,
+                           total_royalty=total_royalty,
+                           total_net=total_net)
 
 
 @branch_bp.route('/members/unlink/<link_id>', methods=['POST'])

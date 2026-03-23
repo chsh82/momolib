@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+{% block title %}정산 입력 - MOMOLIB{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{{ url_for('hq.revenue') }}" class="text-sm text-gray-500 hover:text-indigo-600">← 정산 목록</a>
+    <h2 class="text-2xl font-bold text-gray-800 mt-2">정산 데이터 입력</h2>
+    <p class="text-gray-500 text-sm mt-1">지점 매출을 입력하면 계약 기준으로 로열티가 자동 계산됩니다.</p>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 max-w-lg">
+    <form method="POST" class="space-y-5" id="revenue-form">
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">지점 <span class="text-red-500">*</span></label>
+            <select name="branch_id" required onchange="loadBranchInfo(this.value)"
+                    class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="">지점 선택</option>
+                {% for b in branches %}
+                <option value="{{ b.branch_id }}"
+                    data-royalty="{{ b.contract.royalty_rate if b.contract else 20 }}"
+                    data-fee="{{ b.contract.monthly_fee if b.contract else 0 }}"
+                    {% if selected_branch and selected_branch.branch_id == b.branch_id %}selected{% endif %}>
+                    [{{ b.code }}] {{ b.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- 계약 정보 미리보기 -->
+        <div id="contract-info" class="hidden bg-indigo-50 rounded-lg px-4 py-3 text-sm space-y-1">
+            <div class="flex justify-between text-gray-600">
+                <span>로열티 비율</span>
+                <span id="info-royalty" class="font-semibold text-indigo-700">-</span>
+            </div>
+            <div class="flex justify-between text-gray-600">
+                <span>월 가맹비</span>
+                <span id="info-fee" class="font-semibold text-indigo-700">-</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">연도 <span class="text-red-500">*</span></label>
+                <select name="year" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    {% for y in range(now.year - 2, now.year + 1) %}
+                    <option value="{{ y }}" {% if y == now.year %}selected{% endif %}>{{ y }}년</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">월 <span class="text-red-500">*</span></label>
+                <select name="month" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    {% for m in range(1, 13) %}
+                    <option value="{{ m }}" {% if m == now.month %}selected{% endif %}>{{ m }}월</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">총 수금액 (원) <span class="text-red-500">*</span></label>
+            <input type="number" name="gross_amount" required min="0" step="1000"
+                   oninput="calcPreview()"
+                   class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                   placeholder="0">
+        </div>
+
+        <!-- 자동 계산 미리보기 -->
+        <div id="calc-preview" class="hidden bg-gray-50 rounded-lg px-4 py-4 space-y-2 text-sm">
+            <div class="flex justify-between text-gray-600">
+                <span>본사 로열티</span>
+                <span id="calc-royalty" class="font-semibold text-green-700">0원</span>
+            </div>
+            <div class="flex justify-between text-gray-600">
+                <span>월 가맹비</span>
+                <span id="calc-fee" class="font-semibold text-indigo-600">0원</span>
+            </div>
+            <div class="border-t border-gray-200 pt-2 flex justify-between font-semibold">
+                <span class="text-gray-700">지점 지급액</span>
+                <span id="calc-net" class="text-blue-700 text-base">0원</span>
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">메모</label>
+            <textarea name="notes" rows="2"
+                      class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      placeholder="특이사항"></textarea>
+        </div>
+
+        <div class="flex gap-3 pt-2">
+            <button type="submit"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2.5 rounded-lg text-sm">
+                저장
+            </button>
+            <a href="{{ url_for('hq.revenue') }}"
+               class="border border-gray-300 text-gray-600 hover:bg-gray-50 font-medium px-6 py-2.5 rounded-lg text-sm">
+                취소
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+let currentRoyalty = 20, currentFee = 0;
+
+function loadBranchInfo(branchId) {
+    const sel = document.querySelector(`option[value="${branchId}"]`);
+    if (!sel) { document.getElementById('contract-info').classList.add('hidden'); return; }
+    currentRoyalty = parseFloat(sel.dataset.royalty) || 20;
+    currentFee = parseInt(sel.dataset.fee) || 0;
+    document.getElementById('info-royalty').textContent = currentRoyalty + '%';
+    document.getElementById('info-fee').textContent = currentFee.toLocaleString() + '원';
+    document.getElementById('contract-info').classList.remove('hidden');
+    calcPreview();
+}
+
+function calcPreview() {
+    const gross = parseInt(document.querySelector('[name=gross_amount]').value) || 0;
+    if (!gross) { document.getElementById('calc-preview').classList.add('hidden'); return; }
+    const royalty = Math.round(gross * currentRoyalty / 100);
+    const net = gross - royalty - currentFee;
+    document.getElementById('calc-royalty').textContent = royalty.toLocaleString() + '원';
+    document.getElementById('calc-fee').textContent = currentFee.toLocaleString() + '원';
+    document.getElementById('calc-net').textContent = net.toLocaleString() + '원';
+    document.getElementById('calc-preview').classList.remove('hidden');
+}
+
+// 초기 로드 시 선택된 지점 있으면 반영
+window.addEventListener('DOMContentLoaded', () => {
+    const sel = document.querySelector('[name=branch_id]');
+    if (sel.value) loadBranchInfo(sel.value);
+});
+</script>
+{% endblock %}

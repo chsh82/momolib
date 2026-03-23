@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block title %}{{ year }}년 연간 정산 요약 - MOMOLIB{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <a href="{{ url_for('hq.revenue') }}" class="text-sm text-gray-500 hover:text-indigo-600">← 월별 정산</a>
+        <h2 class="text-2xl font-bold text-gray-800 mt-1">{{ year }}년 연간 정산 요약</h2>
+    </div>
+    <form class="flex gap-2" method="GET">
+        <select name="year" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            {% for y in years %}
+            <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}년</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg text-sm text-gray-700">조회</button>
+    </form>
+</div>
+
+<!-- 연간 합계 카드 -->
+<div class="grid grid-cols-2 gap-4 mb-8">
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        <div class="text-sm text-gray-500 mb-1">{{ year }}년 총 수금액</div>
+        <div class="text-3xl font-bold text-gray-800">{{ grand_gross | format_number }}원</div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        <div class="text-sm text-gray-500 mb-1">{{ year }}년 본사 로열티 합계</div>
+        <div class="text-3xl font-bold text-green-600">{{ grand_royalty | format_number }}원</div>
+    </div>
+</div>
+
+<!-- 지점별 연간 실적 -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+    <div class="px-6 py-4 border-b border-gray-100">
+        <h3 class="font-semibold text-gray-700">지점별 연간 실적</h3>
+    </div>
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50 border-b border-gray-100">
+            <tr class="text-left text-gray-500">
+                <th class="px-6 py-3 font-medium">지점</th>
+                <th class="px-6 py-3 font-medium text-center">입력 월 수</th>
+                <th class="px-6 py-3 font-medium text-right">총 수금액</th>
+                <th class="px-6 py-3 font-medium text-right">로열티</th>
+                <th class="px-6 py-3 font-medium text-right">지점 지급액</th>
+                <th class="px-6 py-3 font-medium text-right">로열티 비율</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+            {% for r in results %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4">
+                    <div class="font-medium text-gray-800">{{ r.name }}</div>
+                    <div class="text-xs text-indigo-500 font-mono">{{ r.code }}</div>
+                </td>
+                <td class="px-6 py-4 text-center text-gray-500">{{ r.months_recorded }}개월</td>
+                <td class="px-6 py-4 text-right font-medium text-gray-800">{{ (r.total_gross or 0) | format_number }}</td>
+                <td class="px-6 py-4 text-right text-green-700 font-medium">{{ (r.total_royalty or 0) | format_number }}</td>
+                <td class="px-6 py-4 text-right text-blue-700 font-medium">{{ (r.total_net or 0) | format_number }}</td>
+                <td class="px-6 py-4 text-right text-gray-500">
+                    {% if r.total_gross and r.total_gross > 0 %}
+                    {{ "%.1f"|format(r.total_royalty / r.total_gross * 100) }}%
+                    {% else %}-{% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="px-6 py-10 text-center text-gray-400">{{ year }}년 정산 데이터가 없습니다.</td></tr>
+            {% endfor %}
+        </tbody>
+        {% if results %}
+        <tfoot class="bg-gray-50 border-t-2 border-gray-200">
+            <tr class="font-semibold">
+                <td class="px-6 py-4 text-gray-700">합계</td>
+                <td class="px-6 py-4 text-center text-gray-500">-</td>
+                <td class="px-6 py-4 text-right text-gray-800">{{ grand_gross | format_number }}</td>
+                <td class="px-6 py-4 text-right text-green-700">{{ grand_royalty | format_number }}</td>
+                <td class="px-6 py-4 text-right text-blue-700">{{ (grand_gross - grand_royalty) | format_number }}</td>
+                <td class="px-6 py-4 text-right text-gray-500">
+                    {% if grand_gross > 0 %}{{ "%.1f"|format(grand_royalty / grand_gross * 100) }}%{% else %}-{% endif %}
+                </td>
+            </tr>
+        </tfoot>
+        {% endif %}
+    </table>
+</div>
+{% endblock %}

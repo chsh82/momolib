@@ -8,25 +8,60 @@
 </div>
 
 <!-- 통계 카드 -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
         <div class="text-sm text-gray-500 mb-1">운영 지점 수</div>
         <div class="text-3xl font-bold text-indigo-700">{{ total_branches }}</div>
     </div>
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
         <div class="text-sm text-gray-500 mb-1">전체 지점 회원</div>
-        <div class="text-3xl font-bold text-green-600">{{ total_users }}</div>
+        <div class="text-3xl font-bold text-blue-600">{{ total_users }}</div>
     </div>
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div class="text-sm text-gray-500 mb-1">이번 달 매출</div>
-        <div class="text-3xl font-bold text-gray-800">-</div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+        <div class="text-sm text-gray-500 mb-1">이번 달 총 수금</div>
+        <div class="text-2xl font-bold text-gray-800">{{ total_gross | format_number }}원</div>
     </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+        <div class="text-sm text-gray-500 mb-1">이번 달 로열티</div>
+        <div class="text-2xl font-bold text-green-600">{{ total_royalty | format_number }}원</div>
+        {% if pending_count > 0 %}
+        <div class="text-xs text-orange-500 mt-1">미확정 {{ pending_count }}건</div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 바로가기 -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+    <a href="{{ url_for('hq.branches') }}"
+       class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:border-indigo-300 transition group">
+        <div class="flex items-center gap-3 mb-1">
+            <span class="text-xl">🏢</span>
+            <span class="font-semibold text-gray-800 group-hover:text-indigo-700">지점 관리</span>
+        </div>
+        <div class="text-xs text-gray-400">지점 등록, 계약 정보, 계정 관리</div>
+    </a>
+    <a href="{{ url_for('hq.revenue') }}"
+       class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:border-green-300 transition group">
+        <div class="flex items-center gap-3 mb-1">
+            <span class="text-xl">💰</span>
+            <span class="font-semibold text-gray-800 group-hover:text-green-700">정산 관리</span>
+        </div>
+        <div class="text-xs text-gray-400">월별 매출 입력, 로열티 확인, 지급 처리</div>
+    </a>
+    <a href="{{ url_for('cms.index') }}"
+       class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:border-blue-300 transition group">
+        <div class="flex items-center gap-3 mb-1">
+            <span class="text-xl">📢</span>
+            <span class="font-semibold text-gray-800 group-hover:text-blue-700">콘텐츠 관리</span>
+        </div>
+        <div class="text-xs text-gray-400">지점 공지, 자료 배포</div>
+    </a>
 </div>
 
 <!-- 최근 지점 -->
 <div class="bg-white rounded-xl shadow-sm border border-gray-100">
     <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-        <h3 class="font-semibold text-gray-700">지점 목록</h3>
+        <h3 class="font-semibold text-gray-700">최근 등록 지점</h3>
         <a href="{{ url_for('hq.new_branch') }}"
            class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 rounded-lg">+ 지점 추가</a>
     </div>
@@ -36,8 +71,8 @@
                 <tr class="text-left text-gray-500">
                     <th class="px-6 py-3 font-medium">코드</th>
                     <th class="px-6 py-3 font-medium">지점명</th>
-                    <th class="px-6 py-3 font-medium">주소</th>
                     <th class="px-6 py-3 font-medium">상태</th>
+                    <th class="px-6 py-3 font-medium">로열티</th>
                     <th class="px-6 py-3 font-medium">등록일</th>
                     <th class="px-6 py-3 font-medium"></th>
                 </tr>
@@ -47,25 +82,24 @@
                 <tr class="hover:bg-gray-50">
                     <td class="px-6 py-4 font-mono font-semibold text-indigo-600">{{ branch.code }}</td>
                     <td class="px-6 py-4 font-medium text-gray-800">{{ branch.name }}</td>
-                    <td class="px-6 py-4 text-gray-500">{{ branch.address or '-' }}</td>
                     <td class="px-6 py-4">
                         <span class="px-2 py-1 rounded text-xs font-medium
                             {% if branch.status == 'active' %}bg-green-100 text-green-700
-                            {% elif branch.status == 'suspended' %}bg-red-100 text-red-700
-                            {% else %}bg-gray-100 text-gray-600{% endif %}">
-                            {{ branch.status }}
+                            {% else %}bg-red-100 text-red-700{% endif %}">
+                            {{ branch.display_status }}
                         </span>
                     </td>
-                    <td class="px-6 py-4 text-gray-500">{{ branch.created_at.strftime('%Y-%m-%d') if branch.created_at else '-' }}</td>
+                    <td class="px-6 py-4 text-gray-600">
+                        {{ branch.contract.royalty_rate if branch.contract else '-' }}%
+                    </td>
+                    <td class="px-6 py-4 text-gray-400 text-xs">{{ branch.created_at.strftime('%Y-%m-%d') if branch.created_at else '-' }}</td>
                     <td class="px-6 py-4">
                         <a href="{{ url_for('hq.branch_detail', branch_id=branch.branch_id) }}"
                            class="text-indigo-600 hover:underline">상세</a>
                     </td>
                 </tr>
                 {% else %}
-                <tr>
-                    <td colspan="6" class="px-6 py-8 text-center text-gray-400">등록된 지점이 없습니다.</td>
-                </tr>
+                <tr><td colspan="6" class="px-6 py-8 text-center text-gray-400">등록된 지점이 없습니다.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

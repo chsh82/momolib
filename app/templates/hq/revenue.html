@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% block title %}정산 관리 - MOMOLIB{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-800">정산 관리</h2>
+        <p class="text-gray-500 text-sm mt-1">{{ year }}년 {{ month }}월</p>
+    </div>
+    <div class="flex gap-3">
+        <a href="{{ url_for('hq.revenue_summary', year=year) }}"
+           class="border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm px-4 py-2 rounded-lg">연간 요약</a>
+        <a href="{{ url_for('hq.revenue_input') }}"
+           class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 rounded-lg">+ 정산 입력</a>
+    </div>
+</div>
+
+<!-- 연월 선택 -->
+<form class="flex gap-2 mb-6 items-center" method="GET">
+    <select name="year" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        {% for y in years %}
+        <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}년</option>
+        {% endfor %}
+    </select>
+    <select name="month" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        {% for m in months %}
+        <option value="{{ m }}" {% if m == month %}selected{% endif %}>{{ m }}월</option>
+        {% endfor %}
+    </select>
+    <button type="submit" class="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg text-sm text-gray-700">조회</button>
+</form>
+
+<!-- 합계 카드 -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+        <div class="text-xs text-gray-500 mb-1">총 수금액</div>
+        <div class="text-xl font-bold text-gray-800">{{ total_gross | format_number }}원</div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+        <div class="text-xs text-gray-500 mb-1">본사 로열티</div>
+        <div class="text-xl font-bold text-green-600">{{ total_royalty | format_number }}원</div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+        <div class="text-xs text-gray-500 mb-1">월 가맹비</div>
+        <div class="text-xl font-bold text-indigo-600">{{ total_fee | format_number }}원</div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+        <div class="text-xs text-gray-500 mb-1">지점 지급액 합계</div>
+        <div class="text-xl font-bold text-blue-600">{{ total_net | format_number }}원</div>
+    </div>
+</div>
+
+<!-- 정산 목록 -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto mb-6">
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50 border-b border-gray-100">
+            <tr class="text-left text-gray-500">
+                <th class="px-6 py-3 font-medium">지점</th>
+                <th class="px-6 py-3 font-medium text-right">총 수금액</th>
+                <th class="px-6 py-3 font-medium text-right">로열티율</th>
+                <th class="px-6 py-3 font-medium text-right">로열티</th>
+                <th class="px-6 py-3 font-medium text-right">가맹비</th>
+                <th class="px-6 py-3 font-medium text-right">지점 지급액</th>
+                <th class="px-6 py-3 font-medium text-center">상태</th>
+                <th class="px-6 py-3 font-medium text-center">처리</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+            {% for r in records %}
+            <tr class="hover:bg-gray-50" id="row-{{ r.record_id }}">
+                <td class="px-6 py-4">
+                    <div class="font-medium text-gray-800">{{ r.branch.name }}</div>
+                    <div class="text-xs text-indigo-500 font-mono">{{ r.branch.code }}</div>
+                </td>
+                <td class="px-6 py-4 text-right font-medium text-gray-800">{{ r.gross_amount | format_number }}</td>
+                <td class="px-6 py-4 text-right text-gray-500">
+                    {{ r.branch.contract.royalty_rate if r.branch.contract else '-' }}%
+                </td>
+                <td class="px-6 py-4 text-right text-green-700 font-medium">{{ r.royalty_amount | format_number }}</td>
+                <td class="px-6 py-4 text-right text-gray-500">{{ r.monthly_fee | format_number }}</td>
+                <td class="px-6 py-4 text-right text-blue-700 font-medium">{{ r.net_amount | format_number }}</td>
+                <td class="px-6 py-4 text-center">
+                    <span id="status-{{ r.record_id }}" class="px-2 py-1 rounded text-xs font-medium
+                        {% if r.status == 'paid' %}bg-blue-100 text-blue-700
+                        {% elif r.status == 'confirmed' %}bg-green-100 text-green-700
+                        {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                        {{ r.display_status }}
+                    </span>
+                </td>
+                <td class="px-6 py-4 text-center">
+                    {% if r.status == 'pending' %}
+                    <button onclick="confirmRevenue('{{ r.record_id }}')"
+                            class="text-xs text-green-600 hover:underline border border-green-200 px-3 py-1 rounded">확정</button>
+                    {% elif r.status == 'confirmed' and current_user.is_super_admin %}
+                    <button onclick="payRevenue('{{ r.record_id }}')"
+                            class="text-xs text-blue-600 hover:underline border border-blue-200 px-3 py-1 rounded">지급 처리</button>
+                    {% else %}
+                    <span class="text-xs text-gray-300">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="8" class="px-6 py-10 text-center text-gray-400">이번 달 정산 데이터가 없습니다.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 미입력 지점 -->
+{% if unrecorded_branches %}
+<div class="bg-orange-50 border border-orange-200 rounded-xl p-5">
+    <h4 class="text-sm font-semibold text-orange-800 mb-3">⚠ 정산 미입력 지점 ({{ unrecorded_branches | length }}개)</h4>
+    <div class="flex flex-wrap gap-2">
+        {% for b in unrecorded_branches %}
+        <a href="{{ url_for('hq.revenue_input') }}?branch_id={{ b.branch_id }}"
+           class="bg-white border border-orange-200 text-orange-700 text-xs px-3 py-1.5 rounded-lg hover:bg-orange-100">
+            <span class="font-mono font-semibold">{{ b.code }}</span> {{ b.name }}
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<script>
+function confirmRevenue(id) {
+    if (!confirm('정산을 확정할까요?')) return;
+    fetch(`/hq/revenue/${id}/confirm`, {method:'POST'})
+        .then(r => r.json()).then(data => {
+            if (data.success) {
+                document.getElementById(`status-${id}`).textContent = '확정';
+                document.getElementById(`status-${id}`).className = 'px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700';
+                location.reload();
+            }
+        });
+}
+function payRevenue(id) {
+    if (!confirm('지급 처리하시겠습니까?')) return;
+    fetch(`/hq/revenue/${id}/pay`, {method:'POST'})
+        .then(r => r.json()).then(data => {
+            if (data.success) location.reload();
+            else alert(data.message);
+        });
+}
+</script>
+{% endblock %}
