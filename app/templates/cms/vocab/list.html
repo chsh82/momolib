@@ -9,16 +9,44 @@
 </div>
 
 <div class="flex flex-wrap gap-2 mb-4">
-    <form method="GET" class="flex gap-2">
+    <form method="GET" class="flex flex-wrap gap-2" id="filter-form">
         <input type="text" name="q" value="{{ q }}" placeholder="검색..."
-               class="border border-gray-200 rounded-lg px-3 py-2 text-sm w-44 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+               class="border border-gray-200 rounded-lg px-3 py-2 text-sm w-36 focus:outline-none focus:ring-2 focus:ring-indigo-400">
         <select name="book_id" class="border border-gray-200 rounded-lg px-3 py-2 text-sm">
             <option value="">전체 도서</option>
             {% for book in books %}
             <option value="{{ book.book_id }}" {% if book_id == book.book_id %}selected{% endif %}>{{ book.title }}</option>
             {% endfor %}
         </select>
+        <select name="cat_large" id="f-large" onchange="filterMedium(); this.form.submit()"
+                class="border border-gray-200 rounded-lg px-3 py-2 text-sm">
+            <option value="">대분류 전체</option>
+            {% for large in vocab_categories %}
+            <option value="{{ large }}" {% if cat_large == large %}selected{% endif %}>{{ large }}</option>
+            {% endfor %}
+        </select>
+        <select name="cat_medium" id="f-medium" onchange="filterSmall(); this.form.submit()"
+                class="border border-gray-200 rounded-lg px-3 py-2 text-sm">
+            <option value="">중분류 전체</option>
+            {% if cat_large and cat_large in vocab_categories %}
+                {% for medium in vocab_categories[cat_large] %}
+                <option value="{{ medium }}" {% if cat_medium == medium %}selected{% endif %}>{{ medium }}</option>
+                {% endfor %}
+            {% endif %}
+        </select>
+        <select name="cat_small" onchange="this.form.submit()"
+                class="border border-gray-200 rounded-lg px-3 py-2 text-sm">
+            <option value="">소분류 전체</option>
+            {% if cat_large and cat_medium and cat_large in vocab_categories and cat_medium in vocab_categories[cat_large] %}
+                {% for small in vocab_categories[cat_large][cat_medium] %}
+                <option value="{{ small }}" {% if cat_small == small %}selected{% endif %}>{{ small }}</option>
+                {% endfor %}
+            {% endif %}
+        </select>
         <button class="bg-gray-700 text-white px-3 py-2 rounded-lg text-sm">검색</button>
+        {% if cat_large or cat_medium or cat_small or q or book_id %}
+        <a href="{{ url_for('cms.vocab_list') }}" class="border border-gray-300 text-gray-500 px-3 py-2 rounded-lg text-sm hover:bg-gray-50">초기화</a>
+        {% endif %}
     </form>
     <div class="ml-auto flex gap-2">
         <a href="{{ url_for('cms.vocab_template') }}"
@@ -77,6 +105,19 @@
 </div>
 
 <script>
+const VOCAB_CAT = {{ vocab_categories | tojson }};
+function filterMedium() {
+    const large = document.getElementById('f-large').value;
+    const med = document.getElementById('f-medium');
+    med.innerHTML = '<option value="">중분류 전체</option>';
+    if (large && VOCAB_CAT[large]) {
+        Object.keys(VOCAB_CAT[large]).forEach(m => {
+            med.innerHTML += `<option value="${m}">${m}</option>`;
+        });
+    }
+}
+function filterSmall() { /* small은 서버 렌더로 처리 */ }
+
 function showFileName(input) {
     const name = input.files[0]?.name || '';
     document.getElementById('file-name').textContent = name ? '선택됨: ' + name : '';
@@ -94,6 +135,7 @@ document.getElementById('upload-modal').addEventListener('click', function(e) {
             <tr>
                 <th class="text-left px-5 py-3 text-gray-600 font-medium">제목</th>
                 <th class="text-left px-4 py-3 text-gray-600 font-medium">단어</th>
+                <th class="text-left px-4 py-3 text-gray-600 font-medium">분류</th>
                 <th class="text-left px-4 py-3 text-gray-600 font-medium">연결 도서</th>
                 <th class="text-center px-3 py-3 text-gray-600 font-medium">주차</th>
                 <th class="text-center px-3 py-3 text-gray-600 font-medium">난이도</th>
@@ -105,6 +147,12 @@ document.getElementById('upload-modal').addEventListener('click', function(e) {
             <tr class="hover:bg-gray-50">
                 <td class="px-5 py-3 font-medium text-gray-800">{{ q.title }}</td>
                 <td class="px-4 py-3 text-indigo-700 font-semibold">{{ (q.data or {}).get('word', '-') }}</td>
+                <td class="px-4 py-3 text-xs text-gray-500">
+                    {% if q.cat_large %}
+                    <div class="font-medium text-gray-700">{{ q.cat_large }}</div>
+                    {% if q.cat_medium %}<div>{{ q.cat_medium }}{% if q.cat_small %} › {{ q.cat_small }}{% endif %}</div>{% endif %}
+                    {% else %}<span class="text-gray-300">-</span>{% endif %}
+                </td>
                 <td class="px-4 py-3 text-gray-500 text-xs">{{ q.book.title if q.book else '-' }}</td>
                 <td class="px-3 py-3 text-center text-gray-500 text-xs">{{ q.week_num ~ '주' if q.week_num else '-' }}</td>
                 <td class="px-3 py-3 text-center">

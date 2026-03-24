@@ -13,6 +13,7 @@ from app.models.library import Book
 from app.models.content_bank import (
     BankQuestion, LectureVideo, MockExam, MockExamQuestion, StudyMaterial,
     BANK_QUESTION_TYPES, DIFFICULTY_CHOICES, EXAM_QUESTION_TYPES, MATERIAL_TYPES,
+    VOCAB_CATEGORIES,
 )
 from app.utils.decorators import requires_role
 from app.models.notification import Notification
@@ -143,16 +144,29 @@ def vocab_list():
     if not _hq_only(): abort(403)
     q = request.args.get('q', '').strip()
     book_id = request.args.get('book_id', '')
+    cat_large  = request.args.get('cat_large', '')
+    cat_medium = request.args.get('cat_medium', '')
+    cat_small  = request.args.get('cat_small', '')
+
     query = BankQuestion.query.filter_by(type='vocab_quiz', is_active=True)
     if q:
         query = query.filter(BankQuestion.title.ilike(f'%{q}%') |
                              BankQuestion.tags.ilike(f'%{q}%'))
     if book_id:
         query = query.filter_by(book_id=book_id)
+    if cat_large:
+        query = query.filter_by(cat_large=cat_large)
+    if cat_medium:
+        query = query.filter_by(cat_medium=cat_medium)
+    if cat_small:
+        query = query.filter_by(cat_small=cat_small)
+
     questions = query.order_by(BankQuestion.created_at.desc()).all()
     books = _all_books()
     return render_template('cms/vocab/list.html', questions=questions,
-                           q=q, book_id=book_id, books=books)
+                           q=q, book_id=book_id, books=books,
+                           cat_large=cat_large, cat_medium=cat_medium, cat_small=cat_small,
+                           vocab_categories=VOCAB_CATEGORIES)
 
 
 @cms_bp.route('/vocab/new', methods=['GET', 'POST'])
@@ -174,6 +188,9 @@ def vocab_new():
             week_num=request.form.get('week_num') or None,
             difficulty=request.form.get('difficulty', 'medium'),
             tags=request.form.get('tags'),
+            cat_large=request.form.get('cat_large') or None,
+            cat_medium=request.form.get('cat_medium') or None,
+            cat_small=request.form.get('cat_small') or None,
             data=data,
             created_by=current_user.user_id,
         )
@@ -182,7 +199,8 @@ def vocab_new():
         flash('어휘 퀴즈가 등록되었습니다.', 'success')
         return redirect(url_for('cms.vocab_list'))
     return render_template('cms/vocab/form.html', books=_all_books(),
-                           difficulty_choices=DIFFICULTY_CHOICES)
+                           difficulty_choices=DIFFICULTY_CHOICES,
+                           vocab_categories=VOCAB_CATEGORIES)
 
 
 @cms_bp.route('/vocab/<question_id>/edit', methods=['GET', 'POST'])
@@ -197,6 +215,9 @@ def vocab_edit(question_id):
         q.week_num = request.form.get('week_num') or None
         q.difficulty = request.form.get('difficulty', 'medium')
         q.tags = request.form.get('tags')
+        q.cat_large  = request.form.get('cat_large') or None
+        q.cat_medium = request.form.get('cat_medium') or None
+        q.cat_small  = request.form.get('cat_small') or None
         q.data = {
             'word': request.form.get('word', ''),
             'definition': request.form.get('definition', ''),
@@ -207,7 +228,8 @@ def vocab_edit(question_id):
         flash('수정되었습니다.', 'success')
         return redirect(url_for('cms.vocab_list'))
     return render_template('cms/vocab/form.html', question=q, books=_all_books(),
-                           difficulty_choices=DIFFICULTY_CHOICES)
+                           difficulty_choices=DIFFICULTY_CHOICES,
+                           vocab_categories=VOCAB_CATEGORIES)
 
 
 @cms_bp.route('/vocab/<question_id>/delete', methods=['POST'])
@@ -237,8 +259,9 @@ def vocab_template():
     ws.title = '어휘퀴즈'
 
     headers = ['제목', '단어', '뜻(정답)', '보기1', '보기2', '보기3', '보기4',
-               '정답번호(1~4)', '난이도(easy/medium/hard)', '주차(숫자)', '태그(쉼표구분)']
-    col_widths = [25, 15, 25, 20, 20, 20, 20, 16, 22, 12, 25]
+               '정답번호(1~4)', '난이도(easy/medium/hard)', '주차(숫자)', '태그(쉼표구분)',
+               '대분류', '중분류', '소분류']
+    col_widths = [25, 15, 25, 20, 20, 20, 20, 16, 22, 12, 25, 22, 20, 18]
 
     header_fill = PatternFill('solid', fgColor='4F46E5')
     header_font = Font(bold=True, color='FFFFFF', size=10)
@@ -259,11 +282,14 @@ def vocab_template():
     # 예시 데이터 3행
     samples = [
         ['호기심 많은 소년 - 어휘1', '탐구하다', '무엇인가를 깊이 파고들어 연구하다',
-         '탐구하다', '포기하다', '무시하다', '즐기다', 1, 'medium', 1, '독서,어휘'],
-        ['호기심 많은 소년 - 어휘2', '성취감', '목표를 이루었을 때 느끼는 만족감',
-         '허탈감', '성취감', '외로움', '두려움', 2, 'easy', 1, '감정,독서'],
-        ['호기심 많은 소년 - 어휘3', '도전', '어려운 상황에 맞서 싸우는 행위',
-         '회피', '안주', '도전', '포기', 3, 'hard', 2, ''],
+         '탐구하다', '포기하다', '무시하다', '즐기다', 1, 'medium', 1, '독서,어휘',
+         '배경지식·스키마 어휘', '문학', '소설'],
+        ['분석하다 - 도구어1', '분석하다', '대상을 여러 요소로 나누어 살펴보다',
+         '분석하다', '회피하다', '포기하다', '나열하다', 1, 'medium', '', '',
+         '학습 도구어', '사고·인지 동사', '분석'],
+        ['인과 관계 - 접속어', '따라서', '앞의 내용이 원인이 되어 결론을 이끄는 말',
+         '그러나', '반면에', '따라서', '또한', 3, 'easy', '', '',
+         '학습 도구어', '접속·연결어', '인과'],
     ]
     for row_num, row_data in enumerate(samples, 2):
         for col, val in enumerate(row_data, 1):
@@ -284,6 +310,9 @@ def vocab_template():
         ('난이도', 'easy / medium / hard 중 하나 (빈칸이면 medium)', 'X'),
         ('주차', '커리큘럼 주차 숫자 (빈칸 가능)', 'X'),
         ('태그', '쉼표로 구분 (예: 독서,어휘,초등)', 'X'),
+        ('대분류', '배경지식·스키마 어휘 또는 학습 도구어', 'X'),
+        ('중분류', '대분류에 속하는 중분류 (예: 문학, 사고·인지 동사)', 'X'),
+        ('소분류', '중분류에 속하는 소분류 (예: 소설, 분석)', 'X'),
     ]
     ws2.column_dimensions['A'].width = 14
     ws2.column_dimensions['B'].width = 55
@@ -336,6 +365,9 @@ def vocab_bulk_upload():
         difficulty  = str(row[8]).strip().lower() if row[8] else 'medium'
         week_num    = int(row[9]) if row[9] and str(row[9]).strip().isdigit() else None
         tags        = str(row[10]).strip() if row[10] else ''
+        cat_large   = str(row[11]).strip() if len(row) > 11 and row[11] else None
+        cat_medium  = str(row[12]).strip() if len(row) > 12 and row[12] else None
+        cat_small   = str(row[13]).strip() if len(row) > 13 and row[13] else None
 
         # 필수값 검증
         if not title or not word or not definition:
@@ -360,6 +392,9 @@ def vocab_bulk_upload():
             difficulty=difficulty,
             week_num=week_num,
             tags=tags or None,
+            cat_large=cat_large,
+            cat_medium=cat_medium,
+            cat_small=cat_small,
             data={'word': word, 'definition': definition,
                   'choices': choices, 'correct_idx': correct_idx},
             created_by=current_user.user_id,

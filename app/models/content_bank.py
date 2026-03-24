@@ -7,6 +7,22 @@ from app.models import db
 
 # ─── 어휘/독서/서술형 문제은행 ───────────────────────────
 
+# 어휘 퀴즈 대/중/소 분류 체계
+VOCAB_CATEGORIES = {
+    '배경지식·스키마 어휘': {
+        '문학': ['동화·아동문학', '소설', '시·시조', '수필·기행문'],
+        '비문학': ['사회·경제', '과학·기술', '역사·문화', '예술·체육', '철학·윤리'],
+        '어법·표현': ['사자성어·속담', '관용어', '한자어', '외래어'],
+    },
+    '학습 도구어': {
+        '사고·인지 동사': ['분석', '비교·대조', '추론', '평가', '종합', '적용'],
+        '텍스트 구조어': ['원인·결과', '과정·단계', '특징·차이', '분류·유형', '문제·해결'],
+        '논증·담화어': ['주장·근거', '반론·반박', '결론·요약', '전제·가정'],
+        '접속·연결어': ['인과', '역접', '나열·예시', '강조'],
+        '메타 개념어': ['관점·입장', '맥락·배경', '해석·의미', '가치·판단'],
+    },
+}
+
 BANK_QUESTION_TYPES = [
     ('vocab_quiz',   '어휘 퀴즈'),
     ('reading_quiz', '독서 퀴즈'),
@@ -36,6 +52,11 @@ class BankQuestion(db.Model):
     title = db.Column(db.String(200), nullable=False)  # 문항 제목/분류
     difficulty = db.Column(db.String(10), nullable=True, default='medium')
     tags = db.Column(db.String(300), nullable=True)    # 쉼표 구분
+
+    # 대/중/소 분류 (어휘 퀴즈 전용)
+    cat_large  = db.Column(db.String(30), nullable=True)   # 배경지식·스키마 어휘 / 학습 도구어
+    cat_medium = db.Column(db.String(30), nullable=True)   # 문학 / 비문학 / 사고·인지 동사 등
+    cat_small  = db.Column(db.String(30), nullable=True)   # 소설 / 원인·결과 등
 
     # 타입별 JSON 데이터
     # vocab_quiz:   {word, definition, choices:[str×4], correct_idx:0~3}
