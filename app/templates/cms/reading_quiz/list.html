@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block title %}독서 퀴즈 관리{% endblock %}
+{% block content %}
+{% include 'cms/_subnav.html' %}
+
+<div class="flex items-center justify-between mb-4">
+    <h2 class="text-xl font-bold text-gray-800">독서 퀴즈 관리</h2>
+    <span class="text-sm text-gray-500">총 {{ questions|length }}개</span>
+</div>
+
+<div class="flex flex-wrap gap-2 mb-4">
+    <form method="GET" class="flex gap-2">
+        <input type="text" name="q" value="{{ q }}" placeholder="검색..."
+               class="border border-gray-200 rounded-lg px-3 py-2 text-sm w-44 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        <select name="book_id" class="border border-gray-200 rounded-lg px-3 py-2 text-sm">
+            <option value="">전체 도서</option>
+            {% for book in books %}
+            <option value="{{ book.book_id }}" {% if book_id == book.book_id %}selected{% endif %}>{{ book.title }}</option>
+            {% endfor %}
+        </select>
+        <button class="bg-gray-700 text-white px-3 py-2 rounded-lg text-sm">검색</button>
+    </form>
+    <a href="{{ url_for('cms.reading_quiz_new') }}"
+       class="ml-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ 등록</a>
+</div>
+
+{% if questions %}
+<div class="space-y-3">
+    {% for q in questions %}
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+        <div class="flex items-start justify-between gap-3">
+            <div class="flex-1 min-w-0">
+                <div class="font-medium text-gray-800 text-sm">{{ q.title }}</div>
+                <div class="text-xs text-gray-500 mt-0.5 line-clamp-2">
+                    {{ (q.data or {}).get('question', '-') }}
+                </div>
+                <div class="flex gap-2 mt-1">
+                    {% if q.book %}<span class="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded">{{ q.book.title }}</span>{% endif %}
+                    {% if q.week_num %}<span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded">{{ q.week_num }}주차</span>{% endif %}
+                    <span class="text-xs px-2 py-0.5 rounded
+                        {% if q.difficulty == 'easy' %}bg-green-100 text-green-700
+                        {% elif q.difficulty == 'hard' %}bg-red-100 text-red-700
+                        {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                        {{ q.difficulty_display }}
+                    </span>
+                </div>
+            </div>
+            <div class="flex gap-2 flex-shrink-0">
+                <a href="{{ url_for('cms.reading_quiz_edit', question_id=q.question_id) }}"
+                   class="text-xs text-indigo-600 hover:underline">수정</a>
+                <form method="POST" action="{{ url_for('cms.reading_quiz_delete', question_id=q.question_id) }}"
+                      class="inline" onsubmit="return confirm('삭제할까요?')">
+                    <button class="text-xs text-red-500 hover:underline">삭제</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-white rounded-xl border border-gray-100 p-12 text-center text-gray-400">
+    <div class="text-3xl mb-2">📚</div><div>등록된 독서 퀴즈가 없습니다.</div>
+</div>
+{% endif %}
+{% endblock %}

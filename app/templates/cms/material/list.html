@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% block title %}학습 교재 관리{% endblock %}
+{% block content %}
+{% include 'cms/_subnav.html' %}
+<div class="flex items-center justify-between mb-4">
+    <h2 class="text-xl font-bold text-gray-800">학습 교재 관리</h2>
+    <span class="text-sm text-gray-500">총 {{ materials|length }}개</span>
+</div>
+<div class="flex flex-wrap gap-2 mb-4">
+    <form method="GET" class="flex gap-2">
+        <input type="text" name="q" value="{{ q }}" placeholder="검색..."
+               class="border border-gray-200 rounded-lg px-3 py-2 text-sm w-44 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        <select name="book_id" class="border border-gray-200 rounded-lg px-3 py-2 text-sm">
+            <option value="">전체 도서</option>
+            {% for book in books %}
+            <option value="{{ book.book_id }}" {% if book_id == book.book_id %}selected{% endif %}>{{ book.title }}</option>
+            {% endfor %}
+        </select>
+        <button class="bg-gray-700 text-white px-3 py-2 rounded-lg text-sm">검색</button>
+    </form>
+    <a href="{{ url_for('cms.material_new') }}"
+       class="ml-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ 업로드</a>
+</div>
+
+{% if materials %}
+<div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50 border-b border-gray-100">
+            <tr>
+                <th class="text-left px-5 py-3 text-gray-600 font-medium">제목</th>
+                <th class="text-left px-4 py-3 text-gray-600 font-medium">파일</th>
+                <th class="text-left px-4 py-3 text-gray-600 font-medium">연결 도서</th>
+                <th class="text-center px-3 py-3 text-gray-600 font-medium">주차</th>
+                <th class="text-center px-3 py-3 text-gray-600 font-medium">다운로드</th>
+                <th class="text-center px-3 py-3 text-gray-600 font-medium">공개</th>
+                <th class="text-center px-3 py-3 text-gray-600 font-medium">관리</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+            {% for m in materials %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-5 py-3">
+                    <div class="font-medium text-gray-800">{{ m.title }}</div>
+                    {% if m.description %}
+                    <div class="text-xs text-gray-400 mt-0.5 truncate max-w-xs">{{ m.description }}</div>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3">
+                    <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded uppercase font-medium">{{ m.file_type or '?' }}</span>
+                    <span class="text-xs text-gray-400 ml-1">{{ m.file_size_display }}</span>
+                </td>
+                <td class="px-4 py-3 text-gray-500 text-xs">{{ m.book.title if m.book else '-' }}</td>
+                <td class="px-3 py-3 text-center text-xs text-gray-500">{{ m.week_num ~ '주' if m.week_num else '-' }}</td>
+                <td class="px-3 py-3 text-center text-gray-500 text-xs">{{ m.download_count }}</td>
+                <td class="px-3 py-3 text-center">
+                    <button onclick="togglePublish('{{ m.material_id }}', this)"
+                            class="text-xs {% if m.is_published %}text-green-600{% else %}text-gray-400{% endif %} hover:underline">
+                        {{ '공개' if m.is_published else '비공개' }}
+                    </button>
+                </td>
+                <td class="px-3 py-3 text-center">
+                    <a href="{{ url_for('cms.material_download', material_id=m.material_id) }}"
+                       class="text-xs text-gray-500 hover:underline mr-1">다운</a>
+                    <a href="{{ url_for('cms.material_edit', material_id=m.material_id) }}"
+                       class="text-xs text-indigo-600 hover:underline mr-1">수정</a>
+                    <form method="POST" action="{{ url_for('cms.material_delete', material_id=m.material_id) }}"
+                          class="inline" onsubmit="return confirm('삭제할까요?')">
+                        <button class="text-xs text-red-500 hover:underline">삭제</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="bg-white rounded-xl border border-gray-100 p-12 text-center text-gray-400">
+    <div class="text-3xl mb-2">🗂️</div><div>등록된 교재가 없습니다.</div>
+</div>
+{% endif %}
+
+<script>
+function togglePublish(id, btn) {
+    fetch(`/cms/materials/${id}/toggle-publish`, {method:'POST'})
+        .then(r => r.json())
+        .then(d => location.reload());
+}
+</script>
+{% endblock %}

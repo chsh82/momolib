@@ -79,6 +79,19 @@
                        class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
             <div>
+                <label class="block text-xs text-gray-500 mb-1">담당 강사 배정</label>
+                <select name="assigned_teacher_id"
+                        class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="">미배정</option>
+                    {% for t in all_teachers %}
+                    <option value="{{ t.user_id }}"
+                        {% if member.student_profile.assigned_teacher_id == t.user_id %}selected{% endif %}>
+                        {{ t.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
                 <label class="block text-xs text-gray-500 mb-1">메모</label>
                 <textarea name="notes" rows="2"
                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ member.student_profile.notes or '' }}</textarea>

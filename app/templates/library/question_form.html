@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block title %}문항 {{ '수정' if question else '추가' }}{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{{ url_for('library.question_list', content_id=content.content_id) }}" class="text-sm text-gray-500 hover:text-indigo-600">← 문항 목록</a>
+</div>
+<h2 class="text-xl font-bold text-gray-800 mb-6">문항 {{ '수정' if question else '추가' }} ({{ content.type_display }})</h2>
+
+<div class="max-w-xl bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+    <form method="POST"
+          action="{{ url_for('library.question_edit', question_id=question.question_id) if question else url_for('library.question_new', content_id=content.content_id) }}">
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">문항 텍스트 *</label>
+                <textarea name="question_text" rows="3" required
+                          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ question.question_text if question else '' }}</textarea>
+            </div>
+
+            {% if content.type == 'quiz' %}
+            <div id="quiz-choices">
+                <label class="block text-xs text-gray-500 mb-1">선택지 (정답에 체크)</label>
+                {% set existing_choices = question.choices if question and question.choices else [] %}
+                {% for i in range(5) %}
+                {% set c = existing_choices[i] if i < existing_choices|length else {'text': '', 'is_correct': false} %}
+                <div class="flex items-center gap-2 mb-2">
+                    <input type="checkbox" name="correct_{{ i }}" {% if c.is_correct %}checked{% endif %}>
+                    <input type="text" name="choice_{{ i }}" value="{{ c.text }}"
+                           placeholder="{{ i+1 }}번 선택지"
+                           class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                {% endfor %}
+            </div>
+
+            {% elif content.type == 'initial_quiz' %}
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">정답 (초성)</label>
+                <input type="text" name="initial_answer"
+                       value="{{ question.choices.answer if question and question.choices else '' }}"
+                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">힌트</label>
+                <input type="text" name="hint"
+                       value="{{ question.choices.hint if question and question.choices else '' }}"
+                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+
+            {% elif content.type == 'vocab_quiz' %}
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">어휘 단어</label>
+                <input type="text" name="word"
+                       value="{{ question.choices.word if question and question.choices else '' }}"
+                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">선택지 (4개)</label>
+                {% set vc = question.choices if question and question.choices else {} %}
+                {% for i in range(4) %}
+                {% set choices_list = vc.choices if vc.choices else [] %}
+                <input type="text" name="choice_{{ i }}"
+                       value="{{ choices_list[i] if i < choices_list|length else '' }}"
+                       placeholder="{{ i+1 }}번 선택지"
+                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                {% endfor %}
+                <label class="block text-xs text-gray-500 mb-1">정답 번호 (0부터)</label>
+                <input type="number" name="correct_idx" min="0" max="3"
+                       value="{{ vc.correct_idx if vc.correct_idx is defined else 0 }}"
+                       class="w-24 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            {% endif %}
+
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">해설</label>
+                <textarea name="explanation" rows="2"
+                          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ question.explanation or '' if question else '' }}</textarea>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">순서</label>
+                <input type="number" name="order_num" value="{{ question.order_num if question else 0 }}"
+                       class="w-24 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+        </div>
+
+        <button type="submit"
+                class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg text-sm">
+            저장
+        </button>
+    </form>
+</div>
+{% endblock %}

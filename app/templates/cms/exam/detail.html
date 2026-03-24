@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+{% block title %}{{ exam.title }} - 모의고사{% endblock %}
+{% block content %}
+{% include 'cms/_subnav.html' %}
+
+<div class="mb-4 flex items-center justify-between flex-wrap gap-3">
+    <div>
+        <a href="{{ url_for('cms.mock_exam_list') }}" class="text-sm text-gray-500 hover:text-indigo-600">← 모의고사 목록</a>
+        <h2 class="text-xl font-bold text-gray-800 mt-1">{{ exam.title }}</h2>
+        <div class="flex gap-2 mt-1 text-xs text-gray-500">
+            <span>문항 {{ exam.question_count }}개</span>
+            <span>·</span><span>총점 {{ exam.total_score|int }}점</span>
+            {% if exam.time_limit_minutes %}<span>·</span><span>{{ exam.time_limit_minutes }}분</span>{% endif %}
+            <span>·</span>
+            <span class="{% if exam.is_published %}text-green-600{% else %}text-gray-400{% endif %}">
+                {{ '공개' if exam.is_published else '비공개' }}
+            </span>
+        </div>
+    </div>
+    <div class="flex gap-2">
+        <a href="{{ url_for('cms.mock_exam_import', exam_id=exam.exam_id) }}"
+           class="border border-indigo-200 text-indigo-600 px-3 py-2 rounded-lg text-sm hover:bg-indigo-50">
+            📥 엑셀 일괄 입력
+        </a>
+        <a href="{{ url_for('cms.mock_exam_edit', exam_id=exam.exam_id) }}"
+           class="border border-gray-200 text-gray-600 px-3 py-2 rounded-lg text-sm hover:bg-gray-50">수정</a>
+    </div>
+</div>
+
+<!-- 문항 추가 폼 -->
+<div class="bg-indigo-50 border border-indigo-200 rounded-xl p-5 mb-6">
+    <div class="font-semibold text-indigo-700 text-sm mb-3">문항 직접 추가</div>
+    <form method="POST" action="{{ url_for('cms.mock_exam_add_question', exam_id=exam.exam_id) }}" id="add-question-form">
+        <div class="space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">문항 유형</label>
+                    <select name="question_type" id="qtype-select" onchange="toggleQType()"
+                            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none">
+                        {% for val, label in question_types %}
+                        <option value="{{ val }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">배점</label>
+                    <input type="number" name="score" value="1" step="0.5"
+                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none">
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">지문 (선택)</label>
+                <textarea name="passage" rows="2"
+                          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none"
+                          placeholder="독해 지문 (없으면 비워두세요)"></textarea>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">문제 *</label>
+                <textarea name="question_text" rows="2" required
+                          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none"></textarea>
+            </div>
+
+            <!-- 객관식 보기 -->
+            <div id="choices-block">
+                <label class="block text-xs text-gray-500 mb-1">보기 (객관식)</label>
+                {% for i in range(4) %}
+                <input type="text" name="choice_{{ i }}" placeholder="{{ i+1 }}번 보기"
+                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white mb-1 focus:outline-none">
+                {% endfor %}
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">정답 (객관식: 1~4, 단답: 텍스트)</label>
+                    <input type="text" name="correct_answer"
+                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">해설 (선택)</label>
+                    <input type="text" name="explanation"
+                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none">
+                </div>
+            </div>
+        </div>
+        <button type="submit" class="mt-3 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm font-medium">
+            문항 추가
+        </button>
+    </form>
+</div>
+
+<!-- 문항 목록 -->
+{% if exam.questions %}
+<div class="space-y-2">
+    {% for q in exam.questions %}
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex gap-3">
+        <div class="text-gray-400 text-sm font-medium w-8 flex-shrink-0 pt-0.5">{{ loop.index }}</div>
+        <div class="flex-1 min-w-0">
+            {% if q.passage %}
+            <div class="text-xs text-gray-400 mb-1 line-clamp-1 bg-gray-50 px-2 py-1 rounded">지문: {{ q.passage }}</div>
+            {% endif %}
+            <div class="text-sm text-gray-800">{{ q.question_text }}</div>
+            {% if q.choices %}
+            <div class="mt-1 flex flex-wrap gap-1">
+                {% for c in q.choices %}
+                <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{{ loop.index }}) {{ c }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <div class="flex gap-3 mt-1 text-xs text-gray-400">
+                <span class="text-green-600">정답: {{ q.correct_answer or '-' }}</span>
+                <span>{{ q.type_display }}</span>
+                <span>{{ q.score|int }}점</span>
+            </div>
+        </div>
+        <form method="POST" action="{{ url_for('cms.mock_exam_delete_question', mq_id=q.mq_id) }}"
+              class="flex-shrink-0" onsubmit="return confirm('삭제할까요?')">
+            <button class="text-xs text-red-400 hover:text-red-600">삭제</button>
+        </form>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-white rounded-xl border border-gray-100 p-10 text-center text-gray-400 text-sm">
+    아직 문항이 없습니다. 위에서 직접 추가하거나 엑셀로 일괄 입력하세요.
+</div>
+{% endif %}
+
+<script>
+function toggleQType() {
+    const type = document.getElementById('qtype-select').value;
+    document.getElementById('choices-block').style.display = (type === 'multiple_choice') ? 'block' : 'none';
+}
+toggleQType();
+</script>
+{% endblock %}

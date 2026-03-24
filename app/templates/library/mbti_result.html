@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block title %}독서MBTI 결과{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto py-6">
+    <div class="text-center mb-8">
+        <div class="text-6xl mb-3">{{ type_info.emoji if type_info else '📚' }}</div>
+        <h2 class="text-2xl font-bold text-gray-800">
+            {{ type_info.type_name if type_info else '나의 독서 유형' }}
+        </h2>
+        <p class="text-sm text-gray-500 mt-1">측정일: {{ result.submitted_at.strftime('%Y-%m-%d') }}</p>
+    </div>
+
+    <!-- 영역별 수준 -->
+    <div class="grid grid-cols-3 gap-3 mb-6">
+        {% set levels = result.level_display %}
+        {% set level_colors = {'초급': 'bg-yellow-50 border-yellow-200 text-yellow-700', '중급': 'bg-blue-50 border-blue-200 text-blue-700', '고급': 'bg-purple-50 border-purple-200 text-purple-700'} %}
+        {% for domain, label in [('reading', '독해력'), ('thinking', '사고력'), ('writing', '서술력')] %}
+        {% set lv = levels[domain] %}
+        <div class="rounded-xl border p-4 text-center {{ level_colors.get(lv, 'bg-gray-50 border-gray-200 text-gray-700') }}">
+            <div class="text-xs mb-1">{{ label }}</div>
+            <div class="font-bold text-lg">{{ lv }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if type_info %}
+    <!-- 유형 설명 -->
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-4">
+        {% if type_info.description %}
+        <div>
+            <div class="text-xs font-semibold text-gray-500 mb-1">유형 설명</div>
+            <p class="text-sm text-gray-700 leading-relaxed">{{ type_info.description }}</p>
+        </div>
+        {% endif %}
+        {% if type_info.strengths %}
+        <div>
+            <div class="text-xs font-semibold text-green-600 mb-1">강점</div>
+            <p class="text-sm text-gray-700 leading-relaxed">{{ type_info.strengths }}</p>
+        </div>
+        {% endif %}
+        {% if type_info.weaknesses %}
+        <div>
+            <div class="text-xs font-semibold text-orange-600 mb-1">보완할 점</div>
+            <p class="text-sm text-gray-700 leading-relaxed">{{ type_info.weaknesses }}</p>
+        </div>
+        {% endif %}
+        {% if type_info.recommendation %}
+        <div class="bg-indigo-50 rounded-xl p-4">
+            <div class="text-xs font-semibold text-indigo-600 mb-1">추천 학습 방향</div>
+            <p class="text-sm text-indigo-800 leading-relaxed">{{ type_info.recommendation }}</p>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="flex gap-3 mt-6">
+        <a href="{{ url_for('library.mbti_intro') }}"
+           class="flex-1 text-center border border-gray-200 text-gray-600 py-2 rounded-xl text-sm hover:bg-gray-50">
+            다시 테스트
+        </a>
+        <a href="{{ url_for('library.my_analytics') }}"
+           class="flex-1 text-center bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-xl text-sm font-medium">
+            학습 분석 보기
+        </a>
+    </div>
+</div>
+{% endblock %}

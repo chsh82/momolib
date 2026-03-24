@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block title %}강의 영상 관리{% endblock %}
+{% block content %}
+{% include 'cms/_subnav.html' %}
+
+<div class="flex items-center justify-between mb-4">
+    <h2 class="text-xl font-bold text-gray-800">독서 강의 영상 관리</h2>
+</div>
+<div class="flex flex-wrap gap-2 mb-4">
+    <form method="GET" class="flex gap-2">
+        <input type="text" name="q" value="{{ q }}" placeholder="검색..."
+               class="border border-gray-200 rounded-lg px-3 py-2 text-sm w-44 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        <select name="book_id" class="border border-gray-200 rounded-lg px-3 py-2 text-sm">
+            <option value="">전체 도서</option>
+            {% for book in books %}
+            <option value="{{ book.book_id }}" {% if book_id == book.book_id %}selected{% endif %}>{{ book.title }}</option>
+            {% endfor %}
+        </select>
+        <button class="bg-gray-700 text-white px-3 py-2 rounded-lg text-sm">검색</button>
+    </form>
+    <a href="{{ url_for('cms.video_new') }}"
+       class="ml-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ 등록</a>
+</div>
+
+{% if videos %}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for v in videos %}
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        {% if v.thumbnail_url %}
+        <img src="{{ v.thumbnail_url }}" class="w-full h-36 object-cover">
+        {% elif v.is_youtube and v.youtube_id %}
+        <img src="https://img.youtube.com/vi/{{ v.youtube_id }}/mqdefault.jpg"
+             class="w-full h-36 object-cover">
+        {% else %}
+        <div class="w-full h-36 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-3xl">🎬</div>
+        {% endif %}
+        <div class="p-4">
+            <div class="font-medium text-gray-800 text-sm line-clamp-1">{{ v.title }}</div>
+            <div class="text-xs text-gray-400 mt-0.5">{{ v.duration_display }}
+                {% if v.book %}· {{ v.book.title }}{% endif %}
+                {% if v.week_num %}· {{ v.week_num }}주차{% endif %}
+            </div>
+            <div class="flex items-center justify-between mt-3">
+                <span class="text-xs {% if v.is_published %}text-green-600{% else %}text-gray-400{% endif %}">
+                    {{ '공개' if v.is_published else '비공개' }}
+                </span>
+                <div class="flex gap-2">
+                    <button onclick="togglePublish('{{ v.video_id }}', this)"
+                            data-published="{{ 'true' if v.is_published else 'false' }}"
+                            class="text-xs text-gray-500 hover:text-indigo-600">
+                        {{ '비공개로' if v.is_published else '공개' }}
+                    </button>
+                    <a href="{{ url_for('cms.video_edit', video_id=v.video_id) }}"
+                       class="text-xs text-indigo-600 hover:underline">수정</a>
+                    <form method="POST" action="{{ url_for('cms.video_delete', video_id=v.video_id) }}"
+                          class="inline" onsubmit="return confirm('삭제할까요?')">
+                        <button class="text-xs text-red-500 hover:underline">삭제</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-white rounded-xl border border-gray-100 p-12 text-center text-gray-400">
+    <div class="text-3xl mb-2">🎬</div><div>등록된 영상이 없습니다.</div>
+</div>
+{% endif %}
+
+<script>
+function togglePublish(id, btn) {
+    fetch(`/cms/videos/${id}/toggle-publish`, {method:'POST'})
+        .then(r => r.json())
+        .then(d => location.reload());
+}
+</script>
+{% endblock %}

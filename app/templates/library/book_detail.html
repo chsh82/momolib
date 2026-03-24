@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% block title %}{{ book.title }}{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{{ url_for('library.book_list') }}" class="text-sm text-gray-500 hover:text-indigo-600">← 도서 목록</a>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <!-- 도서 정보 -->
+    <div class="lg:col-span-1">
+        {% if book.cover_image_url %}
+        <img src="{{ book.cover_image_url }}" alt="{{ book.title }}"
+             class="w-full rounded-xl shadow-sm mb-4 object-cover">
+        {% else %}
+        <div class="w-full h-56 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-xl flex items-center justify-center text-5xl mb-4">
+            📚
+        </div>
+        {% endif %}
+        <h2 class="text-xl font-bold text-gray-800">{{ book.title }}</h2>
+        <p class="text-sm text-gray-500 mt-1">{{ book.author or '-' }}</p>
+        <div class="mt-3 space-y-1 text-sm text-gray-600">
+            <div>출판사: {{ book.publisher or '-' }}</div>
+            <div>출판연도: {{ book.publication_year or '-' }}</div>
+            <div>장르: <span class="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded text-xs">{{ book.genre_display }}</span></div>
+            <div>수준: <span class="bg-green-50 text-green-600 px-2 py-0.5 rounded text-xs">{{ book.level_display }}</span></div>
+        </div>
+        {% if book.description %}
+        <p class="mt-3 text-sm text-gray-600 leading-relaxed">{{ book.description }}</p>
+        {% endif %}
+        {% if current_user.is_hq %}
+        <div class="mt-4 flex gap-2">
+            <a href="{{ url_for('library.book_edit', book_id=book.book_id) }}"
+               class="flex-1 text-center bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm">수정</a>
+            <form method="POST" action="{{ url_for('library.book_delete', book_id=book.book_id) }}"
+                  onsubmit="return confirm('삭제할까요?')">
+                <button type="submit" class="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-2 rounded-lg text-sm">삭제</button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 콘텐츠 목록 -->
+    <div class="lg:col-span-3">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-gray-700">학습 콘텐츠</h3>
+            {% if current_user.is_hq %}
+            <a href="{{ url_for('library.content_new', book_id=book.book_id) }}"
+               class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs">+ 콘텐츠 추가</a>
+            {% endif %}
+        </div>
+
+        {% if book.contents %}
+        <div class="space-y-3">
+            {% for content in book.contents %}
+            <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-center gap-4">
+                <div class="text-2xl">{{ content.type_icon }}</div>
+                <div class="flex-1 min-w-0">
+                    <div class="font-medium text-gray-800 text-sm">{{ content.title }}</div>
+                    <div class="text-xs text-gray-400 mt-0.5">{{ content.type_display }}
+                        {% if content.type in ('quiz', 'initial_quiz', 'vocab_quiz') %}
+                        · 문항 {{ content.questions|length }}개
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    {% if content.is_published %}
+                    <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">공개</span>
+                    {% else %}
+                    <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded">비공개</span>
+                    {% endif %}
+                    {% if current_user.is_hq %}
+                    <a href="{{ url_for('library.content_edit', content_id=content.content_id) }}"
+                       class="text-xs text-indigo-600 hover:underline">수정</a>
+                    {% if content.type in ('quiz', 'initial_quiz', 'vocab_quiz') %}
+                    <a href="{{ url_for('library.question_list', content_id=content.content_id) }}"
+                       class="text-xs text-purple-600 hover:underline">문항 관리</a>
+                    {% endif %}
+                    <form method="POST" action="{{ url_for('library.content_delete', content_id=content.content_id) }}"
+                          class="inline" onsubmit="return confirm('삭제할까요?')">
+                        <button type="submit" class="text-xs text-red-500 hover:underline">삭제</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="bg-white rounded-xl border border-gray-100 p-10 text-center text-gray-400">
+            <div class="text-3xl mb-2">📝</div>
+            <div class="text-sm">아직 등록된 콘텐츠가 없습니다.</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

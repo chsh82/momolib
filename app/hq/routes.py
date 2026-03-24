@@ -17,27 +17,64 @@ from datetime import datetime
 @login_required
 @requires_role('super_admin', 'hq_manager', 'hq_essay_manager')
 def dashboard():
-    total_branches = Branch.query.filter_by(status='active').count()
-    total_users = User.query.filter(User.branch_id.isnot(None)).count()
-    branches = Branch.query.order_by(Branch.created_at.desc()).limit(10).all()
-
-    # 이번 달 전체 매출 합계
+    from app.models.essay import Essay
     now = datetime.utcnow()
+
+    # 전체 지표
+    total_branches = Branch.query.filter_by(status='active').count()
+    total_students = User.query.filter(
+        User.branch_id.isnot(None), User.role == 'student').count()
+    total_essays = Essay.query.count()
+
+    # 첨삭 상태별 건수
+    essay_counts = {}
+    for s in ('draft', 'processing', 'reviewing', 'completed', 'failed'):
+        essay_counts[s] = Essay.query.filter(Essay.status == s).count()
+
+    # 이번 달 매출
     monthly_records = RevenueRecord.query.filter_by(
         period_year=now.year, period_month=now.month).all()
     total_gross = sum(r.gross_amount for r in monthly_records)
     total_royalty = sum(r.royalty_amount for r in monthly_records)
-
-    # 미확정 정산 건수
     pending_count = RevenueRecord.query.filter_by(status='pending').count()
+
+    # 지점별 KPI
+    branches = Branch.query.filter_by(status='active').order_by(Branch.code).all()
+    branch_kpi = []
+    for b in branches:
+        students = User.query.filter_by(branch_id=b.branch_id, role='student').count()
+        b_essays = Essay.query.filter_by(branch_id=b.branch_id).count()
+        b_completed = Essay.query.filter_by(
+            branch_id=b.branch_id, status='completed').count()
+        b_pending = Essay.query.filter_by(
+            branch_id=b.branch_id, status='draft').count()
+        this_month = RevenueRecord.query.filter_by(
+            branch_id=b.branch_id,
+            period_year=now.year, period_month=now.month).first()
+        branch_kpi.append({
+            'branch': b,
+            'students': students,
+            'essays': b_essays,
+            'completed': b_completed,
+            'pending': b_pending,
+            'gross': this_month.gross_amount if this_month else 0,
+            'royalty': this_month.royalty_amount if this_month else 0,
+        })
+
+    # 최근 첨삭 (전체)
+    recent_essays = Essay.query.order_by(Essay.created_at.desc()).limit(8).all()
 
     return render_template('hq/dashboard.html',
                            total_branches=total_branches,
-                           total_users=total_users,
-                           branches=branches,
+                           total_students=total_students,
+                           total_essays=total_essays,
+                           essay_counts=essay_counts,
                            total_gross=total_gross,
                            total_royalty=total_royalty,
-                           pending_count=pending_count)
+                           pending_count=pending_count,
+                           branch_kpi=branch_kpi,
+                           recent_essays=recent_essays,
+                           now=now)
 
 
 # ─── 지점 관리 ───────────────────────────────────────────────

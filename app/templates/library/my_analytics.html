@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% block title %}학습 분석{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">내 학습 분석</h2>
+    <p class="text-sm text-gray-500 mt-1">나의 독서 및 학습 활동을 분석합니다.</p>
+</div>
+
+<!-- 요약 카드 -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+        <div class="text-2xl font-bold text-gray-800">{{ records|length }}</div>
+        <div class="text-xs text-gray-500 mt-1">전체 독서</div>
+    </div>
+    <div class="bg-green-50 rounded-xl border border-green-100 shadow-sm p-5">
+        <div class="text-2xl font-bold text-green-700">{{ records|selectattr('status', 'equalto', 'completed')|list|length }}</div>
+        <div class="text-xs text-green-500 mt-1">완료한 책</div>
+    </div>
+    <div class="bg-indigo-50 rounded-xl border border-indigo-100 shadow-sm p-5">
+        <div class="text-2xl font-bold text-indigo-700">{{ completions|length }}</div>
+        <div class="text-xs text-indigo-500 mt-1">완료한 콘텐츠</div>
+    </div>
+    <div class="bg-purple-50 rounded-xl border border-purple-100 shadow-sm p-5">
+        <div class="text-2xl font-bold text-purple-700">{{ avg_pct ~ '%' if avg_pct is not none else '-' }}</div>
+        <div class="text-xs text-purple-500 mt-1">평균 퀴즈 점수</div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- 장르별 독서 -->
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        <h3 class="font-semibold text-gray-700 mb-4">장르별 독서</h3>
+        {% if genre_counts %}
+        <div class="space-y-2">
+            {% set max_count = genre_counts.values()|max %}
+            {% for genre, count in genre_counts.items() %}
+            <div class="flex items-center gap-2 text-sm">
+                <div class="w-20 text-gray-600 truncate">{{ genre }}</div>
+                <div class="flex-1 bg-gray-100 rounded-full h-2">
+                    <div class="bg-indigo-500 h-2 rounded-full" style="width: {{ (count / max_count * 100)|round|int }}%"></div>
+                </div>
+                <div class="w-6 text-right text-gray-500 text-xs">{{ count }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-sm text-gray-400">독서 기록이 없습니다.</p>
+        {% endif %}
+    </div>
+
+    <!-- 콘텐츠 유형별 -->
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        <h3 class="font-semibold text-gray-700 mb-4">콘텐츠 유형별 완료</h3>
+        {% if type_counts %}
+        <div class="space-y-2">
+            {% set max_tc = type_counts.values()|max %}
+            {% for ttype, count in type_counts.items() %}
+            <div class="flex items-center gap-2 text-sm">
+                <div class="w-24 text-gray-600 truncate">{{ ttype }}</div>
+                <div class="flex-1 bg-gray-100 rounded-full h-2">
+                    <div class="bg-purple-500 h-2 rounded-full" style="width: {{ (count / max_tc * 100)|round|int }}%"></div>
+                </div>
+                <div class="w-6 text-right text-gray-500 text-xs">{{ count }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-sm text-gray-400">완료한 콘텐츠가 없습니다.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 독서MBTI 결과 -->
+<div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-gray-700">독서MBTI</h3>
+        <a href="{{ url_for('library.mbti_intro') }}"
+           class="text-xs text-indigo-600 hover:underline">
+            {{ '다시 테스트' if mbti_result else '테스트 시작' }} →
+        </a>
+    </div>
+    {% if mbti_result %}
+    {% set type_info = mbti_result.type_info %}
+    <div class="flex items-center gap-4">
+        <div class="text-4xl">{{ type_info.emoji if type_info else '📚' }}</div>
+        <div>
+            <div class="font-bold text-gray-800">{{ type_info.type_name if type_info else mbti_result.type_code }}</div>
+            <div class="text-xs text-gray-500 mt-1">
+                독해력 {{ mbti_result.level_display.reading }} · 사고력 {{ mbti_result.level_display.thinking }} · 서술력 {{ mbti_result.level_display.writing }}
+            </div>
+        </div>
+        <a href="{{ url_for('library.mbti_result', result_id=mbti_result.result_id) }}"
+           class="ml-auto text-xs text-indigo-600 hover:underline">결과 보기</a>
+    </div>
+    {% else %}
+    <p class="text-sm text-gray-400">아직 독서MBTI를 측정하지 않았습니다. 테스트를 통해 나의 독서 유형을 알아보세요!</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -44,6 +44,7 @@
                 <th class="px-6 py-3 font-medium text-right">가맹비</th>
                 <th class="px-6 py-3 font-medium text-right">지점 수령액</th>
                 <th class="px-6 py-3 font-medium text-center">상태</th>
+                <th class="px-6 py-3 font-medium text-center">리포트</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
@@ -62,9 +63,13 @@
                         {{ r.display_status }}
                     </span>
                 </td>
+                <td class="px-6 py-4 text-center">
+                    <a href="{{ url_for('branch.revenue_report', year=r.period_year, month=r.period_month) }}"
+                       class="text-xs text-indigo-600 hover:underline">🖨️ 리포트</a>
+                </td>
             </tr>
             {% else %}
-            <tr><td colspan="6" class="px-6 py-10 text-center text-gray-400">{{ year }}년 정산 내역이 없습니다.</td></tr>
+            <tr><td colspan="7" class="px-6 py-10 text-center text-gray-400">{{ year }}년 정산 내역이 없습니다.</td></tr>
             {% endfor %}
         </tbody>
     </table>

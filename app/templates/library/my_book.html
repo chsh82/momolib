@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% block title %}{{ book.title }}{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{{ url_for('library.my_books') }}" class="text-sm text-gray-500 hover:text-indigo-600">← 내 독서 목록</a>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <!-- 도서 정보 -->
+    <div class="lg:col-span-1">
+        {% if book.cover_image_url %}
+        <img src="{{ book.cover_image_url }}" alt="{{ book.title }}"
+             class="w-full rounded-xl shadow-sm mb-4 object-cover">
+        {% else %}
+        <div class="w-full h-48 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-xl flex items-center justify-center text-5xl mb-4">
+            📚
+        </div>
+        {% endif %}
+        <h2 class="text-lg font-bold text-gray-800">{{ book.title }}</h2>
+        <p class="text-sm text-gray-500">{{ book.author or '-' }}</p>
+
+        <div class="mt-4">
+            {% if record.status == 'completed' %}
+            <div class="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
+                <div class="text-green-700 font-semibold text-sm">✓ 독서 완료</div>
+                <div class="text-xs text-green-500 mt-0.5">{{ record.finished_at.strftime('%Y-%m-%d') if record.finished_at else '' }}</div>
+                {% if record.rating %}
+                <div class="text-yellow-500 mt-1">{{ '★' * record.rating }}{{ '☆' * (5 - record.rating) }}</div>
+                {% endif %}
+            </div>
+            {% else %}
+            <button onclick="document.getElementById('finish-modal').classList.remove('hidden')"
+                    class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm font-medium">
+                ✓ 독서 완료하기
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 콘텐츠 -->
+    <div class="lg:col-span-3">
+        <h3 class="font-semibold text-gray-700 mb-4">학습 콘텐츠</h3>
+        {% set total_contents = contents|length %}
+        {% set done_count = contents|selectattr('content_id', 'in', completed_ids)|list|length %}
+        {% if total_contents > 0 %}
+        <div class="mb-4">
+            <div class="flex justify-between text-xs text-gray-500 mb-1">
+                <span>진행률</span>
+                <span>{{ done_count }}/{{ total_contents }}</span>
+            </div>
+            <div class="w-full bg-gray-100 rounded-full h-2">
+                <div class="bg-indigo-600 h-2 rounded-full transition-all"
+                     style="width: {{ (done_count / total_contents * 100)|round|int }}%"></div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="space-y-3">
+            {% for content in contents %}
+            {% set is_done = content.content_id in completed_ids %}
+            <a href="{{ url_for('library.content_play', content_id=content.content_id) }}"
+               class="flex items-center gap-3 bg-white rounded-xl border p-4 hover:shadow-sm transition
+               {% if is_done %}border-green-100 bg-green-50{% else %}border-gray-100{% endif %}">
+                <div class="text-2xl">{{ content.type_icon }}</div>
+                <div class="flex-1">
+                    <div class="font-medium text-sm text-gray-800">{{ content.title }}</div>
+                    <div class="text-xs text-gray-400 mt-0.5">{{ content.type_display }}</div>
+                </div>
+                {% if is_done %}
+                <span class="text-xs text-green-600 font-medium">완료 ✓</span>
+                {% else %}
+                <span class="text-xs text-indigo-500">→</span>
+                {% endif %}
+            </a>
+            {% else %}
+            <div class="text-center py-8 text-gray-400 text-sm">아직 학습 콘텐츠가 없습니다.</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- 독서 완료 모달 -->
+{% if record.status != 'completed' %}
+<div id="finish-modal" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div class="bg-white rounded-2xl p-6 w-80 shadow-xl">
+        <h3 class="font-bold text-gray-800 mb-4">독서 완료!</h3>
+        <form method="POST" action="{{ url_for('library.finish_reading', book_id=book.book_id) }}">
+            <div class="mb-4">
+                <label class="block text-xs text-gray-500 mb-2">별점</label>
+                <div class="flex gap-1">
+                    {% for i in range(1, 6) %}
+                    <label class="cursor-pointer">
+                        <input type="radio" name="rating" value="{{ i }}" class="sr-only">
+                        <span class="text-2xl text-gray-300 hover:text-yellow-400 rating-star" data-val="{{ i }}">★</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="mb-4">
+                <label class="block text-xs text-gray-500 mb-1">한 줄 감상</label>
+                <textarea name="review" rows="3" placeholder="책 소감을 남겨보세요..."
+                          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"></textarea>
+            </div>
+            <div class="flex gap-2">
+                <button type="button" onclick="document.getElementById('finish-modal').classList.add('hidden')"
+                        class="flex-1 border border-gray-200 text-gray-600 py-2 rounded-lg text-sm">취소</button>
+                <button type="submit"
+                        class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm font-medium">완료</button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+document.querySelectorAll('.rating-star').forEach(star => {
+    star.addEventListener('click', function() {
+        const val = parseInt(this.dataset.val);
+        document.querySelectorAll('.rating-star').forEach((s, i) => {
+            s.classList.toggle('text-yellow-400', i < val);
+            s.classList.toggle('text-gray-300', i >= val);
+        });
+        // 해당 radio 선택
+        document.querySelector(`input[name="rating"][value="${val}"]`).checked = true;
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

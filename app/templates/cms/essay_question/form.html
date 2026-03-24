@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}서술형 문항 {{ '수정' if question else '등록' }}{% endblock %}
+{% block content %}
+{% include 'cms/_subnav.html' %}
+<div class="mb-4">
+    <a href="{{ url_for('cms.essay_question_list') }}" class="text-sm text-gray-500 hover:text-indigo-600">← 서술형 문항 목록</a>
+</div>
+<h2 class="text-xl font-bold text-gray-800 mb-6">서술형 문항 {{ '수정' if question else '등록' }}</h2>
+
+{% set d = question.data if question else {} %}
+<div class="max-w-2xl bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+    <form method="POST">
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">문항 제목 *</label>
+                <input type="text" name="title" value="{{ question.title if question else '' }}" required
+                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">문제 지문 *</label>
+                <textarea name="prompt" rows="5" required
+                          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ d.get('prompt', '') }}</textarea>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">채점 기준 (루브릭)</label>
+                <textarea name="rubric" rows="4"
+                          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          placeholder="예: A(90~100점): 핵심 주제를 정확히 서술하고... B(70~89점): ...">{{ d.get('rubric', '') }}</textarea>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">예시 답안</label>
+                <textarea name="sample_answer" rows="3"
+                          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ d.get('sample_answer', '') }}</textarea>
+            </div>
+            <div class="grid grid-cols-4 gap-3">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">만점</label>
+                    <input type="number" name="max_score" value="{{ d.get('max_score', 100)|int }}"
+                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">난이도</label>
+                    <select name="difficulty" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+                        {% for val, label in difficulty_choices %}
+                        <option value="{{ val }}" {% if question and question.difficulty == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">연결 도서</label>
+                    <select name="book_id" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+                        <option value="">없음</option>
+                        {% for book in books %}
+                        <option value="{{ book.book_id }}" {% if question and question.book_id == book.book_id %}selected{% endif %}>{{ book.title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">주차</label>
+                    <input type="number" name="week_num" value="{{ question.week_num or '' if question else '' }}"
+                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">태그</label>
+                <input type="text" name="tags" value="{{ question.tags or '' if question else '' }}"
+                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+            </div>
+        </div>
+        <button type="submit" class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg text-sm">저장</button>
+    </form>
+</div>
+{% endblock %}

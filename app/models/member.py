@@ -33,6 +33,10 @@ class StudentProfile(db.Model):
     birth_date = db.Column(db.Date, nullable=True)
     notes = db.Column(db.Text, nullable=True)               # 강사용 메모
 
+    # 담당 강사 배정
+    assigned_teacher_id = db.Column(db.String(36),
+        db.ForeignKey('users.user_id', ondelete='SET NULL'), nullable=True)
+
     enrolled_at = db.Column(db.Date, nullable=True)         # 등록일
     status = db.Column(db.String(20), default='active')     # active / inactive / graduated
 
@@ -40,8 +44,10 @@ class StudentProfile(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
-    user = db.relationship('User', backref=db.backref('student_profile', uselist=False))
+    user = db.relationship('User', foreign_keys='StudentProfile.user_id',
+                           backref=db.backref('student_profile', uselist=False))
     branch = db.relationship('Branch', backref='student_profiles')
+    assigned_teacher = db.relationship('User', foreign_keys=[assigned_teacher_id])
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

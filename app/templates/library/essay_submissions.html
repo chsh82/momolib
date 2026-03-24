@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}서술형 제출 목록{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+    <h2 class="text-2xl font-bold text-gray-800">서술형 평가 제출 목록</h2>
+    <div class="flex gap-2">
+        <a href="{{ url_for('library.essay_submissions') }}"
+           class="border border-gray-200 text-gray-600 px-3 py-2 rounded-lg text-sm {% if not pending %}bg-gray-100{% endif %}">전체</a>
+        <a href="{{ url_for('library.essay_submissions', pending=1) }}"
+           class="border border-yellow-200 text-yellow-700 px-3 py-2 rounded-lg text-sm {% if pending %}bg-yellow-50{% endif %}">채점 대기</a>
+    </div>
+</div>
+
+{% if submissions %}
+<div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50 border-b border-gray-100">
+            <tr>
+                <th class="text-left px-5 py-3 font-medium text-gray-600">학생</th>
+                <th class="text-left px-5 py-3 font-medium text-gray-600">콘텐츠</th>
+                <th class="text-left px-5 py-3 font-medium text-gray-600">도서</th>
+                <th class="text-center px-4 py-3 font-medium text-gray-600">점수</th>
+                <th class="text-center px-4 py-3 font-medium text-gray-600">제출일</th>
+                <th class="text-center px-4 py-3 font-medium text-gray-600">채점</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+            {% for sub in submissions %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-5 py-3 font-medium text-gray-800">{{ sub.student.name }}</td>
+                <td class="px-5 py-3 text-gray-600 text-xs">{{ sub.content.title }}</td>
+                <td class="px-5 py-3 text-gray-500 text-xs">{{ sub.content.book.title }}</td>
+                <td class="px-4 py-3 text-center">
+                    {% if sub.score is not none %}
+                    <span class="font-bold text-indigo-700">{{ sub.score|int }}/{{ sub.max_score|int }}</span>
+                    {% else %}
+                    <span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">대기</span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3 text-center text-xs text-gray-400">
+                    {{ sub.submitted_at.strftime('%Y-%m-%d') }}
+                </td>
+                <td class="px-4 py-3 text-center">
+                    <a href="{{ url_for('library.essay_submission_grade', submission_id=sub.submission_id) }}"
+                       class="text-xs text-indigo-600 hover:underline">
+                        {{ '재채점' if sub.score is not none else '채점' }}
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="bg-white rounded-xl border border-gray-100 p-12 text-center text-gray-400">
+    <div class="text-4xl mb-2">✍️</div>
+    <div>제출된 서술형 평가가 없습니다.</div>
+</div>
+{% endif %}
+{% endblock %}

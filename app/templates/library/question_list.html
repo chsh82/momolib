@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}문항 관리 - {{ content.title }}{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{{ url_for('library.book_detail', book_id=content.book_id) }}" class="text-sm text-gray-500 hover:text-indigo-600">← {{ content.book.title }}</a>
+</div>
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h2 class="text-xl font-bold text-gray-800">문항 관리</h2>
+        <p class="text-sm text-gray-500">{{ content.title }} ({{ content.type_display }})</p>
+    </div>
+    <a href="{{ url_for('library.question_new', content_id=content.content_id) }}"
+       class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm">+ 문항 추가</a>
+</div>
+
+{% if content.questions %}
+<div class="space-y-3">
+    {% for q in content.questions %}
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+        <div class="flex items-start justify-between gap-3">
+            <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded">{{ loop.index }}번</span>
+                </div>
+                <div class="text-sm text-gray-800">{{ q.question_text }}</div>
+                {% if q.choices %}
+                <div class="mt-2 text-xs text-gray-500">
+                    {% if content.type == 'quiz' %}
+                        {% for c in q.choices %}
+                        <span class="{% if c.is_correct %}text-green-600 font-medium{% endif %}">
+                            ① {{ c.text }}
+                        </span>
+                        {% endfor %}
+                    {% elif content.type == 'initial_quiz' %}
+                        정답: {{ q.choices.answer }}
+                    {% elif content.type == 'vocab_quiz' %}
+                        단어: {{ q.choices.word }}
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            <div class="flex gap-2">
+                <a href="{{ url_for('library.question_edit', question_id=q.question_id) }}"
+                   class="text-xs text-indigo-600 hover:underline">수정</a>
+                <form method="POST" action="{{ url_for('library.question_delete', question_id=q.question_id) }}"
+                      class="inline" onsubmit="return confirm('삭제할까요?')">
+                    <button type="submit" class="text-xs text-red-500 hover:underline">삭제</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-white rounded-xl border border-gray-100 p-10 text-center text-gray-400">
+    <div class="text-3xl mb-2">📝</div>
+    <div class="text-sm">등록된 문항이 없습니다.</div>
+</div>
+{% endif %}
+{% endblock %}

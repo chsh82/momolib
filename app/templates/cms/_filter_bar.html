@@ -1,0 +1,27 @@
+{% macro filter_bar(search_endpoint, q='', book_id='', books=[], new_url='', new_label='+ 등록') %}
+<div class="flex flex-wrap items-center gap-2 mb-6">
+    <form method="GET" action="{{ url_for(search_endpoint) }}" class="flex gap-2">
+        <input type="text" name="q" value="{{ q }}" placeholder="검색..."
+               class="border border-gray-200 rounded-lg px-3 py-2 text-sm w-44 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        {% if books %}
+        <select name="book_id"
+                class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+            <option value="">전체 도서</option>
+            {% for book in books %}
+            <option value="{{ book.book_id }}" {% if book_id == book.book_id %}selected{% endif %}>
+                {{ book.title }}
+            </option>
+            {% endfor %}
+        </select>
+        {% endif %}
+        <button type="submit"
+                class="bg-gray-700 text-white px-3 py-2 rounded-lg text-sm">검색</button>
+    </form>
+    {% if new_url %}
+    <a href="{{ new_url }}"
+       class="ml-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+        {{ new_label }}
+    </a>
+    {% endif %}
+</div>
+{% endmacro %}

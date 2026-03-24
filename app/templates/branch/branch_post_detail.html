@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}{{ post.title }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{{ url_for('branch.branch_posts') }}" class="text-sm text-gray-500 hover:text-indigo-600">← 공지 목록</a>
+</div>
+
+<div class="max-w-2xl">
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        <div class="flex items-start justify-between gap-3 mb-4">
+            <div>
+                <div class="flex items-center gap-2 mb-2 flex-wrap">
+                    {% if post.is_pinned %}
+                    <span class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded font-medium">고정</span>
+                    {% endif %}
+                    <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded">{{ post.target_label }}</span>
+                </div>
+                <h2 class="text-xl font-bold text-gray-800">{{ post.title }}</h2>
+                <div class="text-xs text-gray-400 mt-1">
+                    {{ post.author.name if post.author else '-' }} · {{ post.created_at.strftime('%Y-%m-%d %H:%M') }}
+                    · 읽음 {{ post.reads | length }}명
+                </div>
+            </div>
+            {% if can_manage %}
+            <form method="POST" action="{{ url_for('branch.delete_branch_post', post_id=post.post_id) }}">
+                <button type="submit"
+                        onclick="return confirm('이 공지를 삭제할까요?')"
+                        class="text-xs text-red-400 hover:text-red-600 border border-red-100 hover:border-red-300 px-3 py-1.5 rounded-lg">
+                    삭제
+                </button>
+            </form>
+            {% endif %}
+        </div>
+
+        <div class="border-t border-gray-100 pt-4">
+            <div class="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{{ post.content }}</div>
+        </div>
+    </div>
+</div>
+{% endblock %}

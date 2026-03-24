@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}독서MBTI{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto text-center py-8">
+    <div class="text-6xl mb-4">🧠</div>
+    <h2 class="text-2xl font-bold text-gray-800 mb-2">독서MBTI 테스트</h2>
+    <p class="text-gray-500 text-sm mb-8 leading-relaxed">
+        나의 독서 역량을 분석해보세요.<br>
+        독해력, 사고력, 서술력 3가지 영역에서 나의 수준을 파악하고,<br>
+        맞춤형 학습 방향을 제안받을 수 있습니다.
+    </p>
+
+    {% if my_result %}
+    {% set ti = my_result.type_info %}
+    <div class="bg-indigo-50 border border-indigo-200 rounded-2xl p-6 mb-6 text-left">
+        <div class="flex items-center gap-3 mb-3">
+            <div class="text-3xl">{{ ti.emoji if ti else '📚' }}</div>
+            <div>
+                <div class="font-bold text-indigo-800">{{ ti.type_name if ti else my_result.type_code }}</div>
+                <div class="text-xs text-indigo-500">최근 측정 결과</div>
+            </div>
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-center">
+            {% set levels = my_result.level_display %}
+            <div class="bg-white rounded-xl p-2">
+                <div class="text-xs text-gray-500">독해력</div>
+                <div class="font-bold text-indigo-700">{{ levels.reading }}</div>
+            </div>
+            <div class="bg-white rounded-xl p-2">
+                <div class="text-xs text-gray-500">사고력</div>
+                <div class="font-bold text-indigo-700">{{ levels.thinking }}</div>
+            </div>
+            <div class="bg-white rounded-xl p-2">
+                <div class="text-xs text-gray-500">서술력</div>
+                <div class="font-bold text-indigo-700">{{ levels.writing }}</div>
+            </div>
+        </div>
+        <a href="{{ url_for('library.mbti_result', result_id=my_result.result_id) }}"
+           class="block mt-3 text-center text-sm text-indigo-600 hover:underline">결과 상세 보기 →</a>
+    </div>
+    {% endif %}
+
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 text-left mb-6">
+        <h3 class="font-semibold text-gray-700 mb-3">테스트 안내</h3>
+        <ul class="space-y-2 text-sm text-gray-600">
+            <li>• 총 50문항 (절대평가 45문항 + 비교평가 5문항)</li>
+            <li>• 소요 시간: 약 10~15분</li>
+            <li>• 3가지 영역 (독해력, 사고력, 서술력) × 3가지 수준 = 27가지 유형</li>
+            <li>• 솔직하게 답할수록 더 정확한 결과가 나옵니다</li>
+        </ul>
+    </div>
+
+    {% if test %}
+    <a href="{{ url_for('library.mbti_test') }}"
+       class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-semibold text-sm">
+        테스트 시작하기 →
+    </a>
+    {% else %}
+    <p class="text-sm text-gray-400">테스트가 준비되지 않았습니다.</p>
+    {% endif %}
+</div>
+{% endblock %}

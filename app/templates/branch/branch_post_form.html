@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block title %}지점 공지 작성{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{{ url_for('branch.branch_posts') }}" class="text-sm text-gray-500 hover:text-indigo-600">← 공지 목록</a>
+    <h2 class="text-2xl font-bold text-gray-800 mt-2">지점 공지 작성</h2>
+</div>
+
+<div class="max-w-2xl">
+    <form method="POST" class="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-5">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">제목</label>
+            <input type="text" name="title" required
+                   class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                   placeholder="공지 제목을 입력하세요">
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">내용</label>
+            <textarea name="content" rows="8" required
+                      class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y"
+                      placeholder="공지 내용을 입력하세요..."></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">수신 대상</label>
+                <select name="target_roles"
+                        class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="all">전체 (강사+학생+학부모)</option>
+                    <option value="teacher">강사만</option>
+                    <option value="student">학생만</option>
+                    <option value="parent">학부모만</option>
+                    <option value="student,parent">학생+학부모</option>
+                    <option value="teacher,student">강사+학생</option>
+                </select>
+            </div>
+            <div class="flex items-end pb-1">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="is_pinned"
+                           class="w-4 h-4 text-indigo-600 rounded">
+                    <span class="text-sm text-gray-700">상단 고정</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="flex gap-3 pt-2">
+            <button type="submit"
+                    class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg text-sm">
+                공지 등록
+            </button>
+            <a href="{{ url_for('branch.branch_posts') }}"
+               class="border border-gray-200 text-gray-600 hover:bg-gray-50 px-6 py-2.5 rounded-lg text-sm">
+                취소
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -55,6 +55,14 @@
         <div class="text-sm text-gray-500">본사에서 보낸 공지 및 자료를 확인합니다.</div>
     </a>
     {% if current_user.role in ['branch_owner', 'branch_manager'] %}
+    <a href="{{ url_for('branch.scores') }}"
+       class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:border-indigo-300 transition group">
+        <div class="flex items-center gap-3 mb-2">
+            <span class="text-2xl">📊</span>
+            <div class="text-lg font-semibold text-gray-800 group-hover:text-indigo-700">성적 현황</div>
+        </div>
+        <div class="text-sm text-gray-500">학생별 점수 추이와 평균을 확인합니다.</div>
+    </a>
     <a href="{{ url_for('branch.my_revenue') }}"
        class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:border-green-300 transition group">
         <div class="flex items-center gap-3 mb-2">
@@ -64,5 +72,31 @@
         <div class="text-sm text-gray-500">월별 수금액, 로열티, 지급액을 확인합니다.</div>
     </a>
     {% endif %}
+    {% if current_user.role == 'teacher' %}
+    <a href="{{ url_for('branch.teacher_queue') }}"
+       class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:border-green-300 transition group">
+        <div class="flex items-center gap-3 mb-2">
+            <span class="text-2xl">✏️</span>
+            <div class="text-lg font-semibold text-gray-800 group-hover:text-green-700">첨삭 대기 큐</div>
+        </div>
+        <div class="text-sm text-gray-500">수동 첨삭이 필요한 과제를 확인합니다.</div>
+    </a>
+    <a href="{{ url_for('branch.teacher_students') }}"
+       class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:border-blue-300 transition group">
+        <div class="flex items-center gap-3 mb-2">
+            <span class="text-2xl">👨‍🎓</span>
+            <div class="text-lg font-semibold text-gray-800 group-hover:text-blue-700">담당 학생</div>
+        </div>
+        <div class="text-sm text-gray-500">학생 목록과 과제 현황을 확인합니다.</div>
+    </a>
+    {% endif %}
+    <a href="{{ url_for('branch.branch_posts') }}"
+       class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:border-indigo-300 transition group">
+        <div class="flex items-center gap-3 mb-2">
+            <span class="text-2xl">📌</span>
+            <div class="text-lg font-semibold text-gray-800 group-hover:text-indigo-700">지점 공지</div>
+        </div>
+        <div class="text-sm text-gray-500">지점 내 공지사항을 관리하고 확인합니다.</div>
+    </a>
 </div>
 {% endblock %}

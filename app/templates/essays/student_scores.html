@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% block title %}성적 분석{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{{ url_for('essays.student_dashboard') }}" class="text-sm text-gray-500 hover:text-indigo-600">← 대시보드</a>
+    <h2 class="text-2xl font-bold text-gray-800 mt-2">성적 분석</h2>
+    <p class="text-sm text-gray-500 mt-1">완료된 첨삭 기준 점수 추이입니다.</p>
+</div>
+
+<!-- 요약 카드 -->
+<div class="grid grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5 text-center">
+        <div class="text-2xl font-bold text-indigo-700">{{ latest or '-' }}{% if latest %}점{% endif %}</div>
+        <div class="text-xs text-gray-500 mt-1">최근 점수</div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5 text-center">
+        <div class="text-2xl font-bold text-blue-600">{{ avg or '-' }}{% if avg %}점{% endif %}</div>
+        <div class="text-xs text-gray-500 mt-1">평균 점수</div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5 text-center">
+        <div class="text-2xl font-bold text-green-600">{{ best or '-' }}{% if best %}점{% endif %}</div>
+        <div class="text-xs text-gray-500 mt-1">최고 점수</div>
+    </div>
+</div>
+
+{% if chart_scores %}
+<!-- 차트 -->
+<div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6 mb-6">
+    <h3 class="font-semibold text-gray-700 mb-4">점수 추이</h3>
+    <div class="relative" style="height: 220px;">
+        <canvas id="scoreChart"></canvas>
+    </div>
+</div>
+{% endif %}
+
+<!-- 점수 목록 -->
+<div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="px-5 py-3 border-b border-gray-100 font-semibold text-gray-700 text-sm">
+        첨삭 내역 ({{ score_list | length }}편)
+    </div>
+    {% if score_list %}
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50 text-xs text-gray-500">
+            <tr>
+                <th class="text-left px-5 py-2.5 font-medium">과제 제목</th>
+                <th class="text-center px-4 py-2.5 font-medium">제출일</th>
+                <th class="text-center px-4 py-2.5 font-medium">점수</th>
+                <th class="text-center px-4 py-2.5 font-medium">등급</th>
+                <th class="text-center px-4 py-2.5 font-medium"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+            {% for item in score_list | reverse %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-5 py-3 text-gray-800 font-medium truncate max-w-xs">{{ item.essay.title }}</td>
+                <td class="px-4 py-3 text-center text-gray-400 text-xs">{{ item.essay.created_at.strftime('%Y-%m-%d') }}</td>
+                <td class="px-4 py-3 text-center font-bold text-indigo-700">{{ item.score }}점</td>
+                <td class="px-4 py-3 text-center">
+                    {% if item.grade %}
+                    <span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">{{ item.grade }}</span>
+                    {% else %}-{% endif %}
+                </td>
+                <td class="px-4 py-3 text-center">
+                    <a href="{{ url_for('essays.student_view', essay_id=item.essay.essay_id) }}"
+                       class="text-xs text-indigo-600 hover:underline">보기</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="p-10 text-center text-gray-400 text-sm">완료된 첨삭이 없습니다.</div>
+    {% endif %}
+</div>
+
+{% if chart_scores %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const ctx = document.getElementById('scoreChart').getContext('2d');
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: {{ chart_labels | tojson }},
+        datasets: [{
+            label: '점수',
+            data: {{ chart_scores | tojson }},
+            borderColor: '#6366f1',
+            backgroundColor: 'rgba(99,102,241,0.08)',
+            borderWidth: 2.5,
+            pointBackgroundColor: '#6366f1',
+            pointRadius: 4,
+            tension: 0.3,
+            fill: true,
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            y: {
+                min: 0, max: 100,
+                grid: { color: 'rgba(0,0,0,0.05)' },
+                ticks: { font: { size: 11 } },
+            },
+            x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+        }
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

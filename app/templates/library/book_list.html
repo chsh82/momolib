@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}도서 관리{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-center justify-between flex-wrap gap-3">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-800">도서 관리</h2>
+        <p class="text-sm text-gray-500 mt-1">학습 콘텐츠가 연결된 도서 목록입니다.</p>
+    </div>
+    {% if current_user.is_hq %}
+    <div class="flex gap-2">
+        <a href="{{ url_for('library.book_new') }}"
+           class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm">+ 도서 등록</a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- 검색/필터 -->
+<form method="GET" class="flex flex-wrap gap-2 mb-6">
+    <input type="text" name="q" value="{{ q }}" placeholder="제목, 저자 검색..."
+           class="border border-gray-200 rounded-lg px-3 py-2 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+    <select name="genre" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        <option value="">전체 장르</option>
+        {% for val, label in genre_choices %}
+        <option value="{{ val }}" {% if genre == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <select name="level" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        <option value="">전체 수준</option>
+        {% for val, label in level_choices %}
+        <option value="{{ val }}" {% if level == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <button type="submit" class="bg-gray-700 text-white px-4 py-2 rounded-lg text-sm">검색</button>
+</form>
+
+{% if books %}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    {% for book in books %}
+    <a href="{{ url_for('library.book_detail', book_id=book.book_id) }}"
+       class="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition overflow-hidden flex flex-col">
+        {% if book.cover_image_url %}
+        <img src="{{ book.cover_image_url }}" alt="{{ book.title }}"
+             class="w-full h-44 object-cover bg-gray-100">
+        {% else %}
+        <div class="w-full h-44 bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-4xl">
+            📚
+        </div>
+        {% endif %}
+        <div class="p-4 flex-1 flex flex-col">
+            <div class="font-semibold text-gray-800 text-sm line-clamp-2">{{ book.title }}</div>
+            <div class="text-xs text-gray-500 mt-1">{{ book.author or '-' }}</div>
+            <div class="mt-auto pt-3 flex items-center justify-between">
+                <span class="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded">{{ book.genre_display }}</span>
+                <span class="text-xs text-gray-400">콘텐츠 {{ book.content_count }}개</span>
+            </div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-white rounded-xl border border-gray-100 p-12 text-center text-gray-400">
+    <div class="text-4xl mb-2">📚</div>
+    <div>등록된 도서가 없습니다.</div>
+</div>
+{% endif %}
+{% endblock %}

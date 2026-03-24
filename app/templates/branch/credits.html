@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}이용권 관리{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-center justify-between flex-wrap gap-3">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-800">이용권 관리</h2>
+        <p class="text-sm text-gray-500 mt-1">학생별 첨삭 이용권 잔량을 관리합니다. 이용권이 없는 학생은 무제한으로 제출 가능합니다.</p>
+    </div>
+    <form method="GET" class="flex gap-2">
+        <input type="text" name="q" value="{{ search }}" placeholder="학생 이름..."
+               class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 w-40">
+        <button type="submit"
+                class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700">검색</button>
+        {% if search %}<a href="{{ url_for('branch.credits') }}"
+                         class="border border-gray-200 px-4 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-50">초기화</a>{% endif %}
+    </form>
+</div>
+
+<div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+    {% if students %}
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50 border-b border-gray-100">
+            <tr>
+                <th class="text-left px-5 py-3 font-medium text-gray-600">학생</th>
+                <th class="text-left px-5 py-3 font-medium text-gray-600">학년</th>
+                <th class="text-center px-4 py-3 font-medium text-gray-600">누적 충전</th>
+                <th class="text-center px-4 py-3 font-medium text-gray-600">사용</th>
+                <th class="text-center px-4 py-3 font-medium text-gray-600">잔여</th>
+                <th class="text-center px-4 py-3 font-medium text-gray-600">상태</th>
+                <th class="text-center px-4 py-3 font-medium text-gray-600">관리</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+            {% for s in students %}
+            {% set cr = credit_map.get(s.user_id) %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-5 py-3">
+                    <div class="font-medium text-gray-800">{{ s.name }}</div>
+                    <div class="text-xs text-gray-400">{{ s.email }}</div>
+                </td>
+                <td class="px-5 py-3 text-gray-500 text-xs">
+                    {{ s.student_profile.grade_display if s.student_profile else '-' }}
+                </td>
+                <td class="px-4 py-3 text-center text-gray-600">{{ cr.total_credits if cr else '-' }}</td>
+                <td class="px-4 py-3 text-center text-gray-600">{{ cr.used_credits if cr else '-' }}</td>
+                <td class="px-4 py-3 text-center">
+                    {% if cr %}
+                    <span class="font-bold {% if cr.remaining > 3 %}text-green-600{% elif cr.remaining > 0 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                        {{ cr.remaining }}
+                    </span>
+                    {% else %}
+                    <span class="text-gray-400 text-xs">무제한</span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3 text-center">
+                    {% if cr %}
+                    {% if cr.remaining == 0 %}
+                    <span class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded">소진</span>
+                    {% elif cr.remaining <= 3 %}
+                    <span class="text-xs bg-yellow-100 text-yellow-600 px-2 py-0.5 rounded">부족</span>
+                    {% else %}
+                    <span class="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded">정상</span>
+                    {% endif %}
+                    {% else %}
+                    <span class="text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded">미설정</span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3 text-center">
+                    <a href="{{ url_for('branch.credit_detail', student_id=s.user_id) }}"
+                       class="text-xs text-indigo-600 hover:underline">충전/이력</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="p-12 text-center text-gray-400">
+        <div class="text-4xl mb-2">🎫</div>
+        <div>{% if search %}검색 결과가 없습니다.{% else %}등록된 학생이 없습니다.{% endif %}</div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

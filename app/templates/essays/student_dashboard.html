@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% block title %}내 대시보드{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">안녕하세요, {{ current_user.name }} 학생! 👋</h2>
+    {% if current_user.student_profile %}
+    <p class="text-sm text-gray-500 mt-1">{{ current_user.student_profile.grade_display }}</p>
+    {% endif %}
+</div>
+
+<!-- 이용권 배너 -->
+{% if credit %}
+<div class="mb-4 px-5 py-3 rounded-xl flex items-center justify-between
+    {% if credit.remaining == 0 %}bg-red-50 border border-red-200
+    {% elif credit.remaining <= 3 %}bg-yellow-50 border border-yellow-200
+    {% else %}bg-green-50 border border-green-200{% endif %}">
+    <span class="text-sm font-medium
+        {% if credit.remaining == 0 %}text-red-700
+        {% elif credit.remaining <= 3 %}text-yellow-700
+        {% else %}text-green-700{% endif %}">
+        🎫 남은 이용권: <strong>{{ credit.remaining }}회</strong>
+        {% if credit.remaining == 0 %} — 지점에 충전을 요청해주세요.{% endif %}
+    </span>
+</div>
+{% endif %}
+
+<!-- 통계 카드 -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+        <div class="text-2xl font-bold text-gray-800">{{ total }}</div>
+        <div class="text-xs text-gray-500 mt-1">전체 과제</div>
+    </div>
+    <div class="bg-indigo-50 rounded-xl border border-indigo-100 shadow-sm p-5">
+        <div class="text-2xl font-bold text-indigo-700">{{ completed }}</div>
+        <div class="text-xs text-indigo-500 mt-1">완료된 첨삭</div>
+    </div>
+    <div class="bg-purple-50 rounded-xl border border-purple-100 shadow-sm p-5">
+        <div class="text-2xl font-bold text-purple-700">{{ reviewing }}</div>
+        <div class="text-xs text-purple-500 mt-1">검토 중</div>
+    </div>
+    <div class="bg-yellow-50 rounded-xl border border-yellow-100 shadow-sm p-5">
+        <div class="text-2xl font-bold text-yellow-700">{{ draft }}</div>
+        <div class="text-xs text-yellow-500 mt-1">대기 중</div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- 최근 과제 -->
+    <div class="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-gray-700">최근 과제</h3>
+            <a href="{{ url_for('essays.student_essays') }}" class="text-xs text-indigo-600 hover:underline">전체 보기 →</a>
+        </div>
+        {% if recent %}
+        <div class="space-y-3">
+            {% for essay in recent %}
+            <a href="{{ url_for('essays.student_view', essay_id=essay.essay_id) }}"
+               class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition border border-gray-50">
+                <div class="min-w-0 flex-1">
+                    <div class="font-medium text-sm text-gray-800 truncate">{{ essay.title }}</div>
+                    <div class="text-xs text-gray-400 mt-0.5">{{ essay.created_at.strftime('%Y-%m-%d') }}</div>
+                </div>
+                <div class="ml-3 flex items-center gap-2">
+                    {% if essay.result and essay.result.total_score %}
+                    <span class="text-sm font-bold text-indigo-700">{{ essay.result.total_score }}점</span>
+                    {% endif %}
+                    <span class="px-2 py-1 rounded text-xs font-medium
+                        {% if essay.status == 'completed' %}bg-green-100 text-green-700
+                        {% elif essay.status == 'reviewing' %}bg-purple-100 text-purple-700
+                        {% elif essay.status == 'processing' %}bg-blue-100 text-blue-700
+                        {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                        {{ essay.status_display }}
+                    </span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-8 text-gray-400">
+            <div class="text-4xl mb-2">📝</div>
+            <div class="text-sm">아직 제출한 과제가 없습니다.</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 빠른 메뉴 -->
+    <div class="space-y-3">
+        <a href="{{ url_for('essays.submit') }}"
+           class="block bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl p-5 transition">
+            <div class="text-2xl mb-2">✏️</div>
+            <div class="font-semibold">과제 제출하기</div>
+            <div class="text-xs text-indigo-200 mt-1">새 글쓰기를 첨삭받으세요</div>
+        </a>
+        <a href="{{ url_for('library.catalog') }}"
+           class="block bg-white border border-gray-100 hover:border-indigo-200 rounded-xl p-4 transition shadow-sm flex items-center gap-3">
+            <div class="text-2xl">📚</div>
+            <div>
+                <div class="font-semibold text-gray-700 text-sm">도서 목록</div>
+                <div class="text-xs text-gray-400">책을 선택해 독서를 시작하세요</div>
+            </div>
+        </a>
+        <a href="{{ url_for('library.my_analytics') }}"
+           class="block bg-white border border-gray-100 hover:border-indigo-200 rounded-xl p-4 transition shadow-sm flex items-center gap-3">
+            <div class="text-2xl">📊</div>
+            <div>
+                <div class="font-semibold text-gray-700 text-sm">학습 분석</div>
+                <div class="text-xs text-gray-400">독서 현황과 퀴즈 점수를 확인하세요</div>
+            </div>
+        </a>
+        <a href="{{ url_for('essays.student_scores') }}"
+           class="block bg-white border border-gray-100 hover:border-indigo-200 rounded-xl p-4 transition shadow-sm flex items-center gap-3">
+            <div class="text-2xl">📈</div>
+            <div>
+                <div class="font-semibold text-gray-700 text-sm">성적 분석</div>
+                <div class="text-xs text-gray-400">첨삭 점수 추이를 확인하세요</div>
+            </div>
+        </a>
+    </div>
+</div>
+{% endblock %}

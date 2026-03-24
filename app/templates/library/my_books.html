@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %}내 독서 목록{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-800">내 독서 목록</h2>
+        <p class="text-sm text-gray-500 mt-1">읽고 있거나 완료한 책들입니다.</p>
+    </div>
+    <a href="{{ url_for('library.catalog') }}"
+       class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm">+ 새 책 찾기</a>
+</div>
+
+{% if records %}
+<div class="space-y-3">
+    {% for record in records %}
+    <a href="{{ url_for('library.my_book', book_id=record.book_id) }}"
+       class="flex items-center gap-4 bg-white rounded-xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition">
+        {% if record.book.cover_image_url %}
+        <img src="{{ record.book.cover_image_url }}" alt=""
+             class="w-14 h-18 object-cover rounded-lg flex-shrink-0">
+        {% else %}
+        <div class="w-14 h-18 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg flex items-center justify-center text-2xl flex-shrink-0">
+            📚
+        </div>
+        {% endif %}
+        <div class="flex-1 min-w-0">
+            <div class="font-medium text-gray-800">{{ record.book.title }}</div>
+            <div class="text-xs text-gray-500 mt-0.5">{{ record.book.author or '' }}</div>
+            <div class="text-xs text-gray-400 mt-1">시작: {{ record.started_at.strftime('%Y-%m-%d') }}</div>
+        </div>
+        <div class="flex-shrink-0">
+            {% if record.status == 'completed' %}
+            <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium">완료</span>
+            {% else %}
+            <span class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-medium">읽는 중</span>
+            {% endif %}
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-white rounded-xl border border-gray-100 p-12 text-center text-gray-400">
+    <div class="text-4xl mb-2">📚</div>
+    <div class="text-sm mb-3">아직 시작한 책이 없습니다.</div>
+    <a href="{{ url_for('library.catalog') }}"
+       class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm">도서 탐색하기</a>
+</div>
+{% endif %}
+{% endblock %}

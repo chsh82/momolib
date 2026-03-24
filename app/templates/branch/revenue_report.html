@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% block title %}정산 리포트 {{ year }}년 {{ month }}월 - {{ branch.name }}{% endblock %}
+
+{% block content %}
+<!-- 인쇄 버튼 (화면에서만 표시) -->
+<div class="mb-4 flex items-center justify-between print:hidden">
+    <a href="{{ url_for('branch.my_revenue') }}" class="text-sm text-gray-500 hover:text-indigo-600">← 정산 내역</a>
+    <div class="flex gap-2">
+        <!-- 월 이동 -->
+        {% set prev_month = month - 1 if month > 1 else 12 %}
+        {% set prev_year  = year if month > 1 else year - 1 %}
+        {% set next_month = month + 1 if month < 12 else 1 %}
+        {% set next_year  = year if month < 12 else year + 1 %}
+        <a href="{{ url_for('branch.revenue_report', year=prev_year, month=prev_month) }}"
+           class="border border-gray-200 text-gray-500 px-3 py-2 rounded-lg text-sm hover:bg-gray-50">← 전월</a>
+        <a href="{{ url_for('branch.revenue_report', year=next_year, month=next_month) }}"
+           class="border border-gray-200 text-gray-500 px-3 py-2 rounded-lg text-sm hover:bg-gray-50">다음달 →</a>
+        <button onclick="window.print()"
+                class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg">
+            🖨️ 인쇄 / PDF 저장
+        </button>
+    </div>
+</div>
+
+<!-- 리포트 본문 -->
+<div class="max-w-2xl mx-auto bg-white rounded-xl border border-gray-200 shadow-sm p-8 print:shadow-none print:border-0 print:rounded-none print:max-w-none">
+
+    <!-- 헤더 -->
+    <div class="text-center border-b-2 border-gray-800 pb-6 mb-6">
+        <div class="text-xs text-gray-500 mb-1">MOMOLIB 가맹점 정산 리포트</div>
+        <h1 class="text-2xl font-bold text-gray-900">{{ year }}년 {{ month }}월 정산 내역</h1>
+        <div class="text-sm text-gray-600 mt-2">{{ branch.name }} ({{ branch.code }})</div>
+    </div>
+
+    {% if record %}
+    <!-- 정산 요약 -->
+    <table class="w-full text-sm mb-8">
+        <tbody>
+            <tr class="border-b border-gray-100">
+                <td class="py-3 text-gray-500 w-40">정산 기간</td>
+                <td class="py-3 font-medium text-gray-800">{{ year }}년 {{ month }}월 1일 ~ {{ month }}월 말</td>
+            </tr>
+            <tr class="border-b border-gray-100">
+                <td class="py-3 text-gray-500">총 수금액</td>
+                <td class="py-3 font-bold text-gray-900 text-base">{{ record.gross_amount | format_number }}원</td>
+            </tr>
+            <tr class="border-b border-gray-100">
+                <td class="py-3 text-gray-500">로열티율</td>
+                <td class="py-3 text-gray-700">
+                    {{ branch.contract.royalty_rate if branch.contract else '-' }}%
+                </td>
+            </tr>
+            <tr class="border-b border-gray-100">
+                <td class="py-3 text-gray-500">로열티 금액</td>
+                <td class="py-3 font-medium text-red-600">{{ record.royalty_amount | format_number }}원</td>
+            </tr>
+            <tr class="border-b-2 border-gray-800">
+                <td class="py-3 font-semibold text-gray-700">지점 수취액</td>
+                <td class="py-3 font-bold text-indigo-700 text-lg">{{ record.net_amount | format_number }}원</td>
+            </tr>
+            <tr class="border-b border-gray-100">
+                <td class="py-3 text-gray-500">정산 상태</td>
+                <td class="py-3">
+                    <span class="px-2 py-1 rounded text-xs font-semibold
+                        {% if record.status == 'paid' %}bg-green-100 text-green-700
+                        {% elif record.status == 'confirmed' %}bg-blue-100 text-blue-700
+                        {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                        {{ record.display_status }}
+                    </span>
+                </td>
+            </tr>
+            {% if record.paid_at %}
+            <tr>
+                <td class="py-3 text-gray-500">지급일</td>
+                <td class="py-3 text-gray-700">{{ record.paid_at.strftime('%Y-%m-%d') }}</td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+
+    {% if record.notes %}
+    <div class="bg-gray-50 rounded-lg p-4 mb-6 text-sm text-gray-600">
+        <div class="font-medium mb-1 text-gray-700">비고</div>
+        <div class="whitespace-pre-wrap">{{ record.notes }}</div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="text-center py-12 text-gray-400">
+        <div class="text-4xl mb-2">📭</div>
+        <div>{{ year }}년 {{ month }}월 정산 데이터가 없습니다.</div>
+    </div>
+    {% endif %}
+
+    <!-- 서명란 -->
+    <div class="mt-10 pt-6 border-t border-gray-200 grid grid-cols-2 gap-8 text-sm text-gray-500">
+        <div>
+            <div class="font-medium text-gray-700 mb-4">지점 확인</div>
+            <div class="border-b border-gray-300 pb-1 mb-1">서명: ________________</div>
+            <div class="text-xs">{{ branch.name }}</div>
+        </div>
+        <div>
+            <div class="font-medium text-gray-700 mb-4">본사 확인</div>
+            <div class="border-b border-gray-300 pb-1 mb-1">서명: ________________</div>
+            <div class="text-xs">MOMOLIB 본사</div>
+        </div>
+    </div>
+    <div class="text-center text-xs text-gray-300 mt-8">
+        출력일: {{ now_str }} · MOMOLIB 정산 시스템
+    </div>
+</div>
+
+<style>
+@media print {
+    nav, .print\:hidden { display: none !important; }
+    body { background: white; }
+    main { padding: 0 !important; }
+}
+</style>
+{% endblock %}

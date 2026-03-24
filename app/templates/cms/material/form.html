@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block title %}학습 교재 {{ '수정' if material else '업로드' }}{% endblock %}
+{% block content %}
+{% include 'cms/_subnav.html' %}
+<div class="mb-4">
+    <a href="{{ url_for('cms.material_list') }}" class="text-sm text-gray-500 hover:text-indigo-600">← 학습 교재 목록</a>
+</div>
+<h2 class="text-xl font-bold text-gray-800 mb-6">학습 교재 {{ '수정' if material else '업로드' }}</h2>
+
+<div class="max-w-xl bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+    <form method="POST" enctype="multipart/form-data">
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">제목 *</label>
+                <input type="text" name="title" value="{{ material.title if material else '' }}" required
+                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">설명</label>
+                <textarea name="description" rows="2"
+                          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ material.description or '' if material else '' }}</textarea>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">
+                    파일 {{ '(교체 시에만 선택)' if material else '*' }}
+                </label>
+                {% if material and material.file_name %}
+                <div class="text-xs text-gray-500 mb-1">
+                    현재 파일: <span class="font-medium text-gray-700">{{ material.file_name }}</span>
+                    ({{ material.file_size_display }})
+                </div>
+                {% endif %}
+                <input type="file" name="file"
+                       accept=".pdf,.hwp,.docx,.pptx,.xlsx,.zip"
+                       {% if not material %}required{% endif %}
+                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+                <div class="text-xs text-gray-400 mt-1">허용 형식: PDF, HWP, Word, PPT, Excel, ZIP</div>
+            </div>
+            <hr class="border-gray-100">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">연결 도서 (선택)</label>
+                    <select name="book_id" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+                        <option value="">없음</option>
+                        {% for book in books %}
+                        <option value="{{ book.book_id }}" {% if material and material.book_id == book.book_id %}selected{% endif %}>{{ book.title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">주차</label>
+                    <input type="number" name="week_num"
+                           value="{{ material.week_num or '' if material else '' }}"
+                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">태그</label>
+                <input type="text" name="tags" value="{{ material.tags or '' if material else '' }}"
+                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+            </div>
+            <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input type="checkbox" name="is_published" value="1"
+                       {% if material and material.is_published %}checked{% endif %}
+                       class="rounded border-gray-300 text-indigo-600">
+                공개 (지점/학생에게 표시)
+            </label>
+        </div>
+        <button type="submit" class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg text-sm">
+            저장
+        </button>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% block title %}{{ '도서 수정' if book else '도서 등록' }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{{ url_for('library.book_list') }}" class="text-sm text-gray-500 hover:text-indigo-600">← 도서 목록</a>
+    <h2 class="text-2xl font-bold text-gray-800 mt-2">{{ '도서 수정' if book else '새 도서 등록' }}</h2>
+</div>
+
+<div class="max-w-2xl bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+    <!-- ISBN 조회 -->
+    {% if not book %}
+    <div class="mb-6 p-4 bg-indigo-50 rounded-xl">
+        <div class="text-sm font-semibold text-indigo-700 mb-2">📖 ISBN으로 자동 조회</div>
+        <div class="flex gap-2">
+            <input type="text" id="isbn-input" placeholder="ISBN 13자리 입력"
+                   class="flex-1 border border-indigo-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+            <button type="button" onclick="lookupISBN()"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm">조회</button>
+        </div>
+        <div id="isbn-msg" class="text-xs text-gray-500 mt-1 hidden"></div>
+    </div>
+    {% endif %}
+
+    <form method="POST"
+          action="{{ url_for('library.book_edit', book_id=book.book_id) if book else url_for('library.book_new') }}">
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">ISBN</label>
+                <input type="text" name="isbn" id="field-isbn" value="{{ book.isbn if book else '' }}"
+                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                       placeholder="선택 입력">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">제목 *</label>
+                <input type="text" name="title" id="field-title" value="{{ book.title if book else '' }}" required
+                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">저자</label>
+                    <input type="text" name="author" id="field-author" value="{{ book.author or '' if book else '' }}"
+                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">출판사</label>
+                    <input type="text" name="publisher" id="field-publisher" value="{{ book.publisher or '' if book else '' }}"
+                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">출판연도</label>
+                    <input type="number" name="publication_year" id="field-year"
+                           value="{{ book.publication_year or '' if book else '' }}"
+                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">수준</label>
+                    <select name="level"
+                            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        {% for val, label in level_choices %}
+                        <option value="{{ val }}" {% if book and book.level == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">장르</label>
+                <select name="genre"
+                        class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="">선택 안함</option>
+                    {% for val, label in genre_choices %}
+                    <option value="{{ val }}" {% if book and book.genre == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">표지 이미지 URL</label>
+                <input type="text" name="cover_image_url" id="field-cover"
+                       value="{{ book.cover_image_url or '' if book else '' }}"
+                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">설명</label>
+                <textarea name="description" id="field-description" rows="3"
+                          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ book.description or '' if book else '' }}</textarea>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">태그 (쉼표 구분)</label>
+                <input type="text" name="tags" value="{{ book.tags or '' if book else '' }}"
+                       placeholder="독해력, 상상력, 과학..."
+                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+        </div>
+
+        <button type="submit"
+                class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg text-sm">
+            저장
+        </button>
+    </form>
+</div>
+
+{% if not book %}
+<script>
+function lookupISBN() {
+    const isbn = document.getElementById('isbn-input').value.trim();
+    if (!isbn) return;
+    const msg = document.getElementById('isbn-msg');
+    msg.textContent = '조회 중...';
+    msg.classList.remove('hidden');
+    fetch(`{{ url_for('library.isbn_lookup') }}?isbn=${encodeURIComponent(isbn)}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                const d = data.data;
+                document.getElementById('field-isbn').value = d.isbn || isbn;
+                document.getElementById('field-title').value = d.title || '';
+                document.getElementById('field-author').value = d.author || '';
+                document.getElementById('field-publisher').value = d.publisher || '';
+                document.getElementById('field-year').value = d.publication_year || '';
+                document.getElementById('field-cover').value = d.cover_image_url || '';
+                document.getElementById('field-description').value = d.description || '';
+                msg.textContent = '✓ 정보를 불러왔습니다. 확인 후 저장하세요.';
+                msg.className = 'text-xs text-green-600 mt-1';
+            } else {
+                msg.textContent = data.error || '조회 실패';
+                msg.className = 'text-xs text-red-500 mt-1';
+            }
+        });
+}
+document.getElementById('isbn-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); lookupISBN(); }
+});
+</script>
+{% endif %}
+{% endblock %}

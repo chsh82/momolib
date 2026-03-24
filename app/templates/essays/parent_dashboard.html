@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block title %}학부모 대시보드{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">안녕하세요, {{ current_user.name }} 님! 👋</h2>
+    <p class="text-sm text-gray-500 mt-1">자녀의 과제 현황을 확인하세요.</p>
+</div>
+
+{% if children %}
+<div class="space-y-6">
+    {% for child in children %}
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        <!-- 자녀 헤더 -->
+        <div class="flex items-center justify-between mb-5">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                    <span class="text-indigo-700 font-bold text-sm">{{ child.student.name[0] }}</span>
+                </div>
+                <div>
+                    <div class="font-semibold text-gray-800">{{ child.student.name }}</div>
+                    <div class="text-xs text-gray-400">
+                        {% if child.student.student_profile %}{{ child.student.student_profile.grade_display }} · {% endif %}
+                        {{ child.relation or '자녀' }}
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <a href="{{ url_for('library.parent_child_analytics', child_id=child.student.user_id) }}"
+                   class="text-sm text-gray-500 hover:text-indigo-600">독서 현황</a>
+                <a href="{{ url_for('essays.parent_scores', student_id=child.student.user_id) }}"
+                   class="text-sm text-gray-500 hover:text-indigo-600">성적 리포트</a>
+                <a href="{{ url_for('essays.parent_essays', student_id=child.student.user_id) }}"
+                   class="text-sm text-indigo-600 hover:underline font-medium">
+                    전체 과제 →
+                </a>
+            </div>
+        </div>
+
+        <!-- 통계 -->
+        <div class="grid grid-cols-3 gap-3 mb-5">
+            <div class="bg-gray-50 rounded-lg p-3 text-center">
+                <div class="text-xl font-bold text-gray-700">{{ child.total }}</div>
+                <div class="text-xs text-gray-400 mt-0.5">전체</div>
+            </div>
+            <div class="bg-green-50 rounded-lg p-3 text-center">
+                <div class="text-xl font-bold text-green-700">{{ child.completed }}</div>
+                <div class="text-xs text-green-400 mt-0.5">완료</div>
+            </div>
+            <div class="bg-yellow-50 rounded-lg p-3 text-center">
+                <div class="text-xl font-bold text-yellow-700">{{ child.pending }}</div>
+                <div class="text-xs text-yellow-400 mt-0.5">대기 중</div>
+            </div>
+        </div>
+
+        <!-- 최근 과제 -->
+        {% if child.recent %}
+        <div class="space-y-2">
+            <div class="text-xs font-medium text-gray-500 mb-2">최근 과제</div>
+            {% for essay in child.recent %}
+            <a href="{{ url_for('essays.parent_view', student_id=child.student.user_id, essay_id=essay.essay_id) }}"
+               class="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-gray-50 transition border border-gray-50">
+                <div class="min-w-0 flex-1">
+                    <div class="text-sm text-gray-800 truncate">{{ essay.title }}</div>
+                    <div class="text-xs text-gray-400">{{ essay.created_at.strftime('%Y-%m-%d') }}</div>
+                </div>
+                <div class="ml-3 flex items-center gap-2">
+                    {% if essay.result and essay.result.total_score %}
+                    <span class="text-sm font-bold text-indigo-700">{{ essay.result.total_score }}점</span>
+                    {% endif %}
+                    <span class="px-2 py-1 rounded text-xs font-medium
+                        {% if essay.status == 'completed' %}bg-green-100 text-green-700
+                        {% elif essay.status == 'reviewing' %}bg-purple-100 text-purple-700
+                        {% elif essay.status == 'processing' %}bg-blue-100 text-blue-700
+                        {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                        {{ essay.status_display }}
+                    </span>
+                    {% if essay.is_finalized %}
+                    <span class="text-xs text-indigo-500">확정</span>
+                    {% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-gray-400 text-sm">아직 제출한 과제가 없습니다.</div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+{% else %}
+<div class="bg-white rounded-xl border border-gray-100 shadow-sm p-12 text-center">
+    <div class="text-5xl mb-4">👨‍👩‍👧</div>
+    <div class="text-gray-500 font-medium mb-2">연결된 자녀가 없습니다</div>
+    <div class="text-sm text-gray-400">지점 관계자에게 자녀 연결을 요청해주세요.</div>
+</div>
+{% endif %}
+{% endblock %}

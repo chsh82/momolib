@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}도서 탐색{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">도서 탐색</h2>
+    <p class="text-sm text-gray-500 mt-1">마음에 드는 책을 선택해 학습을 시작해보세요.</p>
+</div>
+
+<!-- 검색/필터 -->
+<form method="GET" class="flex flex-wrap gap-2 mb-6">
+    <input type="text" name="q" value="{{ q }}" placeholder="제목, 저자 검색..."
+           class="border border-gray-200 rounded-lg px-3 py-2 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+    <select name="genre" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+        <option value="">전체 장르</option>
+        {% for val, label in genre_choices %}
+        <option value="{{ val }}" {% if genre == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <select name="level" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+        <option value="">전체 수준</option>
+        {% for val, label in level_choices %}
+        <option value="{{ val }}" {% if level == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm">검색</button>
+</form>
+
+<!-- 내 독서 목록으로 이동 -->
+<div class="flex gap-3 mb-6">
+    <a href="{{ url_for('library.my_books') }}"
+       class="inline-flex items-center gap-1 bg-indigo-50 text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg text-sm hover:bg-indigo-100">
+        📚 내 독서 목록
+    </a>
+    <a href="{{ url_for('library.my_analytics') }}"
+       class="inline-flex items-center gap-1 bg-purple-50 text-purple-600 border border-purple-200 px-4 py-2 rounded-lg text-sm hover:bg-purple-100">
+        📊 학습 분석
+    </a>
+    <a href="{{ url_for('library.mbti_intro') }}"
+       class="inline-flex items-center gap-1 bg-green-50 text-green-600 border border-green-200 px-4 py-2 rounded-lg text-sm hover:bg-green-100">
+        🧠 독서MBTI
+    </a>
+</div>
+
+{% if books %}
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+    {% for book in books %}
+    {% set record = my_records.get(book.book_id) %}
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition overflow-hidden flex flex-col">
+        {% if book.cover_image_url %}
+        <img src="{{ book.cover_image_url }}" alt="{{ book.title }}"
+             class="w-full h-40 object-cover bg-gray-100">
+        {% else %}
+        <div class="w-full h-40 bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-4xl">
+            📚
+        </div>
+        {% endif %}
+        <div class="p-3 flex-1 flex flex-col">
+            <div class="font-medium text-gray-800 text-xs line-clamp-2 leading-tight">{{ book.title }}</div>
+            <div class="text-xs text-gray-400 mt-0.5">{{ book.author or '-' }}</div>
+            <div class="mt-auto pt-2">
+                {% if record %}
+                <a href="{{ url_for('library.my_book', book_id=book.book_id) }}"
+                   class="block text-center text-xs py-1.5 rounded-lg
+                   {% if record.status == 'completed' %}bg-green-100 text-green-700{% else %}bg-indigo-600 text-white{% endif %}">
+                    {{ '✓ 완료' if record.status == 'completed' else '📖 계속 읽기' }}
+                </a>
+                {% else %}
+                <form method="POST" action="{{ url_for('library.start_reading', book_id=book.book_id) }}">
+                    <button type="submit"
+                            class="w-full text-xs py-1.5 rounded-lg bg-gray-100 hover:bg-indigo-600 hover:text-white text-gray-600 transition">
+                        읽기 시작
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-white rounded-xl border border-gray-100 p-12 text-center text-gray-400">
+    <div class="text-4xl mb-2">📚</div>
+    <div>검색 결과가 없습니다.</div>
+</div>
+{% endif %}
+{% endblock %}

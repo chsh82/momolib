@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block title %}엑셀 일괄 입력 - {{ exam.title }}{% endblock %}
+{% block content %}
+{% include 'cms/_subnav.html' %}
+<div class="mb-4">
+    <a href="{{ url_for('cms.mock_exam_detail', exam_id=exam.exam_id) }}" class="text-sm text-gray-500 hover:text-indigo-600">← {{ exam.title }}</a>
+</div>
+<h2 class="text-xl font-bold text-gray-800 mb-6">엑셀 일괄 입력</h2>
+
+<!-- 양식 안내 -->
+<div class="bg-blue-50 border border-blue-200 rounded-xl p-5 mb-6 text-sm text-blue-800">
+    <div class="font-semibold mb-2">📋 엑셀 파일 양식 (1행: 헤더, 2행부터 문항)</div>
+    <table class="w-full text-xs border-collapse">
+        <thead>
+            <tr class="bg-blue-100">
+                <th class="border border-blue-200 px-2 py-1">A: 문항유형</th>
+                <th class="border border-blue-200 px-2 py-1">B: 지문</th>
+                <th class="border border-blue-200 px-2 py-1">C: 문제 *</th>
+                <th class="border border-blue-200 px-2 py-1">D: 보기1</th>
+                <th class="border border-blue-200 px-2 py-1">E: 보기2</th>
+                <th class="border border-blue-200 px-2 py-1">F: 보기3</th>
+                <th class="border border-blue-200 px-2 py-1">G: 보기4</th>
+                <th class="border border-blue-200 px-2 py-1">H: 정답 *</th>
+                <th class="border border-blue-200 px-2 py-1">I: 배점</th>
+                <th class="border border-blue-200 px-2 py-1">J: 해설</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="border border-blue-200 px-2 py-1 text-center">객관식/단답형/서술형</td>
+                <td class="border border-blue-200 px-2 py-1 text-center text-gray-400">선택</td>
+                <td class="border border-blue-200 px-2 py-1 text-center font-medium">필수</td>
+                <td class="border border-blue-200 px-2 py-1 text-center text-gray-400" colspan="4">객관식만 입력</td>
+                <td class="border border-blue-200 px-2 py-1 text-center font-medium">필수</td>
+                <td class="border border-blue-200 px-2 py-1 text-center text-gray-400">기본값 1</td>
+                <td class="border border-blue-200 px-2 py-1 text-center text-gray-400">선택</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- 업로드 폼 -->
+{% if not preview %}
+<div class="max-w-lg bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+    <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="action" value="preview">
+        <div class="mb-4">
+            <label class="block text-xs text-gray-500 mb-1">엑셀 파일 선택 (.xlsx)</label>
+            <input type="file" name="excel_file" accept=".xlsx,.xls"
+                   class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+        </div>
+        {% if errors %}
+        <div class="mb-3 bg-red-50 border border-red-200 rounded-lg p-3">
+            {% for e in errors %}<div class="text-xs text-red-600">{{ e }}</div>{% endfor %}
+        </div>
+        {% endif %}
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium">
+            미리보기
+        </button>
+    </form>
+</div>
+{% endif %}
+
+<!-- 미리보기 -->
+{% if preview %}
+<div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-4">
+    <div class="px-5 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+        <span class="font-medium text-gray-700 text-sm">미리보기 ({{ preview|length }}개 문항)</span>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-xs">
+            <thead class="bg-gray-50 border-b border-gray-100">
+                <tr>
+                    <th class="px-3 py-2 text-left text-gray-500">#</th>
+                    <th class="px-3 py-2 text-left text-gray-500">유형</th>
+                    <th class="px-3 py-2 text-left text-gray-500">문제</th>
+                    <th class="px-3 py-2 text-left text-gray-500">정답</th>
+                    <th class="px-3 py-2 text-center text-gray-500">배점</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+                {% for row in preview %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-3 py-2 text-gray-400">{{ loop.index }}</td>
+                    <td class="px-3 py-2 text-gray-600">{{ row.type_display }}</td>
+                    <td class="px-3 py-2 text-gray-800 max-w-xs truncate">{{ row.question }}</td>
+                    <td class="px-3 py-2 text-green-600 font-medium">{{ row.correct }}</td>
+                    <td class="px-3 py-2 text-center text-gray-500">{{ row.score }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<form method="POST">
+    <input type="hidden" name="action" value="save">
+    <input type="hidden" name="rows_json" value="{{ preview | tojson }}">
+    <div class="flex gap-3">
+        <a href="{{ url_for('cms.mock_exam_import', exam_id=exam.exam_id) }}"
+           class="flex-1 text-center border border-gray-200 text-gray-600 py-2 rounded-lg text-sm">
+            다시 업로드
+        </a>
+        <button type="submit"
+                class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium">
+            {{ preview|length }}개 문항 저장
+        </button>
+    </div>
+</form>
+{% endif %}
+{% endblock %}

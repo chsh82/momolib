@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block title %}지점 공지사항{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-800">지점 공지사항</h2>
+        <p class="text-sm text-gray-500 mt-1">지점 내 강사/학생에게 전달하는 공지입니다.</p>
+    </div>
+    {% if can_manage %}
+    <a href="{{ url_for('branch.new_branch_post') }}"
+       class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2.5 rounded-lg">
+        + 공지 작성
+    </a>
+    {% endif %}
+</div>
+
+{% if posts %}
+<div class="space-y-3">
+    {% for post in posts %}
+    {% set is_read = post.post_id in read_ids %}
+    <a href="{{ url_for('branch.branch_post_detail', post_id=post.post_id) }}"
+       class="block bg-white rounded-xl border shadow-sm p-5 hover:border-indigo-200 transition
+              {{ 'border-gray-100' if is_read else 'border-indigo-200 bg-indigo-50/30' }}">
+        <div class="flex items-start justify-between gap-3">
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1 flex-wrap">
+                    {% if post.is_pinned %}
+                    <span class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded font-medium">고정</span>
+                    {% endif %}
+                    <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded">{{ post.target_label }}</span>
+                    {% if not is_read %}
+                    <span class="w-2 h-2 bg-indigo-500 rounded-full inline-block"></span>
+                    {% endif %}
+                </div>
+                <div class="font-semibold text-gray-800 truncate">{{ post.title }}</div>
+                <div class="text-xs text-gray-400 mt-1 truncate">{{ post.content[:80] }}{% if post.content|length > 80 %}...{% endif %}</div>
+            </div>
+            <div class="text-xs text-gray-400 flex-shrink-0">
+                {{ post.created_at.strftime('%Y-%m-%d') }}<br>
+                <span class="text-gray-300">{{ post.author.name if post.author else '-' }}</span>
+            </div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-white rounded-xl border border-gray-100 p-12 text-center text-gray-400">
+    <div class="text-4xl mb-2">📋</div>
+    <div class="text-sm">등록된 공지사항이 없습니다.</div>
+    {% if can_manage %}
+    <a href="{{ url_for('branch.new_branch_post') }}"
+       class="mt-4 inline-block text-sm text-indigo-600 hover:underline">첫 공지 작성하기 →</a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

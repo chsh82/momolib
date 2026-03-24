@@ -96,6 +96,14 @@ def submit():
             flash('제목과 본문을 입력해주세요.', 'error')
             return render_template('essays/submit.html', grade_choices=GRADE_CHOICES)
 
+        # 이용권 체크 (크레딧이 설정된 학생만)
+        from app.models.credit import EssayCredit
+        credit = EssayCredit.query.filter_by(
+            student_id=current_user.user_id).first()
+        if credit and credit.remaining <= 0:
+            flash('이용권이 부족합니다. 지점에 문의해주세요.', 'error')
+            return render_template('essays/submit.html', grade_choices=GRADE_CHOICES)
+
         grade = ''
         if current_user.student_profile:
             grade = current_user.student_profile.grade or ''
@@ -111,12 +119,40 @@ def submit():
             status='draft',
         )
         db.session.add(essay)
-        db.session.commit()
+        db.session.flush()
 
+        # 크레딧 차감
+        if credit and credit.remaining > 0:
+            credit.deduct(1, note=f'제출: {title[:30]}')
+
+        db.session.commit()
         flash('과제가 제출되었습니다.', 'success')
         return redirect(url_for('essays.student_essays'))
 
     return render_template('essays/submit.html', grade_choices=GRADE_CHOICES)
+
+
+@essays_bp.route('/dashboard')
+@login_required
+def student_dashboard():
+    if current_user.role != 'student':
+        return redirect(url_for('index'))
+    total = Essay.query.filter_by(student_id=current_user.user_id).count()
+    completed = Essay.query.filter_by(
+        student_id=current_user.user_id, status='completed').count()
+    reviewing = Essay.query.filter_by(
+        student_id=current_user.user_id, status='reviewing').count()
+    draft = Essay.query.filter_by(
+        student_id=current_user.user_id, status='draft').count()
+    recent = Essay.query.filter_by(student_id=current_user.user_id)\
+        .order_by(Essay.created_at.desc()).limit(5).all()
+    from app.models.credit import EssayCredit
+    credit = EssayCredit.query.filter_by(
+        student_id=current_user.user_id).first()
+    return render_template('essays/student_dashboard.html',
+                           total=total, completed=completed,
+                           reviewing=reviewing, draft=draft,
+                           recent=recent, credit=credit)
 
 
 @essays_bp.route('/my')
@@ -246,6 +282,20 @@ def _correction_worker(essay_id, api_key):
             title=f'"{essay.title}" AI 첨삭이 완료되었습니다',
             message='선생님의 검토 후 최종 확정됩니다.',
         )
+        # SMS 알림: 학부모에게 발송
+        from app.services.sms_service import send_correction_done
+        from app.models.member import ParentStudent
+        from app.models.user import User
+        student = essay.student
+        for link in ParentStudent.query.filter_by(
+                student_id=essay.student_id, is_active=True).all():
+            parent = User.query.get(link.parent_id)
+            if parent and parent.phone:
+                send_correction_done(
+                    parent.phone,
+                    student.name if student else '학생',
+                    essay.title,
+                )
         db.session.commit()
 
 
@@ -365,6 +415,17 @@ def finalize(essay_id):
         title=f'"{essay.title}" 첨삭이 최종 확정되었습니다',
         message='첨삭 결과를 확인해보세요!',
     )
+    # SMS 알림: 학생 + 학부모
+    from app.services.sms_service import send_correction_finalized
+    from app.models.member import ParentStudent
+    from app.models.user import User
+    if essay.student and essay.student.phone:
+        send_correction_finalized(essay.student.phone, essay.student.name, essay.title)
+    for link in ParentStudent.query.filter_by(
+            student_id=essay.student_id, is_active=True).all():
+        parent = User.query.get(link.parent_id)
+        if parent and parent.phone:
+            send_correction_finalized(parent.phone, essay.student.name, essay.title)
     db.session.commit()
 
     flash('최종 확정되었습니다. 학생과 학부모에게 알림을 보냈습니다.', 'success')
@@ -413,6 +474,40 @@ def delete(essay_id):
     return redirect(url_for('essays.manage'))
 
 
+# ─── 학부모 대시보드 ──────────────────────────────────────────
+
+@essays_bp.route('/parent/dashboard')
+@login_required
+def parent_dashboard():
+    if current_user.role != 'parent':
+        return redirect(url_for('index'))
+    from app.models.member import ParentStudent
+    from app.models.user import User
+    links = ParentStudent.query.filter_by(
+        parent_id=current_user.user_id, is_active=True).all()
+    children = []
+    for link in links:
+        student = User.query.get(link.student_id)
+        if not student:
+            continue
+        total = Essay.query.filter_by(student_id=student.user_id).count()
+        completed = Essay.query.filter_by(
+            student_id=student.user_id, status='completed').count()
+        pending = Essay.query.filter_by(
+            student_id=student.user_id, status='draft').count()
+        recent = Essay.query.filter_by(student_id=student.user_id)\
+            .order_by(Essay.created_at.desc()).limit(3).all()
+        children.append({
+            'student': student,
+            'relation': link.relation,
+            'total': total,
+            'completed': completed,
+            'pending': pending,
+            'recent': recent,
+        })
+    return render_template('essays/parent_dashboard.html', children=children)
+
+
 # ─── 학부모 뷰 ───────────────────────────────────────────────
 
 @essays_bp.route('/parent/<student_id>')
@@ -449,3 +544,125 @@ def parent_view(student_id, essay_id):
 
     return render_template('essays/parent_view.html', essay=essay,
                            html_content=html_content)
+
+
+# ─── 학생: 성적 분석 ──────────────────────────────────────────
+
+@essays_bp.route('/my/scores')
+@login_required
+def student_scores():
+    if current_user.role != 'student':
+        return redirect(url_for('index'))
+
+    essays = (Essay.query
+        .filter_by(student_id=current_user.user_id, status='completed')
+        .order_by(Essay.created_at.asc()).all())
+
+    chart_labels = []
+    chart_scores = []
+    score_list = []
+    for e in essays:
+        if e.result and e.result.total_score is not None:
+            chart_labels.append(e.created_at.strftime('%m/%d'))
+            chart_scores.append(e.result.total_score)
+            score_list.append({
+                'essay': e,
+                'score': e.result.total_score,
+                'grade': e.result.final_grade,
+            })
+
+    avg = round(sum(chart_scores) / len(chart_scores), 1) if chart_scores else None
+    best = max(chart_scores) if chart_scores else None
+    latest = chart_scores[-1] if chart_scores else None
+
+    return render_template('essays/student_scores.html',
+                           score_list=score_list,
+                           chart_labels=chart_labels,
+                           chart_scores=chart_scores,
+                           avg=avg, best=best, latest=latest)
+
+
+# ─── 학부모: 자녀 성적 리포트 ────────────────────────────────
+
+@essays_bp.route('/parent/<student_id>/scores')
+@login_required
+def parent_scores(student_id):
+    if current_user.role != 'parent':
+        return redirect(url_for('index'))
+    from app.models.member import ParentStudent
+    from app.models.user import User
+    ParentStudent.query.filter_by(
+        parent_id=current_user.user_id, student_id=student_id,
+        is_active=True).first_or_404()
+    student = User.query.get_or_404(student_id)
+
+    essays = (Essay.query
+        .filter_by(student_id=student_id, status='completed')
+        .order_by(Essay.created_at.asc()).all())
+
+    chart_labels = []
+    chart_scores = []
+    score_list = []
+    for e in essays:
+        if e.result and e.result.total_score is not None:
+            chart_labels.append(e.created_at.strftime('%m/%d'))
+            chart_scores.append(e.result.total_score)
+            score_list.append({
+                'essay': e,
+                'score': e.result.total_score,
+                'grade': e.result.final_grade,
+            })
+
+    avg = round(sum(chart_scores) / len(chart_scores), 1) if chart_scores else None
+    best = max(chart_scores) if chart_scores else None
+    latest = chart_scores[-1] if chart_scores else None
+
+    return render_template('essays/parent_scores.html',
+                           student=student, score_list=score_list,
+                           chart_labels=chart_labels,
+                           chart_scores=chart_scores,
+                           avg=avg, best=best, latest=latest)
+
+
+# ─── 지점 공지 (학생/학부모 수신) ────────────────────────────
+
+@essays_bp.route('/notices')
+@login_required
+def member_notices():
+    """학생/학부모가 보는 지점 공지"""
+    if current_user.role not in ('student', 'parent'):
+        return redirect(url_for('index'))
+    from app.models.branch_post import BranchPost, BranchPostRead
+
+    posts = (BranchPost.query
+        .filter_by(branch_id=current_user.branch_id, is_published=True)
+        .order_by(BranchPost.is_pinned.desc(), BranchPost.created_at.desc())
+        .all())
+    visible = [p for p in posts if p.is_visible_to(current_user.role)]
+
+    read_ids = {r.post_id for r in BranchPostRead.query.filter_by(
+        user_id=current_user.user_id).all()}
+
+    return render_template('essays/member_notices.html',
+                           posts=visible, read_ids=read_ids)
+
+
+@essays_bp.route('/notices/<post_id>')
+@login_required
+def member_notice_detail(post_id):
+    """학생/학부모 공지 상세"""
+    if current_user.role not in ('student', 'parent'):
+        return redirect(url_for('index'))
+    from app.models.branch_post import BranchPost, BranchPostRead
+
+    post = BranchPost.query.filter_by(
+        post_id=post_id, branch_id=current_user.branch_id).first_or_404()
+
+    existing = BranchPostRead.query.filter_by(
+        post_id=post_id, user_id=current_user.user_id).first()
+    if not existing:
+        db.session.add(BranchPostRead(
+            post_id=post_id, user_id=current_user.user_id))
+        db.session.commit()
+
+    return render_template('essays/member_notice_detail.html', post=post)

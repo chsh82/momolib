@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% block title %}{{ '콘텐츠 수정' if content else '콘텐츠 추가' }}{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{{ url_for('library.book_detail', book_id=book.book_id) }}" class="text-sm text-gray-500 hover:text-indigo-600">← {{ book.title }}</a>
+</div>
+<h2 class="text-xl font-bold text-gray-800 mb-6">{{ '콘텐츠 수정' if content else '새 콘텐츠 추가' }}</h2>
+
+<div class="max-w-xl bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+    <form method="POST"
+          action="{{ url_for('library.content_edit', content_id=content.content_id) if content else url_for('library.content_new', book_id=book.book_id) }}">
+        <div class="space-y-4">
+            {% if not content %}
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">콘텐츠 유형 *</label>
+                <select name="type" id="type-select" onchange="toggleTypeFields()"
+                        class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    {% for val, label in content_types %}
+                    <option value="{{ val }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% else %}
+            <div class="text-sm text-gray-600">
+                유형: <span class="font-medium">{{ content.type_display }}</span>
+            </div>
+            {% endif %}
+
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">제목 *</label>
+                <input type="text" name="title" value="{{ content.title if content else '' }}" required
+                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">설명</label>
+                <textarea name="description" rows="2"
+                          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ content.description or '' if content else '' }}</textarea>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">순서</label>
+                    <input type="number" name="order_num" value="{{ content.order_num if content else 0 }}"
+                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="flex items-end pb-2">
+                    <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                        <input type="checkbox" name="is_published" value="1"
+                               {% if content and content.is_published %}checked{% endif %}
+                               class="rounded border-gray-300 text-indigo-600">
+                        공개
+                    </label>
+                </div>
+            </div>
+
+            <!-- 영상 전용 필드 -->
+            <div id="video-fields" class="space-y-3 {% if content and content.type != 'video' %}hidden{% endif %}">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">영상 URL</label>
+                    <input type="text" name="video_url"
+                           value="{{ (content.data or {}).get('url', '') if content else '' }}"
+                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">재생 시간 (초)</label>
+                    <input type="number" name="duration_seconds"
+                           value="{{ (content.data or {}).get('duration_seconds', '') if content else '' }}"
+                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+
+            <!-- 서술형 전용 필드 -->
+            <div id="essay-fields" class="space-y-3 {% if not content or content.type != 'essay' %}hidden{% endif %}">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">문제 지문</label>
+                    <textarea name="prompt" rows="4"
+                              class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ (content.data or {}).get('prompt', '') if content else '' }}</textarea>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">채점 기준 (루브릭)</label>
+                    <textarea name="rubric" rows="3"
+                              class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ (content.data or {}).get('rubric', '') if content else '' }}</textarea>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">만점</label>
+                    <input type="number" name="max_score"
+                           value="{{ (content.data or {}).get('max_score', 100) if content else 100 }}"
+                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+        </div>
+
+        <button type="submit"
+                class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg text-sm">
+            저장
+        </button>
+    </form>
+</div>
+
+<script>
+function toggleTypeFields() {
+    const type = document.getElementById('type-select').value;
+    document.getElementById('video-fields').classList.toggle('hidden', type !== 'video');
+    document.getElementById('essay-fields').classList.toggle('hidden', type !== 'essay');
+}
+</script>
+{% endblock %}

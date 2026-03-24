@@ -52,6 +52,9 @@ def create_app(config_name='default'):
     from app.essays import essays_bp
     app.register_blueprint(essays_bp, url_prefix='/essays')
 
+    from app.library import library_bp
+    app.register_blueprint(library_bp, url_prefix='/library')
+
     # 메인 라우트
     from flask import redirect, url_for
     from flask_login import current_user
@@ -64,16 +67,9 @@ def create_app(config_name='default'):
             elif current_user.is_branch_owner or current_user.is_branch_staff:
                 return redirect(url_for('branch.dashboard'))
             elif current_user.role == 'student':
-                return redirect(url_for('essays.student_essays'))
+                return redirect(url_for('essays.student_dashboard'))
             elif current_user.role == 'parent':
-                # 자녀 목록으로 이동
-                from app.models.member import ParentStudent
-                link = ParentStudent.query.filter_by(
-                    parent_id=current_user.user_id, is_active=True).first()
-                if link:
-                    return redirect(url_for('essays.parent_essays',
-                                            student_id=link.student_id))
-                return redirect(url_for('auth.login'))
+                return redirect(url_for('essays.parent_dashboard'))
         return redirect(url_for('auth.login'))
 
     # Jinja2 전역 필터

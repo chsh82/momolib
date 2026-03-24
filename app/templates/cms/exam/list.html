@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}모의고사 관리{% endblock %}
+{% block content %}
+{% include 'cms/_subnav.html' %}
+<div class="flex items-center justify-between mb-6">
+    <h2 class="text-xl font-bold text-gray-800">모의고사 관리</h2>
+    <a href="{{ url_for('cms.mock_exam_new') }}"
+       class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ 새 모의고사</a>
+</div>
+
+{% if exams %}
+<div class="space-y-3">
+    {% for exam in exams %}
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-center gap-4">
+        <div class="flex-1 min-w-0">
+            <a href="{{ url_for('cms.mock_exam_detail', exam_id=exam.exam_id) }}"
+               class="font-semibold text-gray-800 hover:text-indigo-600">{{ exam.title }}</a>
+            <div class="flex gap-2 mt-1 flex-wrap">
+                {% if exam.book %}<span class="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded">{{ exam.book.title }}</span>{% endif %}
+                {% if exam.week_num %}<span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded">{{ exam.week_num }}주차</span>{% endif %}
+                <span class="text-xs text-gray-400">문항 {{ exam.question_count }}개</span>
+                <span class="text-xs text-gray-400">총 {{ exam.total_score|int }}점</span>
+                {% if exam.time_limit_minutes %}<span class="text-xs text-gray-400">{{ exam.time_limit_minutes }}분</span>{% endif %}
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            {% if exam.is_published %}
+            <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">공개</span>
+            {% else %}
+            <span class="text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded">비공개</span>
+            {% endif %}
+            <a href="{{ url_for('cms.mock_exam_detail', exam_id=exam.exam_id) }}"
+               class="text-xs text-indigo-600 hover:underline">관리</a>
+            <a href="{{ url_for('cms.mock_exam_edit', exam_id=exam.exam_id) }}"
+               class="text-xs text-gray-500 hover:underline">수정</a>
+            <form method="POST" action="{{ url_for('cms.mock_exam_delete', exam_id=exam.exam_id) }}"
+                  class="inline" onsubmit="return confirm('삭제할까요?')">
+                <button class="text-xs text-red-500 hover:underline">삭제</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-white rounded-xl border border-gray-100 p-12 text-center text-gray-400">
+    <div class="text-3xl mb-2">📝</div><div>등록된 모의고사가 없습니다.</div>
+</div>
+{% endif %}
+{% endblock %}
