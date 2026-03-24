@@ -221,6 +221,164 @@ def vocab_delete(question_id):
     return redirect(url_for('cms.vocab_list'))
 
 
+@cms_bp.route('/vocab/template')
+@login_required
+def vocab_template():
+    """어휘 퀴즈 엑셀 템플릿 다운로드"""
+    if not _hq_only(): abort(403)
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    from io import BytesIO
+    from flask import send_file
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = '어휘퀴즈'
+
+    headers = ['제목', '단어', '뜻(정답)', '보기1', '보기2', '보기3', '보기4',
+               '정답번호(1~4)', '난이도(easy/medium/hard)', '주차(숫자)', '태그(쉼표구분)']
+    col_widths = [25, 15, 25, 20, 20, 20, 20, 16, 22, 12, 25]
+
+    header_fill = PatternFill('solid', fgColor='4F46E5')
+    header_font = Font(bold=True, color='FFFFFF', size=10)
+    req_fill   = PatternFill('solid', fgColor='EEF2FF')
+    thin = Side(style='thin', color='D1D5DB')
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    for col, (h, w) in enumerate(zip(headers, col_widths), 1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        cell.border = border
+        ws.column_dimensions[get_column_letter(col)].width = w
+
+    ws.row_dimensions[1].height = 36
+
+    # 예시 데이터 3행
+    samples = [
+        ['호기심 많은 소년 - 어휘1', '탐구하다', '무엇인가를 깊이 파고들어 연구하다',
+         '탐구하다', '포기하다', '무시하다', '즐기다', 1, 'medium', 1, '독서,어휘'],
+        ['호기심 많은 소년 - 어휘2', '성취감', '목표를 이루었을 때 느끼는 만족감',
+         '허탈감', '성취감', '외로움', '두려움', 2, 'easy', 1, '감정,독서'],
+        ['호기심 많은 소년 - 어휘3', '도전', '어려운 상황에 맞서 싸우는 행위',
+         '회피', '안주', '도전', '포기', 3, 'hard', 2, ''],
+    ]
+    for row_num, row_data in enumerate(samples, 2):
+        for col, val in enumerate(row_data, 1):
+            cell = ws.cell(row=row_num, column=col, value=val)
+            cell.fill = req_fill
+            cell.border = border
+            cell.alignment = Alignment(vertical='center')
+
+    # 안내 시트
+    ws2 = wb.create_sheet('작성 안내')
+    notes = [
+        ('컬럼', '설명', '필수'),
+        ('제목', '문항 분류 이름 (예: 책제목-어휘1)', 'O'),
+        ('단어', '테스트할 단어', 'O'),
+        ('뜻(정답)', '단어의 올바른 뜻 (정답 보기)', 'O'),
+        ('보기1~4', '4개 보기 입력. 정답번호에 해당하는 보기가 뜻과 같아야 함', 'O'),
+        ('정답번호', '1~4 중 정답 보기 번호', 'O'),
+        ('난이도', 'easy / medium / hard 중 하나 (빈칸이면 medium)', 'X'),
+        ('주차', '커리큘럼 주차 숫자 (빈칸 가능)', 'X'),
+        ('태그', '쉼표로 구분 (예: 독서,어휘,초등)', 'X'),
+    ]
+    ws2.column_dimensions['A'].width = 14
+    ws2.column_dimensions['B'].width = 55
+    ws2.column_dimensions['C'].width = 8
+    for r, (a, b, c) in enumerate(notes, 1):
+        ws2.cell(row=r, column=1, value=a).font = Font(bold=(r == 1))
+        ws2.cell(row=r, column=2, value=b)
+        ws2.cell(row=r, column=3, value=c)
+
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return send_file(buf, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                     as_attachment=True, download_name='어휘퀴즈_업로드양식.xlsx')
+
+
+@cms_bp.route('/vocab/bulk-upload', methods=['POST'])
+@login_required
+def vocab_bulk_upload():
+    """엑셀 파일로 어휘 퀴즈 일괄 등록"""
+    if not _hq_only(): abort(403)
+    from openpyxl import load_workbook
+    from io import BytesIO
+
+    file = request.files.get('excel_file')
+    if not file or not file.filename.endswith('.xlsx'):
+        flash('xlsx 파일을 선택해주세요.', 'error')
+        return redirect(url_for('cms.vocab_list'))
+
+    try:
+        wb = load_workbook(BytesIO(file.read()), data_only=True)
+        ws = wb.active
+    except Exception:
+        flash('파일을 읽을 수 없습니다. 올바른 xlsx 파일인지 확인해주세요.', 'error')
+        return redirect(url_for('cms.vocab_list'))
+
+    DIFFICULTY_VALID = {'easy', 'medium', 'hard'}
+    saved = 0
+    errors = []
+
+    for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), 2):
+        if not any(row):  # 빈 행 스킵
+            continue
+
+        title     = str(row[0]).strip()  if row[0] else ''
+        word      = str(row[1]).strip()  if row[1] else ''
+        definition= str(row[2]).strip()  if row[2] else ''
+        choices   = [str(row[i]).strip() if row[i] else '' for i in range(3, 7)]
+        correct_raw = row[7]
+        difficulty  = str(row[8]).strip().lower() if row[8] else 'medium'
+        week_num    = int(row[9]) if row[9] and str(row[9]).strip().isdigit() else None
+        tags        = str(row[10]).strip() if row[10] else ''
+
+        # 필수값 검증
+        if not title or not word or not definition:
+            errors.append(f'{row_num}행: 제목/단어/뜻은 필수입니다.')
+            continue
+        if not all(choices):
+            errors.append(f'{row_num}행: 보기1~4를 모두 입력해주세요.')
+            continue
+        try:
+            correct_idx = int(correct_raw) - 1
+            if correct_idx not in range(4):
+                raise ValueError
+        except (TypeError, ValueError):
+            errors.append(f'{row_num}행: 정답번호는 1~4 사이 숫자여야 합니다.')
+            continue
+        if difficulty not in DIFFICULTY_VALID:
+            difficulty = 'medium'
+
+        q = BankQuestion(
+            type='vocab_quiz',
+            title=title,
+            difficulty=difficulty,
+            week_num=week_num,
+            tags=tags or None,
+            data={'word': word, 'definition': definition,
+                  'choices': choices, 'correct_idx': correct_idx},
+            created_by=current_user.user_id,
+        )
+        db.session.add(q)
+        saved += 1
+
+    if saved:
+        db.session.commit()
+
+    if errors:
+        flash(f'{saved}개 등록 완료. 오류 {len(errors)}건: ' + ' / '.join(errors[:3])
+              + ('...' if len(errors) > 3 else ''), 'warning' if saved else 'error')
+    else:
+        flash(f'{saved}개 어휘 퀴즈가 등록되었습니다.', 'success')
+
+    return redirect(url_for('cms.vocab_list'))
+
+
 # ═══════════════════════════════════════════════
 # 2. 독서 퀴즈 관리
 # ═══════════════════════════════════════════════
