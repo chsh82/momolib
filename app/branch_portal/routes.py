@@ -290,9 +290,12 @@ def delete_member(user_id):
     if user.role == 'branch_owner':
         flash('지점장 계정은 삭제할 수 없습니다.', 'error')
         return redirect(url_for('branch.member_detail', user_id=user_id))
-    db.session.delete(user)
+    name = user.name
+    # ORM 관계 처리를 우회하고 DB 레벨 CASCADE에 위임
+    from sqlalchemy import text
+    db.session.execute(text('DELETE FROM users WHERE user_id = :uid'), {'uid': user_id})
     db.session.commit()
-    flash(f'{user.name} 계정이 삭제되었습니다.', 'success')
+    flash(f'{name} 계정이 삭제되었습니다.', 'success')
     return redirect(url_for('branch.members'))
 
 
