@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from flask import Flask
+from flask import Flask, render_template
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_mail import Mail
@@ -70,7 +70,7 @@ def create_app(config_name='default'):
                 return redirect(url_for('essays.student_dashboard'))
             elif current_user.role == 'parent':
                 return redirect(url_for('essays.parent_dashboard'))
-        return redirect(url_for('auth.login'))
+        return render_template('landing.html')
 
     # Jinja2 전역 필터
     from datetime import datetime

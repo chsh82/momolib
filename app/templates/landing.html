@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>모모 라이브러리 — 독서 교육 관리 플랫폼</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
+        * { font-family: 'Noto Sans KR', sans-serif; }
+        .gradient-bg {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%);
+        }
+        .card-hover {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(79,70,229,0.15);
+        }
+        .fade-in {
+            animation: fadeIn 0.8s ease forwards;
+            opacity: 0;
+        }
+        .fade-in-delay-1 { animation-delay: 0.2s; }
+        .fade-in-delay-2 { animation-delay: 0.4s; }
+        .fade-in-delay-3 { animation-delay: 0.6s; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+    <!-- 네비게이션 -->
+    <nav class="bg-white border-b border-gray-100 sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="text-2xl">📚</span>
+                <span class="font-bold text-gray-800 text-lg">모모 라이브러리</span>
+            </div>
+            <a href="/auth/login"
+               class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-5 py-2 rounded-lg transition">
+                로그인
+            </a>
+        </div>
+    </nav>
+
+    <!-- 히어로 섹션 -->
+    <section class="gradient-bg text-white py-24 px-6">
+        <div class="max-w-4xl mx-auto text-center">
+            <div class="fade-in">
+                <span class="inline-block bg-white/20 text-white text-xs font-medium px-4 py-1.5 rounded-full mb-6">
+                    대치동 모모의 책장 스핀오프 시스템
+                </span>
+            </div>
+            <h1 class="fade-in fade-in-delay-1 text-4xl lg:text-6xl font-black leading-tight mb-6">
+                독서 교육의 새로운 기준<br>
+                <span class="text-purple-200">모모 라이브러리</span>
+            </h1>
+            <p class="fade-in fade-in-delay-2 text-lg text-indigo-100 mb-10 max-w-2xl mx-auto leading-relaxed">
+                학원, 교습소, 공부방을 위한 독서 교육 관리 플랫폼.<br>
+                도서 관리부터 AI 첨삭, 독서 MBTI까지 한 곳에서.
+            </p>
+            <div class="fade-in fade-in-delay-3 flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="/auth/login"
+                   class="bg-white text-indigo-700 font-bold px-8 py-3.5 rounded-xl hover:bg-indigo-50 transition text-sm">
+                    시작하기 →
+                </a>
+                <a href="#features"
+                   class="border border-white/40 text-white font-medium px-8 py-3.5 rounded-xl hover:bg-white/10 transition text-sm">
+                    기능 살펴보기
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- 통계 배너 -->
+    <section class="bg-white border-b border-gray-100 py-10">
+        <div class="max-w-4xl mx-auto px-6 grid grid-cols-3 gap-8 text-center">
+            <div>
+                <div class="text-3xl font-black text-indigo-600">AI</div>
+                <div class="text-sm text-gray-500 mt-1">논술 자동 첨삭</div>
+            </div>
+            <div>
+                <div class="text-3xl font-black text-purple-600">27</div>
+                <div class="text-sm text-gray-500 mt-1">독서 MBTI 유형</div>
+            </div>
+            <div>
+                <div class="text-3xl font-black text-indigo-600">∞</div>
+                <div class="text-sm text-gray-500 mt-1">도서 문제은행</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 주요 기능 -->
+    <section id="features" class="py-20 px-6">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-14">
+                <h2 class="text-3xl font-black text-gray-800 mb-3">모든 독서 교육을 한 곳에서</h2>
+                <p class="text-gray-500">운영에 필요한 모든 기능을 제공합니다.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+                <div class="card-hover bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                    <div class="text-3xl mb-4">📖</div>
+                    <h3 class="font-bold text-gray-800 mb-2">도서 & 콘텐츠 관리</h3>
+                    <p class="text-sm text-gray-500 leading-relaxed">ISBN으로 도서 정보를 자동 검색하고, 어휘 퀴즈·독서 퀴즈·강의 영상 등 다양한 학습 콘텐츠를 연결할 수 있어요.</p>
+                </div>
+
+                <div class="card-hover bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                    <div class="text-3xl mb-4">✍️</div>
+                    <h3 class="font-bold text-gray-800 mb-2">AI 논술 첨삭</h3>
+                    <p class="text-sm text-gray-500 leading-relaxed">Claude AI가 학생의 논술문을 분석하고 18개 지표로 점수를 매깁니다. 첨삭 완료 시 학부모에게 SMS 알림이 자동 발송돼요.</p>
+                </div>
+
+                <div class="card-hover bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                    <div class="text-3xl mb-4">🧠</div>
+                    <h3 class="font-bold text-gray-800 mb-2">독서 MBTI</h3>
+                    <p class="text-sm text-gray-500 leading-relaxed">독해력·사고력·서술력 3가지 영역 50문항으로 학생의 독서 유형을 진단합니다. 27가지 유형으로 맞춤 피드백을 제공해요.</p>
+                </div>
+
+                <div class="card-hover bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                    <div class="text-3xl mb-4">📝</div>
+                    <h3 class="font-bold text-gray-800 mb-2">모의고사 & 문제은행</h3>
+                    <p class="text-sm text-gray-500 leading-relaxed">어휘·독서·서술형 문제를 은행 방식으로 관리하고, 엑셀 일괄 입력으로 모의고사를 빠르게 구성할 수 있어요.</p>
+                </div>
+
+                <div class="card-hover bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                    <div class="text-3xl mb-4">📊</div>
+                    <h3 class="font-bold text-gray-800 mb-2">학습 분석 리포트</h3>
+                    <p class="text-sm text-gray-500 leading-relaxed">학생별 독서 현황, 퀴즈 점수 추이, 장르별 독서 패턴을 한눈에 확인할 수 있어요. 학부모도 자녀 현황을 실시간으로 조회해요.</p>
+                </div>
+
+                <div class="card-hover bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                    <div class="text-3xl mb-4">🏢</div>
+                    <h3 class="font-bold text-gray-800 mb-2">프랜차이즈 관리</h3>
+                    <p class="text-sm text-gray-500 leading-relaxed">본사에서 전체 지점을 통합 관리하고, 콘텐츠를 일괄 배포할 수 있어요. 지점별 매출·수강생 현황도 실시간으로 파악돼요.</p>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- 대상 -->
+    <section class="bg-indigo-50 py-20 px-6">
+        <div class="max-w-4xl mx-auto text-center">
+            <h2 class="text-3xl font-black text-gray-800 mb-3">이런 곳에 딱 맞아요</h2>
+            <p class="text-gray-500 mb-12">독서 교육을 운영하는 모든 기관에서 사용할 수 있어요.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <div class="text-4xl mb-3">🏫</div>
+                    <div class="font-bold text-gray-800">학원</div>
+                    <div class="text-sm text-gray-400 mt-1">독서·논술·국어 학원</div>
+                </div>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <div class="text-4xl mb-3">📚</div>
+                    <div class="font-bold text-gray-800">교습소</div>
+                    <div class="text-sm text-gray-400 mt-1">1인 독서 교습소</div>
+                </div>
+                <div class="bg-white rounded-2xl p-6 shadow-sm">
+                    <div class="text-4xl mb-3">🏠</div>
+                    <div class="font-bold text-gray-800">공부방</div>
+                    <div class="text-sm text-gray-400 mt-1">소규모 독서 지도</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="gradient-bg py-20 px-6 text-center text-white">
+        <div class="max-w-2xl mx-auto">
+            <h2 class="text-3xl font-black mb-4">지금 바로 시작해보세요</h2>
+            <p class="text-indigo-100 mb-8">대치동 모모의 책장이 검증한 독서 교육 시스템을 우리 기관에 도입하세요.</p>
+            <a href="/auth/login"
+               class="inline-block bg-white text-indigo-700 font-bold px-10 py-4 rounded-xl hover:bg-indigo-50 transition text-sm">
+                로그인하기 →
+            </a>
+        </div>
+    </section>
+
+    <!-- 푸터 -->
+    <footer class="bg-gray-800 text-gray-400 py-10 px-6 text-center text-sm">
+        <div class="flex items-center justify-center gap-2 mb-3">
+            <span class="text-xl">📚</span>
+            <span class="font-bold text-white">모모 라이브러리</span>
+        </div>
+        <p>대치동 모모의 책장 스핀오프 서비스</p>
+        <p class="mt-1">© 2026 MOMOLIB. All rights reserved.</p>
+    </footer>
+
+</body>
+</html>
