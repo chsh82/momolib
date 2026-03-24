@@ -264,6 +264,36 @@ def edit_member(user_id):
     return redirect(url_for('branch.member_detail', user_id=user_id))
 
 
+@branch_bp.route('/members/<user_id>/delete', methods=['POST'])
+@login_required
+@requires_role('branch_owner')
+def delete_member(user_id):
+    """회원 완전 삭제 (지점장 전용)"""
+    user = User.query.filter_by(user_id=user_id, branch_id=current_user.branch_id).first_or_404()
+    if user.role == 'branch_owner':
+        flash('지점장 계정은 삭제할 수 없습니다.', 'error')
+        return redirect(url_for('branch.member_detail', user_id=user_id))
+    db.session.delete(user)
+    db.session.commit()
+    flash(f'{user.name} 계정이 삭제되었습니다.', 'success')
+    return redirect(url_for('branch.members'))
+
+
+@branch_bp.route('/members/<user_id>/reset-password', methods=['POST'])
+@login_required
+@requires_role('branch_owner', 'branch_manager')
+def reset_member_password(user_id):
+    """비밀번호 임시 초기화"""
+    import random, string
+    user = User.query.filter_by(user_id=user_id, branch_id=current_user.branch_id).first_or_404()
+    if user.role == 'branch_owner':
+        return jsonify({'error': '지점장 계정은 초기화할 수 없습니다.'}), 403
+    temp_pw = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+    user.set_password(temp_pw)
+    db.session.commit()
+    return jsonify({'success': True, 'temp_password': temp_pw, 'name': user.name})
+
+
 @branch_bp.route('/members/<user_id>/toggle-active', methods=['POST'])
 @login_required
 @requires_role('branch_owner', 'branch_manager')

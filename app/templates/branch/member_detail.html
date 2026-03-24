@@ -18,12 +18,27 @@
             <span class="px-3 py-1 rounded-full text-sm bg-red-100 text-red-600">비활성</span>
             {% endif %}
         </div>
-        <button onclick="toggleActive('{{ member.user_id }}')"
-                class="text-sm px-4 py-2 rounded-lg border
-                {% if member.is_active %}border-red-200 text-red-600 hover:bg-red-50{% else %}border-green-200 text-green-600 hover:bg-green-50{% endif %}"
-                id="toggle-btn">
-            {{ '비활성화' if member.is_active else '활성화' }}
-        </button>
+        <div class="flex gap-2">
+            <button onclick="resetPassword('{{ member.user_id }}')"
+                    class="text-sm px-4 py-2 rounded-lg border border-yellow-200 text-yellow-700 hover:bg-yellow-50">
+                비밀번호 초기화
+            </button>
+            <button onclick="toggleActive('{{ member.user_id }}')"
+                    class="text-sm px-4 py-2 rounded-lg border
+                    {% if member.is_active %}border-red-200 text-red-600 hover:bg-red-50{% else %}border-green-200 text-green-600 hover:bg-green-50{% endif %}"
+                    id="toggle-btn">
+                {{ '비활성화' if member.is_active else '활성화' }}
+            </button>
+            {% if current_user.role == 'branch_owner' and member.role != 'branch_owner' %}
+            <form method="POST" action="{{ url_for('branch.delete_member', user_id=member.user_id) }}"
+                  onsubmit="return confirm('정말 삭제할까요? 이 작업은 되돌릴 수 없습니다.')">
+                <button type="submit"
+                        class="text-sm px-4 py-2 rounded-lg border border-red-300 text-red-600 hover:bg-red-50">
+                    삭제
+                </button>
+            </form>
+            {% endif %}
+        </div>
     </div>
 </div>
 
@@ -204,6 +219,19 @@ function toggleActive(userId) {
             if (data.success) {
                 alert(data.message);
                 location.reload();
+            } else {
+                alert(data.error || '오류가 발생했습니다.');
+            }
+        });
+}
+
+function resetPassword(userId) {
+    if (!confirm('비밀번호를 초기화할까요? 임시 비밀번호가 발급됩니다.')) return;
+    fetch(`/branch/members/${userId}/reset-password`, {method: 'POST'})
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert(`${data.name} 임시 비밀번호: ${data.temp_password}\n\n이 비밀번호를 회원에게 전달하고 로그인 후 변경하도록 안내하세요.`);
             } else {
                 alert(data.error || '오류가 발생했습니다.');
             }
