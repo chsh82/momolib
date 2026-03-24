@@ -9,6 +9,7 @@ class Branch(db.Model):
 
     branch_id = db.Column(db.String(36), primary_key=True)
     code = db.Column(db.String(20), unique=True, nullable=False, index=True)  # 예: BR001
+    short_code = db.Column(db.String(4), nullable=True)  # 학생코드 접두어, 예: GN / BD
     name = db.Column(db.String(100), nullable=False)
     address = db.Column(db.String(500), nullable=True)
     phone = db.Column(db.String(20), nullable=True)

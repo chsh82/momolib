@@ -4,6 +4,29 @@ from datetime import datetime
 from app.models import db
 
 
+def generate_student_code(branch):
+    """지점코드-연도-순번 형식으로 학생 코드 자동 생성 (예: GN-25-0001)"""
+    from datetime import datetime
+    from sqlalchemy import func
+
+    short = (branch.short_code or branch.code[:4]).upper()
+    year = datetime.now().strftime('%y')
+    prefix = f'{short}-{year}-'
+
+    max_code = db.session.query(func.max(StudentProfile.student_code)).filter(
+        StudentProfile.branch_id == branch.branch_id,
+        StudentProfile.student_code.like(f'{prefix}%')
+    ).scalar()
+
+    if max_code:
+        try:
+            last_num = int(max_code.split('-')[-1])
+        except (ValueError, IndexError):
+            last_num = 0
+        return f'{prefix}{(last_num + 1):04d}'
+    return f'{prefix}0001'
+
+
 GRADE_CHOICES = [
     ('elementary_1', '초등 1학년'), ('elementary_2', '초등 2학년'),
     ('elementary_3', '초등 3학년'), ('elementary_4', '초등 4학년'),

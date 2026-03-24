@@ -6,7 +6,7 @@ from app.models import db
 from app.models.user import User
 from app.models.branch import Branch
 from app.models.content import ContentItem, ContentView
-from app.models.member import StudentProfile, ParentStudent, GRADE_CHOICES
+from app.models.member import StudentProfile, ParentStudent, GRADE_CHOICES, generate_student_code
 from app.models.revenue import RevenueRecord
 from app.models.branch_post import BranchPost, BranchPostRead
 from app.models.essay import Essay, EssayResult
@@ -195,8 +195,21 @@ def add_member():
         flash(f'{user.display_role} "{name}" 등록이 완료되었습니다.', 'success')
         return redirect(url_for('branch.members', role=role))
 
+    branch = Branch.query.get(branch_id)
+    next_code = generate_student_code(branch) if branch else ''
     return render_template('branch/add_member.html',
-                           role_default=role_default, grade_choices=GRADE_CHOICES)
+                           role_default=role_default, grade_choices=GRADE_CHOICES,
+                           next_student_code=next_code)
+
+
+@branch_bp.route('/members/next-student-code')
+@login_required
+@requires_role('branch_owner', 'branch_manager')
+def next_student_code():
+    """학생 코드 다음 번호 AJAX"""
+    branch = Branch.query.get(current_user.branch_id)
+    code = generate_student_code(branch) if branch else ''
+    return jsonify({'code': code})
 
 
 @branch_bp.route('/members/<user_id>')

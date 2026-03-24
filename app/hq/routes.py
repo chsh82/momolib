@@ -93,6 +93,7 @@ def branches():
 def new_branch():
     if request.method == 'POST':
         code = request.form.get('code', '').strip().upper()
+        short_code = request.form.get('short_code', '').strip().upper() or None
         name = request.form.get('name', '').strip()
         address = request.form.get('address', '').strip()
         phone = request.form.get('phone', '').strip()
@@ -109,7 +110,7 @@ def new_branch():
             flash('이미 사용 중인 지점 코드입니다.', 'error')
             return render_template('hq/new_branch.html')
 
-        branch = Branch(code=code, name=name, address=address,
+        branch = Branch(code=code, short_code=short_code, name=name, address=address,
                         phone=phone, email=email)
         db.session.add(branch)
         db.session.flush()
