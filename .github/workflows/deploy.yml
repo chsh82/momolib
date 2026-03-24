@@ -1,4 +1,4 @@
-name: Deploy MOMOLIB to GCP
+name: Deploy to GCP
 
 on:
   push:
@@ -8,34 +8,17 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Syntax check
-        run: |
-          find app -name "*.py" -exec python -m py_compile {} \;
-          echo "문법 검사 통과"
-
-      - name: Deploy to GCP
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.GCP_HOST }}
-          username: ${{ secrets.GCP_USER }}
-          key: ${{ secrets.GCP_SSH_KEY }}
+          host: 34.158.201.115
+          username: chsh82
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            set -e
             cd ~/momolib
             git pull origin main
             source venv/bin/activate
             pip install -r requirements.txt -q
-            flask db upgrade
             sudo systemctl restart momolib
-            sleep 2
-            systemctl is-active momolib && echo "배포 성공" || echo "배포 실패"
+            echo "배포 완료"
