@@ -101,7 +101,9 @@ def members():
     search = request.args.get('q', '').strip()
 
     query = User.query.filter_by(branch_id=branch_id)
-    if role_filter:
+    if role_filter == 'admin':
+        query = query.filter(User.role.in_(['branch_owner', 'branch_manager']))
+    elif role_filter:
         query = query.filter_by(role=role_filter)
     if search:
         query = query.filter(
@@ -111,6 +113,8 @@ def members():
     users = query.order_by(User.role_level, User.name).all()
 
     counts = {
+        'admin': User.query.filter(User.branch_id == branch_id,
+                                   User.role.in_(['branch_owner', 'branch_manager'])).count(),
         'teacher': User.query.filter_by(branch_id=branch_id, role='teacher').count(),
         'student': User.query.filter_by(branch_id=branch_id, role='student').count(),
         'parent': User.query.filter_by(branch_id=branch_id, role='parent').count(),
