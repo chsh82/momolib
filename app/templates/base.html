@@ -44,6 +44,7 @@
                     <a href="{{ url_for('cms.index') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">콘텐츠 관리</a>
                     <a href="{{ url_for('library.book_list') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">도서 관리</a>
                     <a href="{{ url_for('library.essay_submissions') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">서술형 채점</a>
+                    <a href="{{ url_for('notif.index') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">알림</a>
                 </div>
                 {% elif current_user.is_branch_owner or current_user.is_branch_staff %}
                 <div class="flex space-x-4">
@@ -63,6 +64,7 @@
                     {% endif %}
                     <a href="{{ url_for('branch.branch_posts') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">지점 공지</a>
                     <a href="{{ url_for('branch.notices') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">본사 공지</a>
+                    <a href="{{ url_for('notif.index') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">알림</a>
                 </div>
                 {% elif current_user.role == 'student' %}
                 <div class="flex space-x-4">
@@ -74,12 +76,14 @@
                     <a href="{{ url_for('essays.student_essays') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">내 과제</a>
                     <a href="{{ url_for('essays.student_scores') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">성적 분석</a>
                     <a href="{{ url_for('essays.member_notices') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">공지사항</a>
+                    <a href="{{ url_for('notif.index') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">알림</a>
                 </div>
                 {% elif current_user.role == 'parent' %}
                 <div class="flex space-x-4">
                     <a href="{{ url_for('essays.parent_dashboard') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">대시보드</a>
                     <a href="{{ url_for('essays.member_notices') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">공지사항</a>
                     <a href="{{ url_for('library.mbti_intro') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">독서MBTI</a>
+                    <a href="{{ url_for('notif.index') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">알림</a>
                 </div>
                 {% endif %}
             </div>
