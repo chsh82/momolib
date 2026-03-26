@@ -39,9 +39,56 @@
         <a href="{{ url_for('cms.book_quiz_list') }}" class="border border-gray-300 text-gray-500 px-3 py-2 rounded-lg text-sm hover:bg-gray-50">초기화</a>
         {% endif %}
     </form>
-    <div class="ml-auto">
+    <div class="ml-auto flex gap-2">
+        <a href="{{ url_for('cms.book_quiz_template') }}"
+           class="border border-gray-300 text-gray-600 hover:bg-gray-50 px-4 py-2 rounded-lg text-sm font-medium">
+            ⬇ 양식 다운로드
+        </a>
+        <button onclick="document.getElementById('upload-modal').classList.remove('hidden')"
+                class="border border-indigo-300 text-indigo-600 hover:bg-indigo-50 px-4 py-2 rounded-lg text-sm font-medium">
+            📤 엑셀 일괄등록
+        </button>
         <a href="{{ url_for('cms.book_quiz_new') }}"
-           class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ 등록</a>
+           class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ 개별등록</a>
+    </div>
+</div>
+
+<!-- 엑셀 업로드 모달 -->
+<div id="upload-modal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+    <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md mx-4">
+        <h3 class="text-lg font-bold text-gray-800 mb-1">엑셀 일괄 등록</h3>
+        <p class="text-sm text-gray-500 mb-5">양식 파일을 다운로드하여 작성 후 업로드하세요.</p>
+        <form method="POST" action="{{ url_for('cms.book_quiz_bulk_upload') }}" enctype="multipart/form-data">
+            <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center mb-5 hover:border-indigo-400 transition">
+                <div class="text-3xl mb-2">📊</div>
+                <p class="text-sm text-gray-500 mb-3">xlsx 파일을 드래그하거나 클릭하여 선택</p>
+                <input type="file" name="excel_file" id="excel-input" accept=".xlsx"
+                       class="hidden" onchange="showFileName(this)">
+                <button type="button" onclick="document.getElementById('excel-input').click()"
+                        class="text-sm text-indigo-600 border border-indigo-300 px-4 py-1.5 rounded-lg hover:bg-indigo-50">
+                    파일 선택
+                </button>
+                <p id="file-name" class="text-xs text-gray-400 mt-2"></p>
+            </div>
+            <div class="bg-blue-50 rounded-lg p-3 text-xs text-blue-700 mb-5 space-y-1">
+                <div class="font-medium">📌 주의사항</div>
+                <div>• 1행(헤더)은 수정하지 마세요.</div>
+                <div>• 형식은 ox / multiple / short 중 하나를 입력하세요.</div>
+                <div>• OX 정답: O 또는 X / 4지선다 정답: 1~4 숫자 / 단답: 정답 텍스트</div>
+                <div>• 한 번에 최대 200행까지 등록 가능합니다.</div>
+            </div>
+            <div class="flex gap-3">
+                <button type="submit"
+                        class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg text-sm">
+                    등록하기
+                </button>
+                <button type="button"
+                        onclick="document.getElementById('upload-modal').classList.add('hidden')"
+                        class="flex-1 border border-gray-300 text-gray-600 hover:bg-gray-50 py-2.5 rounded-lg text-sm">
+                    취소
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -57,6 +104,13 @@ function filterMedium() {
         });
     }
 }
+function showFileName(input) {
+    const name = input.files[0]?.name || '';
+    document.getElementById('file-name').textContent = name ? '선택됨: ' + name : '';
+}
+document.getElementById('upload-modal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.add('hidden');
+});
 </script>
 
 {% if questions %}

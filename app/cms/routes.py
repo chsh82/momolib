@@ -538,6 +538,204 @@ def book_quiz_delete(question_id):
     return redirect(url_for('cms.book_quiz_list'))
 
 
+@cms_bp.route('/book-quiz/template')
+@login_required
+def book_quiz_template():
+    """독서 퀴즈 엑셀 템플릿 다운로드"""
+    if not _hq_only(): abort(403)
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    from io import BytesIO
+    from flask import send_file
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = '독서퀴즈'
+
+    headers = ['제목', '형식(ox/multiple/short)', '문제',
+               '보기1', '보기2', '보기3', '보기4',
+               '정답(OX→O또는X / 4지선다→1~4 / 단답→직접입력)',
+               '해설', '난이도(easy/medium/hard)', '주차(숫자)', '태그(쉼표구분)',
+               '대분류', '중분류', '소분류']
+    col_widths = [22, 20, 40, 18, 18, 18, 18, 38, 30, 22, 12, 20, 18, 18, 18]
+
+    header_fill = PatternFill('solid', fgColor='4F46E5')
+    header_font = Font(bold=True, color='FFFFFF', size=10)
+    req_fill    = PatternFill('solid', fgColor='EEF2FF')
+    thin        = Side(style='thin', color='D1D5DB')
+    border      = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    for col, (h, w) in enumerate(zip(headers, col_widths), 1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        cell.border = border
+        ws.column_dimensions[get_column_letter(col)].width = w
+    ws.row_dimensions[1].height = 50
+
+    samples = [
+        ['OX 예시 - 홍길동전', 'ox', '홍길동은 서얼 출신이다.',
+         '', '', '', '', 'O', '홍길동은 대표적인 서얼 차별 소설의 주인공이다.',
+         'medium', 1, '', '문학', '소설·동화', '중1'],
+        ['4지선다 예시 - 과학', 'multiple', '광합성이 일어나는 장소는?',
+         '미토콘드리아', '엽록체', '핵', '세포막', '2',
+         '엽록체에서 빛에너지를 이용해 포도당을 만든다.',
+         'easy', 2, '', '비문학', '설명문·정보글', '초5'],
+        ['단답 예시 - 역사', 'short', '조선을 건국한 인물은?',
+         '', '', '', '', '이성계', '1392년 이성계가 고려를 무너뜨리고 조선을 건국했다.',
+         'medium', '', '', '비문학', '사회·역사', '중2'],
+    ]
+    for row_num, row_data in enumerate(samples, 2):
+        for col, val in enumerate(row_data, 1):
+            cell = ws.cell(row=row_num, column=col, value=val)
+            cell.fill = req_fill
+            cell.border = border
+            cell.alignment = Alignment(vertical='center', wrap_text=True)
+        ws.row_dimensions[row_num].height = 28
+
+    ws2 = wb.create_sheet('작성 안내')
+    notes = [
+        ('컬럼', '설명', '필수'),
+        ('제목', '문항 분류 이름 (빈칸 시 문제 앞 40자 자동 사용)', 'X'),
+        ('형식', 'ox / multiple / short 중 하나', 'O'),
+        ('문제', '학생에게 제시할 질문', 'O'),
+        ('보기1~4', '4지선다(multiple)일 때만 입력 (나머지는 비워도 됨)', '조건부'),
+        ('정답', 'OX→O 또는 X / 4지선다→1~4 숫자 / 단답→정답 텍스트', 'O'),
+        ('해설', '정답 해설 (선택)', 'X'),
+        ('난이도', 'easy / medium / hard (빈칸이면 medium)', 'X'),
+        ('주차', '커리큘럼 주차 숫자 (빈칸 가능)', 'X'),
+        ('태그', '쉼표로 구분 (예: 독서,퀴즈)', 'X'),
+        ('대분류', '문학 또는 비문학', 'X'),
+        ('중분류', '소설·동화, 설명문·정보글 등', 'X'),
+        ('소분류', '초1~고등 등 학년', 'X'),
+    ]
+    ws2.column_dimensions['A'].width = 10
+    ws2.column_dimensions['B'].width = 55
+    ws2.column_dimensions['C'].width = 8
+    for r, (a, b, c) in enumerate(notes, 1):
+        ws2.cell(row=r, column=1, value=a).font = Font(bold=(r == 1))
+        ws2.cell(row=r, column=2, value=b)
+        ws2.cell(row=r, column=3, value=c)
+
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return send_file(buf, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                     as_attachment=True, download_name='독서퀴즈_업로드양식.xlsx')
+
+
+@cms_bp.route('/book-quiz/bulk-upload', methods=['POST'])
+@login_required
+def book_quiz_bulk_upload():
+    """엑셀 파일로 독서 퀴즈 일괄 등록"""
+    if not _hq_only(): abort(403)
+    from openpyxl import load_workbook
+    from io import BytesIO
+
+    file = request.files.get('excel_file')
+    if not file or not file.filename.endswith('.xlsx'):
+        flash('xlsx 파일을 선택해주세요.', 'error')
+        return redirect(url_for('cms.book_quiz_list'))
+
+    try:
+        wb = load_workbook(BytesIO(file.read()), data_only=True)
+        ws = wb.active
+    except Exception:
+        flash('파일을 읽을 수 없습니다. 올바른 xlsx 파일인지 확인해주세요.', 'error')
+        return redirect(url_for('cms.book_quiz_list'))
+
+    DIFFICULTY_VALID = {'easy', 'medium', 'hard'}
+    FORMATS_VALID    = {'ox', 'multiple', 'short'}
+    saved  = 0
+    errors = []
+
+    for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), 2):
+        if not any(row):
+            continue
+
+        def cell(i): return str(row[i]).strip() if len(row) > i and row[i] is not None else ''
+
+        title      = cell(0)
+        fmt        = cell(1).lower()
+        question   = cell(2)
+        choices    = [cell(3), cell(4), cell(5), cell(6)]
+        answer_raw = cell(7)
+        explanation= cell(8)
+        difficulty = cell(9).lower() or 'medium'
+        week_raw   = cell(10)
+        tags       = cell(11)
+        cat_large  = cell(12) or None
+        cat_medium = cell(13) or None
+        cat_small  = cell(14) or None
+
+        if fmt not in FORMATS_VALID:
+            errors.append(f'{row_num}행: 형식은 ox/multiple/short 중 하나여야 합니다.')
+            continue
+        if not question:
+            errors.append(f'{row_num}행: 문제는 필수입니다.')
+            continue
+        if not answer_raw:
+            errors.append(f'{row_num}행: 정답을 입력해주세요.')
+            continue
+
+        if fmt == 'ox':
+            correct = answer_raw.upper()
+            if correct not in ('O', 'X'):
+                errors.append(f'{row_num}행: OX 정답은 O 또는 X여야 합니다.')
+                continue
+            data = {'format': 'ox', 'question': question,
+                    'correct': correct, 'explanation': explanation}
+        elif fmt == 'multiple':
+            if not all(choices):
+                errors.append(f'{row_num}행: 4지선다는 보기1~4를 모두 입력해야 합니다.')
+                continue
+            try:
+                correct_idx = int(answer_raw) - 1
+                if correct_idx not in range(4):
+                    raise ValueError
+            except (TypeError, ValueError):
+                errors.append(f'{row_num}행: 4지선다 정답은 1~4 숫자여야 합니다.')
+                continue
+            data = {'format': 'multiple', 'question': question,
+                    'choices': choices, 'correct_idx': correct_idx, 'explanation': explanation}
+        else:  # short
+            data = {'format': 'short', 'question': question,
+                    'correct_answer': answer_raw, 'explanation': explanation}
+
+        if difficulty not in DIFFICULTY_VALID:
+            difficulty = 'medium'
+        week_num = int(week_raw) if week_raw.isdigit() else None
+        auto_title = title or question[:40]
+
+        bq = BankQuestion(
+            type='book_quiz',
+            title=auto_title,
+            difficulty=difficulty,
+            week_num=week_num,
+            tags=tags or None,
+            cat_large=cat_large,
+            cat_medium=cat_medium,
+            cat_small=cat_small,
+            data=data,
+            created_by=current_user.user_id,
+        )
+        db.session.add(bq)
+        saved += 1
+
+    if saved:
+        db.session.commit()
+
+    if errors:
+        flash(f'{saved}개 등록 완료. 오류 {len(errors)}건: ' + ' / '.join(errors[:3])
+              + ('...' if len(errors) > 3 else ''), 'warning' if saved else 'error')
+    else:
+        flash(f'{saved}개 독서 퀴즈가 등록되었습니다.', 'success')
+
+    return redirect(url_for('cms.book_quiz_list'))
+
+
 # ═══════════════════════════════════════════════
 # 3. 토론질문 관리
 # ═══════════════════════════════════════════════
