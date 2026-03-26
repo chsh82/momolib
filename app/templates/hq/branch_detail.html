@@ -65,6 +65,49 @@
     {% endif %}
 </div>
 
+<!-- 배정된 패키지 목록 -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-6">
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <h3 class="font-semibold text-gray-700">배정된 패키지 ({{ pkg_assignments|length }}개)</h3>
+        <a href="{{ url_for('lms.package_list') }}"
+           class="text-xs text-indigo-600 hover:underline">패키지 관리 →</a>
+    </div>
+    {% if pkg_assignments %}
+    <div class="divide-y divide-gray-50">
+        {% for a in pkg_assignments %}
+        <div class="px-6 py-3 flex items-center justify-between">
+            <div>
+                <span class="font-medium text-gray-800 text-sm">{{ a.package.title }}</span>
+                <span class="text-xs text-gray-400 ml-2">
+                    {{ a.package.curriculum_count }}개 주차 · v{{ a.package.version }}
+                </span>
+                {% if a.expires_at %}
+                <span class="text-xs text-amber-600 ml-2">~{{ a.expires_at.strftime('%Y-%m-%d') }}</span>
+                {% else %}
+                <span class="text-xs text-gray-300 ml-2">영구</span>
+                {% endif %}
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-xs text-gray-400">
+                    {{ a.assigned_at.strftime('%Y-%m-%d') }} 배정
+                </span>
+                <form method="POST"
+                      action="{{ url_for('lms.package_branch_delete', package_id=a.package_id, assignment_id=a.id) }}"
+                      onsubmit="return confirm('배정을 해제할까요?')">
+                    <button class="text-xs text-red-400 hover:text-red-600">해제</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="px-6 py-8 text-center text-gray-400 text-sm">
+        배정된 패키지가 없습니다.
+        <a href="{{ url_for('lms.package_list') }}" class="text-indigo-500 hover:underline ml-1">패키지 관리에서 배정하세요.</a>
+    </div>
+    {% endif %}
+</div>
+
 <!-- 계정 목록 -->
 <div class="bg-white rounded-xl shadow-sm border border-gray-100">
     <div class="px-6 py-4 border-b border-gray-100">

@@ -7,6 +7,7 @@ from app.models.user import User
 from app.models.branch import Branch, BranchContract
 from app.models.revenue import RevenueRecord
 from app.models.notification import Notification
+from app.models.lms import BranchPackageAssignment
 from app.utils.decorators import requires_role
 from datetime import datetime
 
@@ -141,8 +142,11 @@ def branch_detail(branch_id):
     recent_revenue = RevenueRecord.query.filter_by(branch_id=branch_id)\
         .order_by(RevenueRecord.period_year.desc(), RevenueRecord.period_month.desc())\
         .limit(6).all()
+    pkg_assignments = BranchPackageAssignment.query.filter_by(
+        branch_id=branch_id, is_active=True).all()
     return render_template('hq/branch_detail.html', branch=branch, users=users,
-                           recent_revenue=recent_revenue)
+                           recent_revenue=recent_revenue,
+                           pkg_assignments=pkg_assignments)
 
 
 @hq_bp.route('/branches/<branch_id>/create-user', methods=['GET', 'POST'])
