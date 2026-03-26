@@ -65,6 +65,7 @@ function filterMedium() {
         <thead class="bg-gray-50 border-b border-gray-100">
             <tr>
                 <th class="text-left px-5 py-3 text-gray-600 font-medium">제목</th>
+                <th class="text-center px-3 py-3 text-gray-600 font-medium">형식</th>
                 <th class="text-left px-4 py-3 text-gray-600 font-medium">문제</th>
                 <th class="text-left px-4 py-3 text-gray-600 font-medium">분류</th>
                 <th class="text-left px-4 py-3 text-gray-600 font-medium">연결 도서</th>
@@ -77,6 +78,16 @@ function filterMedium() {
             {% for q in questions %}
             <tr class="hover:bg-gray-50">
                 <td class="px-5 py-3 font-medium text-gray-800">{{ q.title }}</td>
+                <td class="px-3 py-3 text-center">
+                    {% set fmt = (q.data or {}).get('format', 'multiple') %}
+                    {% if fmt == 'ox' %}
+                    <span class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">OX</span>
+                    {% elif fmt == 'short' %}
+                    <span class="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">단답</span>
+                    {% else %}
+                    <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">4지선다</span>
+                    {% endif %}
+                </td>
                 <td class="px-4 py-3 text-gray-600 text-xs max-w-xs truncate">{{ (q.data or {}).get('question', '-') }}</td>
                 <td class="px-4 py-3 text-xs text-gray-500">
                     {% if q.cat_large %}

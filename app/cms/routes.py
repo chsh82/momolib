@@ -452,14 +452,21 @@ def book_quiz_list():
 def book_quiz_new():
     if not _hq_only(): abort(403)
     if request.method == 'POST':
-        choices = [request.form.get(f'choice_{i}', '') for i in range(4)]
-        data = {
-            'question':    request.form.get('question', ''),
-            'choices':     choices,
-            'correct_idx': int(request.form.get('correct_idx', 0)),
-            'explanation': request.form.get('explanation', ''),
-        }
-        title = request.form.get('title', '').strip() or data['question'][:40]
+        fmt = request.form.get('format', 'multiple')
+        question_text = request.form.get('question', '')
+        explanation   = request.form.get('explanation', '')
+        if fmt == 'ox':
+            data = {'format': 'ox', 'question': question_text,
+                    'correct': request.form.get('ox_correct', 'O'), 'explanation': explanation}
+        elif fmt == 'short':
+            data = {'format': 'short', 'question': question_text,
+                    'correct_answer': request.form.get('correct_answer', ''), 'explanation': explanation}
+        else:
+            choices = [request.form.get(f'choice_{i}', '') for i in range(4)]
+            data = {'format': 'multiple', 'question': question_text,
+                    'choices': choices, 'correct_idx': int(request.form.get('correct_idx', 0)),
+                    'explanation': explanation}
+        title = request.form.get('title', '').strip() or question_text[:40]
         bq = BankQuestion(
             type='book_quiz',
             title=title,
@@ -488,7 +495,20 @@ def book_quiz_edit(question_id):
     if not _hq_only(): abort(403)
     bq = BankQuestion.query.filter_by(question_id=question_id, type='book_quiz').first_or_404()
     if request.method == 'POST':
-        choices = [request.form.get(f'choice_{i}', '') for i in range(4)]
+        fmt = request.form.get('format', 'multiple')
+        question_text = request.form.get('question', '')
+        explanation   = request.form.get('explanation', '')
+        if fmt == 'ox':
+            data = {'format': 'ox', 'question': question_text,
+                    'correct': request.form.get('ox_correct', 'O'), 'explanation': explanation}
+        elif fmt == 'short':
+            data = {'format': 'short', 'question': question_text,
+                    'correct_answer': request.form.get('correct_answer', ''), 'explanation': explanation}
+        else:
+            choices = [request.form.get(f'choice_{i}', '') for i in range(4)]
+            data = {'format': 'multiple', 'question': question_text,
+                    'choices': choices, 'correct_idx': int(request.form.get('correct_idx', 0)),
+                    'explanation': explanation}
         bq.title      = request.form.get('title', '').strip() or bq.title
         bq.book_id    = request.form.get('book_id') or None
         bq.week_num   = request.form.get('week_num') or None
@@ -497,12 +517,7 @@ def book_quiz_edit(question_id):
         bq.cat_medium = request.form.get('cat_medium') or None
         bq.cat_small  = request.form.get('cat_small') or None
         bq.tags       = request.form.get('tags')
-        bq.data = {
-            'question':    request.form.get('question', ''),
-            'choices':     choices,
-            'correct_idx': int(request.form.get('correct_idx', 0)),
-            'explanation': request.form.get('explanation', ''),
-        }
+        bq.data       = data
         bq.updated_at = datetime.utcnow()
         db.session.commit()
         flash('독서 퀴즈가 수정되었습니다.', 'success')

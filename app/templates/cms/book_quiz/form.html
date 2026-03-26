@@ -9,6 +9,7 @@
 <h2 class="text-xl font-bold text-gray-800 mb-6">독서 퀴즈 {{ '수정' if question else '등록' }}</h2>
 
 {% set d = question.data if question else {} %}
+{% set fmt = d.get('format', 'multiple') %}
 <div class="max-w-xl bg-white rounded-xl border border-gray-100 shadow-sm p-6">
     <form method="POST">
         <div class="space-y-4">
@@ -19,19 +20,57 @@
                        placeholder="비워두면 문제 내용 앞 40자로 자동 설정">
             </div>
             <hr class="border-gray-100">
+
+            <!-- 형식 선택 -->
+            <div>
+                <label class="block text-xs text-gray-500 mb-2">문제 형식 *</label>
+                <div class="flex gap-3">
+                    {% for val, label in [('ox','OX'), ('multiple','4지선다'), ('short','단답식')] %}
+                    <label class="flex items-center gap-1.5 cursor-pointer">
+                        <input type="radio" name="format" value="{{ val }}" onchange="switchFormat(this.value)"
+                               {% if fmt == val %}checked{% endif %}
+                               class="accent-indigo-600">
+                        <span class="text-sm text-gray-700">{{ label }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
             <div>
                 <label class="block text-xs text-gray-500 mb-1">문제 *</label>
                 <textarea name="question" rows="3" required
                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                           placeholder="학생에게 제시할 내용 확인 질문을 입력하세요.">{{ d.get('question', '') }}</textarea>
             </div>
-            <div>
+
+            <!-- OX 정답 -->
+            <div id="section-ox" class="hidden">
+                <label class="block text-xs text-gray-500 mb-2">정답</label>
+                <div class="flex gap-4">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="ox_correct" value="O"
+                               {% if d.get('correct') == 'O' %}checked{% endif %}
+                               class="accent-indigo-600">
+                        <span class="text-lg font-bold text-green-600">O</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="ox_correct" value="X"
+                               {% if d.get('correct') == 'X' %}checked{% endif %}
+                               class="accent-indigo-600">
+                        <span class="text-lg font-bold text-red-500">X</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 4지선다 보기 -->
+            <div id="section-multiple" class="hidden">
                 <label class="block text-xs text-gray-500 mb-1">보기 4개 (정답에 라디오 선택)</label>
                 {% for i in range(4) %}
                 {% set choices = d.get('choices', ['','','','']) %}
                 <div class="flex items-center gap-2 mb-2">
                     <input type="radio" name="correct_idx" value="{{ i }}"
-                           {% if d.get('correct_idx', 0) == i %}checked{% endif %}>
+                           {% if d.get('correct_idx', 0) == i %}checked{% endif %}
+                           class="accent-indigo-600">
                     <input type="text" name="choice_{{ i }}"
                            value="{{ choices[i] if i < choices|length else '' }}"
                            placeholder="{{ i+1 }}번 보기"
@@ -39,6 +78,15 @@
                 </div>
                 {% endfor %}
             </div>
+
+            <!-- 단답식 정답 -->
+            <div id="section-short" class="hidden">
+                <label class="block text-xs text-gray-500 mb-1">정답</label>
+                <input type="text" name="correct_answer" value="{{ d.get('correct_answer', '') }}"
+                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                       placeholder="정답을 입력하세요.">
+            </div>
+
             <div>
                 <label class="block text-xs text-gray-500 mb-1">해설 (선택)</label>
                 <textarea name="explanation" rows="2"
@@ -119,6 +167,13 @@ const INIT_LARGE  = "{{ question.cat_large  if question and question.cat_large  
 const INIT_MEDIUM = "{{ question.cat_medium if question and question.cat_medium else '' }}";
 const INIT_SMALL  = "{{ question.cat_small  if question and question.cat_small  else '' }}";
 
+function switchFormat(fmt) {
+    ['ox', 'multiple', 'short'].forEach(f => {
+        document.getElementById('section-' + f).classList.add('hidden');
+    });
+    document.getElementById('section-' + fmt).classList.remove('hidden');
+}
+
 function setOptions(selectEl, options, selected) {
     selectEl.innerHTML = '<option value="">선택 안함</option>';
     options.forEach(opt => {
@@ -133,8 +188,7 @@ function updateMedium() {
     const large = document.getElementById('cat-large').value;
     const medSel = document.getElementById('cat-medium');
     const smlSel = document.getElementById('cat-small');
-    const mediums = large ? Object.keys(READING_CAT[large] || {}) : [];
-    setOptions(medSel, mediums, '');
+    setOptions(medSel, large ? Object.keys(READING_CAT[large] || {}) : [], '');
     setOptions(smlSel, [], '');
 }
 
@@ -142,11 +196,14 @@ function updateSmall() {
     const large  = document.getElementById('cat-large').value;
     const medium = document.getElementById('cat-medium').value;
     const smlSel = document.getElementById('cat-small');
-    const smalls = (large && medium) ? (READING_CAT[large]?.[medium] || []) : [];
-    setOptions(smlSel, smalls, '');
+    setOptions(smlSel, (large && medium) ? (READING_CAT[large]?.[medium] || []) : [], '');
 }
 
 (function init() {
+    // 형식 섹션 초기화
+    switchFormat('{{ fmt }}');
+
+    // 분류 초기화
     if (!INIT_LARGE) return;
     document.getElementById('cat-large').value = INIT_LARGE;
     const mediums = Object.keys(READING_CAT[INIT_LARGE] || {});
