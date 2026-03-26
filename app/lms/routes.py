@@ -5,7 +5,8 @@ from flask_login import login_required, current_user
 from app.lms import lms_bp
 from app.models import db
 from app.models.lms import (Curriculum, CurriculumItem, Package, PackageCurriculum,
-                             BranchPackageAssignment, StudentPackageAssignment)
+                             BranchPackageAssignment, StudentPackageAssignment,
+                             StudentItemProgress)
 from app.models.content_bank import BankQuestion, LectureVideo
 from app.models.branch import Branch
 from app.models.member import StudentProfile
@@ -25,7 +26,93 @@ def _hq_only():
 @lms_bp.route('/')
 @login_required
 def index():
-    return redirect(url_for('lms.curriculum_list'))
+    if not _hq_only(): abort(403)
+    return redirect(url_for('lms.hq_dashboard'))
+
+
+# ═══════════════════════════════════════════════
+# HQ 전체 현황 대시보드
+# ═══════════════════════════════════════════════
+
+@lms_bp.route('/dashboard')
+@login_required
+def hq_dashboard():
+    if not _hq_only(): abort(403)
+
+    # ── 전체 요약 ──
+    total_packages = Package.query.filter_by(is_active=True).count()
+    total_branch_assignments = BranchPackageAssignment.query.filter_by(is_active=True).count()
+    total_student_assignments = StudentPackageAssignment.query.filter_by(is_active=True).count()
+    total_completed = StudentItemProgress.query.filter_by(status='completed').count()
+
+    # ── 패키지별 현황 ──
+    packages = Package.query.filter_by(is_active=True).order_by(Package.created_at.desc()).all()
+    package_stats = []
+    for p in packages:
+        branch_cnt = BranchPackageAssignment.query.filter_by(
+            package_id=p.package_id, is_active=True).count()
+        student_assignments = StudentPackageAssignment.query.filter_by(
+            package_id=p.package_id, is_active=True).all()
+        student_cnt = len(student_assignments)
+
+        total_items = sum(len(pc.curriculum.items) for pc in p.curricula)
+        avg_pct = None
+        if student_assignments and total_items > 0:
+            pct_list = []
+            for sa in student_assignments:
+                done = StudentItemProgress.query.filter_by(
+                    assignment_id=sa.id, status='completed').count()
+                pct_list.append(done / total_items * 100)
+            avg_pct = round(sum(pct_list) / len(pct_list))
+
+        package_stats.append({
+            'package': p,
+            'branch_cnt': branch_cnt,
+            'student_cnt': student_cnt,
+            'avg_pct': avg_pct,
+        })
+
+    # ── 지점별 현황 ──
+    branches = Branch.query.filter_by(status='active').order_by(Branch.name).all()
+    branch_stats = []
+    for b in branches:
+        pkg_cnt = BranchPackageAssignment.query.filter_by(
+            branch_id=b.branch_id, is_active=True).count()
+        if pkg_cnt == 0:
+            continue
+        s_assignments = StudentPackageAssignment.query.filter_by(
+            branch_id=b.branch_id, is_active=True).all()
+        s_cnt = len(s_assignments)
+
+        avg_pct = None
+        if s_assignments:
+            pct_list = []
+            for sa in s_assignments:
+                total_items = sum(len(pc.curriculum.items) for pc in sa.package.curricula)
+                if total_items == 0:
+                    continue
+                done = StudentItemProgress.query.filter_by(
+                    assignment_id=sa.id, status='completed').count()
+                pct_list.append(done / total_items * 100)
+            if pct_list:
+                avg_pct = round(sum(pct_list) / len(pct_list))
+
+        branch_stats.append({
+            'branch': b,
+            'pkg_cnt': pkg_cnt,
+            'student_cnt': s_cnt,
+            'avg_pct': avg_pct,
+        })
+
+    branch_stats.sort(key=lambda x: (x['avg_pct'] or 0), reverse=True)
+
+    return render_template('lms/dashboard.html',
+                           total_packages=total_packages,
+                           total_branch_assignments=total_branch_assignments,
+                           total_student_assignments=total_student_assignments,
+                           total_completed=total_completed,
+                           package_stats=package_stats,
+                           branch_stats=branch_stats)
 
 
 @lms_bp.route('/curricula')
