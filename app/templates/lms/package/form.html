@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}패키지 생성{% endblock %}
+{% block content %}
+{% include 'lms/_subnav.html' %}
+<div class="mb-4">
+    <a href="{{ url_for('lms.package_list') }}" class="text-sm text-gray-500 hover:text-indigo-600">← 패키지 목록</a>
+</div>
+<h2 class="text-xl font-bold text-gray-800 mb-6">새 패키지 생성</h2>
+
+<div class="max-w-lg bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+    <form method="POST">
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">패키지명 *</label>
+                <input type="text" name="title" required autofocus
+                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                       placeholder="예: 초등 독서논술 12주 과정">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">설명 (선택)</label>
+                <textarea name="description" rows="3"
+                          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-2">진행 방식 *</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="flex items-start gap-3 border rounded-xl p-3 cursor-pointer hover:border-indigo-400 has-[:checked]:border-indigo-600 has-[:checked]:bg-indigo-50">
+                        <input type="radio" name="is_ordered" value="1" checked class="mt-0.5 accent-indigo-600">
+                        <div>
+                            <div class="text-sm font-medium text-gray-800">순서형</div>
+                            <div class="text-xs text-gray-400">1주차 → 2주차 → ... 순서로 진행</div>
+                        </div>
+                    </label>
+                    <label class="flex items-start gap-3 border rounded-xl p-3 cursor-pointer hover:border-indigo-400 has-[:checked]:border-indigo-600 has-[:checked]:bg-indigo-50">
+                        <input type="radio" name="is_ordered" value="0" class="mt-0.5 accent-indigo-600">
+                        <div>
+                            <div class="text-sm font-medium text-gray-800">자유형</div>
+                            <div class="text-xs text-gray-400">순서 없이 자유롭게 학습</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+        <p class="text-xs text-gray-400 mt-4">생성 후 커리큘럼을 추가할 수 있습니다.</p>
+        <button type="submit"
+                class="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg text-sm">
+            생성하기
+        </button>
+    </form>
+</div>
+{% endblock %}

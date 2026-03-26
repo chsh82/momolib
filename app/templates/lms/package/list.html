@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}패키지 관리{% endblock %}
+{% block content %}
+{% include 'lms/_subnav.html' %}
+
+<div class="flex items-center justify-between mb-4">
+    <h2 class="text-xl font-bold text-gray-800">패키지 관리</h2>
+    <span class="text-sm text-gray-500">총 {{ packages|length }}개</span>
+</div>
+
+<div class="flex gap-2 mb-4">
+    <form method="GET" class="flex gap-2">
+        <input type="text" name="q" value="{{ q }}" placeholder="검색..."
+               class="border border-gray-200 rounded-lg px-3 py-2 text-sm w-48 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        <button class="bg-gray-700 text-white px-3 py-2 rounded-lg text-sm">검색</button>
+    </form>
+    <a href="{{ url_for('lms.package_new') }}"
+       class="ml-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+        + 패키지 생성
+    </a>
+</div>
+
+{% if packages %}
+<div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50 border-b border-gray-100 text-xs text-gray-500">
+            <tr>
+                <th class="text-left px-5 py-3 font-medium">패키지명</th>
+                <th class="text-center px-3 py-3 font-medium">순서</th>
+                <th class="text-center px-3 py-3 font-medium">커리큘럼 수</th>
+                <th class="text-center px-3 py-3 font-medium">버전</th>
+                <th class="text-left px-4 py-3 font-medium">생성일</th>
+                <th class="text-center px-3 py-3 font-medium">관리</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+        {% for p in packages %}
+        <tr class="hover:bg-gray-50">
+            <td class="px-5 py-3">
+                <a href="{{ url_for('lms.package_detail', package_id=p.package_id) }}"
+                   class="font-medium text-gray-800 hover:text-indigo-600">{{ p.title }}</a>
+                {% if p.description %}
+                <div class="text-xs text-gray-400 truncate max-w-xs">{{ p.description }}</div>
+                {% endif %}
+            </td>
+            <td class="px-3 py-3 text-center">
+                {% if p.is_ordered %}
+                <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">순서형</span>
+                {% else %}
+                <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">자유형</span>
+                {% endif %}
+            </td>
+            <td class="px-3 py-3 text-center text-gray-600">{{ p.curriculum_count }}</td>
+            <td class="px-3 py-3 text-center text-gray-400 text-xs">v{{ p.version }}</td>
+            <td class="px-4 py-3 text-xs text-gray-400">{{ p.created_at.strftime('%Y-%m-%d') }}</td>
+            <td class="px-3 py-3 text-center">
+                <a href="{{ url_for('lms.package_detail', package_id=p.package_id) }}"
+                   class="text-xs text-indigo-600 hover:underline mr-2">편집</a>
+                <form method="POST" action="{{ url_for('lms.package_delete', package_id=p.package_id) }}"
+                      class="inline" onsubmit="return confirm('삭제할까요?')">
+                    <button class="text-xs text-red-500 hover:underline">삭제</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="bg-white rounded-xl border border-gray-100 p-12 text-center text-gray-400">
+    <div class="text-3xl mb-2">📦</div>
+    <div>등록된 패키지가 없습니다.</div>
+</div>
+{% endif %}
+{% endblock %}

@@ -55,6 +55,9 @@ def create_app(config_name='default'):
     from app.library import library_bp
     app.register_blueprint(library_bp, url_prefix='/library')
 
+    from app.lms import lms_bp
+    app.register_blueprint(lms_bp, url_prefix='/lms')
+
     # 메인 라우트
     from flask import redirect, url_for
     from flask_login import current_user

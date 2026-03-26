@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+{% block title %}{{ package.title }} — 패키지 편집{% endblock %}
+{% block content %}
+{% include 'lms/_subnav.html' %}
+
+<!-- 헤더 -->
+<div class="flex items-start justify-between mb-6">
+    <div>
+        <div class="mb-1">
+            <a href="{{ url_for('lms.package_list') }}" class="text-sm text-gray-400 hover:text-indigo-600">← 목록</a>
+        </div>
+        <div class="flex items-center gap-2">
+            <h2 class="text-xl font-bold text-gray-800">{{ package.title }}</h2>
+            {% if package.is_ordered %}
+            <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">순서형</span>
+            {% else %}
+            <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">자유형</span>
+            {% endif %}
+        </div>
+        {% if package.description %}
+        <p class="text-sm text-gray-500 mt-0.5">{{ package.description }}</p>
+        {% endif %}
+        <span class="text-xs text-gray-400">v{{ package.version }} · 커리큘럼 {{ package.curriculum_count }}개</span>
+    </div>
+    <button onclick="document.getElementById('edit-modal').classList.remove('hidden')"
+            class="text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 px-3 py-1.5 rounded-lg">
+        ✏️ 정보 수정
+    </button>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <!-- 왼쪽: 커리큘럼 목록 -->
+    <div>
+        <h3 class="text-sm font-semibold text-gray-700 mb-3">커리큘럼 구성</h3>
+
+        {% if package.curricula %}
+        <div class="space-y-2">
+        {% for pc in package.curricula %}
+        <div class="bg-white rounded-lg border border-gray-100 shadow-sm flex items-center gap-3 px-4 py-3">
+            {% if package.is_ordered %}
+            <span class="text-xs font-semibold text-indigo-600 bg-indigo-50 rounded-full w-7 h-7 flex items-center justify-center shrink-0">
+                {{ loop.index }}
+            </span>
+            {% endif %}
+            <div class="flex-1 min-w-0">
+                <div class="text-sm font-medium text-gray-800 truncate">{{ pc.curriculum.title }}</div>
+                <div class="text-xs text-gray-400">
+                    {{ pc.curriculum.item_count }}개 콘텐츠
+                    · 연결 v{{ pc.curriculum_version }}
+                    {% if pc.curriculum.version != pc.curriculum_version %}
+                    <span class="text-amber-600">(최신 v{{ pc.curriculum.version }} 있음)</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+                {% if not loop.first %}
+                <form method="POST" action="{{ url_for('lms.package_curriculum_move', package_id=package.package_id, pc_id=pc.id) }}" class="inline">
+                    <input type="hidden" name="direction" value="up">
+                    <button class="text-gray-400 hover:text-gray-700 text-xs px-1">▲</button>
+                </form>
+                {% endif %}
+                {% if not loop.last %}
+                <form method="POST" action="{{ url_for('lms.package_curriculum_move', package_id=package.package_id, pc_id=pc.id) }}" class="inline">
+                    <input type="hidden" name="direction" value="down">
+                    <button class="text-gray-400 hover:text-gray-700 text-xs px-1">▼</button>
+                </form>
+                {% endif %}
+                <form method="POST" action="{{ url_for('lms.package_curriculum_delete', package_id=package.package_id, pc_id=pc.id) }}"
+                      class="inline" onsubmit="return confirm('제거할까요?')">
+                    <button class="text-red-400 hover:text-red-600 text-xs px-1 ml-1">✕</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+        </div>
+        {% else %}
+        <div class="bg-white rounded-xl border border-dashed border-gray-200 p-8 text-center text-gray-400 text-sm">
+            오른쪽에서 커리큘럼을 추가해주세요.
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 오른쪽: 커리큘럼 추가 패널 -->
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+        <h3 class="text-sm font-semibold text-gray-700 mb-3">커리큘럼 추가</h3>
+        <input type="text" id="curriculum-search-input" placeholder="커리큘럼명 검색..."
+               oninput="searchCurriculum()"
+               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        <div id="curriculum-results" class="space-y-1 max-h-80 overflow-y-auto">
+            <div class="text-xs text-gray-400 text-center py-4">검색어를 입력하거나 비워두면 전체 목록이 표시됩니다.</div>
+        </div>
+    </div>
+</div>
+
+<!-- 정보 수정 모달 -->
+<div id="edit-modal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+    <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">패키지 정보 수정</h3>
+        <form method="POST" action="{{ url_for('lms.package_edit', package_id=package.package_id) }}">
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">패키지명 *</label>
+                    <input type="text" name="title" value="{{ package.title }}" required
+                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">설명</label>
+                    <textarea name="description" rows="2"
+                              class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ package.description or '' }}</textarea>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-2">진행 방식</label>
+                    <div class="flex gap-4">
+                        <label class="flex items-center gap-2 text-sm cursor-pointer">
+                            <input type="radio" name="is_ordered" value="1"
+                                   {% if package.is_ordered %}checked{% endif %} class="accent-indigo-600">순서형
+                        </label>
+                        <label class="flex items-center gap-2 text-sm cursor-pointer">
+                            <input type="radio" name="is_ordered" value="0"
+                                   {% if not package.is_ordered %}checked{% endif %} class="accent-indigo-600">자유형
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-3 mt-4">
+                <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-semibold">저장</button>
+                <button type="button" onclick="document.getElementById('edit-modal').classList.add('hidden')"
+                        class="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm">취소</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 숨김 폼 (커리큘럼 추가용) -->
+<form id="add-curriculum-form" method="POST"
+      action="{{ url_for('lms.package_curriculum_add', package_id=package.package_id) }}">
+    <input type="hidden" name="curriculum_id" id="add-curriculum-id">
+</form>
+
+<script>
+let searchTimer = null;
+
+function searchCurriculum() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+        const q = document.getElementById('curriculum-search-input').value;
+        fetch(`/lms/curriculum-search?q=${encodeURIComponent(q)}`)
+            .then(r => r.json())
+            .then(renderCurricula);
+    }, 200);
+}
+
+function renderCurricula(items) {
+    const box = document.getElementById('curriculum-results');
+    if (!items.length) {
+        box.innerHTML = '<div class="text-xs text-gray-400 text-center py-4">검색 결과가 없습니다.</div>';
+        return;
+    }
+    box.innerHTML = items.map(item => `
+        <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 border border-gray-100">
+            <div class="flex-1 min-w-0">
+                <div class="text-sm text-gray-800 truncate">${item.title}</div>
+                <div class="text-xs text-gray-400">${item.sub}</div>
+            </div>
+            <button onclick="addCurriculum('${item.id}', '${item.title.replace(/'/g, "\\'")}')"
+                    class="text-xs text-indigo-600 border border-indigo-200 hover:bg-indigo-50 px-2 py-1 rounded shrink-0">
+                + 추가
+            </button>
+        </div>
+    `).join('');
+}
+
+function addCurriculum(id, title) {
+    if (!confirm(`"${title}" 을(를) 패키지에 추가할까요?`)) return;
+    document.getElementById('add-curriculum-id').value = id;
+    document.getElementById('add-curriculum-form').submit();
+}
+
+document.getElementById('edit-modal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.add('hidden');
+});
+
+// 페이지 로드 시 전체 목록 표시
+searchCurriculum();
+</script>
+{% endblock %}

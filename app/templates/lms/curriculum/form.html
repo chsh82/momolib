@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}커리큘럼 생성{% endblock %}
+{% block content %}
+{% include 'lms/_subnav.html' %}
+<div class="mb-4">
+    <a href="{{ url_for('lms.curriculum_list') }}" class="text-sm text-gray-500 hover:text-indigo-600">← 커리큘럼 목록</a>
+</div>
+<h2 class="text-xl font-bold text-gray-800 mb-6">새 커리큘럼 생성</h2>
+
+<div class="max-w-lg bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+    <form method="POST">
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">커리큘럼명 *</label>
+                <input type="text" name="title" required autofocus
+                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                       placeholder="예: 홍길동전 1주차">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">설명 (선택)</label>
+                <textarea name="description" rows="3"
+                          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          placeholder="커리큘럼에 대한 간략한 설명"></textarea>
+            </div>
+        </div>
+        <p class="text-xs text-gray-400 mt-4">생성 후 콘텐츠를 추가할 수 있습니다.</p>
+        <button type="submit"
+                class="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg text-sm">
+            생성하기
+        </button>
+    </form>
+</div>
+{% endblock %}

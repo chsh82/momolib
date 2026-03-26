@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}커리큘럼 관리{% endblock %}
+{% block content %}
+{% include 'lms/_subnav.html' %}
+
+<div class="flex items-center justify-between mb-4">
+    <h2 class="text-xl font-bold text-gray-800">커리큘럼 관리</h2>
+    <span class="text-sm text-gray-500">총 {{ curricula|length }}개</span>
+</div>
+
+<div class="flex gap-2 mb-4">
+    <form method="GET" class="flex gap-2">
+        <input type="text" name="q" value="{{ q }}" placeholder="검색..."
+               class="border border-gray-200 rounded-lg px-3 py-2 text-sm w-48 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        <button class="bg-gray-700 text-white px-3 py-2 rounded-lg text-sm">검색</button>
+    </form>
+    <a href="{{ url_for('lms.curriculum_new') }}"
+       class="ml-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+        + 커리큘럼 생성
+    </a>
+</div>
+
+{% if curricula %}
+<div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50 border-b border-gray-100 text-xs text-gray-500">
+            <tr>
+                <th class="text-left px-5 py-3 font-medium">커리큘럼명</th>
+                <th class="text-left px-4 py-3 font-medium">구성</th>
+                <th class="text-center px-3 py-3 font-medium">콘텐츠</th>
+                <th class="text-center px-3 py-3 font-medium">버전</th>
+                <th class="text-left px-4 py-3 font-medium">생성일</th>
+                <th class="text-center px-3 py-3 font-medium">관리</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+        {% for c in curricula %}
+        <tr class="hover:bg-gray-50">
+            <td class="px-5 py-3">
+                <a href="{{ url_for('lms.curriculum_detail', curriculum_id=c.curriculum_id) }}"
+                   class="font-medium text-gray-800 hover:text-indigo-600">{{ c.title }}</a>
+                {% if c.description %}
+                <div class="text-xs text-gray-400 truncate max-w-xs">{{ c.description }}</div>
+                {% endif %}
+            </td>
+            <td class="px-4 py-3">
+                <div class="flex flex-wrap gap-1">
+                {% for ctype, cnt in c.type_summary.items() %}
+                {% set colors = {'vocab_quiz':'blue','book_quiz':'green','reading_quiz':'purple','video':'orange','essay':'pink'} %}
+                {% set col = colors.get(ctype, 'gray') %}
+                <span class="text-xs px-1.5 py-0.5 rounded bg-{{ col }}-50 text-{{ col }}-700">
+                    {{ {'vocab_quiz':'어휘','book_quiz':'독서','reading_quiz':'토론','video':'영상','essay':'글쓰기'}.get(ctype, ctype) }} {{ cnt }}
+                </span>
+                {% endfor %}
+                </div>
+            </td>
+            <td class="px-3 py-3 text-center text-gray-600">{{ c.item_count }}</td>
+            <td class="px-3 py-3 text-center text-gray-400 text-xs">v{{ c.version }}</td>
+            <td class="px-4 py-3 text-xs text-gray-400">{{ c.created_at.strftime('%Y-%m-%d') }}</td>
+            <td class="px-3 py-3 text-center">
+                <a href="{{ url_for('lms.curriculum_detail', curriculum_id=c.curriculum_id) }}"
+                   class="text-xs text-indigo-600 hover:underline mr-2">편집</a>
+                <form method="POST" action="{{ url_for('lms.curriculum_delete', curriculum_id=c.curriculum_id) }}"
+                      class="inline" onsubmit="return confirm('삭제할까요?')">
+                    <button class="text-xs text-red-500 hover:underline">삭제</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="bg-white rounded-xl border border-gray-100 p-12 text-center text-gray-400">
+    <div class="text-3xl mb-2">📋</div>
+    <div>등록된 커리큘럼이 없습니다.</div>
+</div>
+{% endif %}
+{% endblock %}
