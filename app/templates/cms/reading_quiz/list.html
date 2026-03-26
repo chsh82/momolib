@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
-{% block title %}독서 퀴즈 관리{% endblock %}
+{% block title %}토론질문 관리{% endblock %}
 {% block content %}
 {% include 'cms/_subnav.html' %}
 
 <div class="flex items-center justify-between mb-4">
-    <h2 class="text-xl font-bold text-gray-800">독서 퀴즈 관리</h2>
+    <h2 class="text-xl font-bold text-gray-800">토론질문 관리</h2>
     <span class="text-sm text-gray-500">총 {{ questions|length }}개</span>
 </div>
 
@@ -196,7 +196,7 @@ document.getElementById('upload-modal').addEventListener('click', function(e) {
 </div>
 {% else %}
 <div class="bg-white rounded-xl border border-gray-100 p-12 text-center text-gray-400">
-    <div class="text-3xl mb-2">📚</div><div>등록된 독서 퀴즈가 없습니다.</div>
+    <div class="text-3xl mb-2">📚</div><div>등록된 토론질문이 없습니다.</div>
 </div>
 {% endif %}
 {% endblock %}

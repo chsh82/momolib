@@ -52,8 +52,9 @@ READING_TYPE_CHOICES = [
 
 BANK_QUESTION_TYPES = [
     ('vocab_quiz',   '어휘 퀴즈'),
-    ('reading_quiz', '독서 퀴즈'),
-    ('essay',        '서술형 문항'),
+    ('book_quiz',    '독서 퀴즈'),
+    ('reading_quiz', '토론질문'),
+    ('essay',        '글쓰기 질문'),
 ]
 
 DIFFICULTY_CHOICES = [

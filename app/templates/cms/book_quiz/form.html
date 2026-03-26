@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+{% block title %}독서 퀴즈 {{ '수정' if question else '등록' }}{% endblock %}
+{% block content %}
+{% include 'cms/_subnav.html' %}
+
+<div class="mb-4">
+    <a href="{{ url_for('cms.book_quiz_list') }}" class="text-sm text-gray-500 hover:text-indigo-600">← 독서 퀴즈 목록</a>
+</div>
+<h2 class="text-xl font-bold text-gray-800 mb-6">독서 퀴즈 {{ '수정' if question else '등록' }}</h2>
+
+{% set d = question.data if question else {} %}
+<div class="max-w-xl bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+    <form method="POST">
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">문항 제목 (내부 분류용)</label>
+                <input type="text" name="title" value="{{ question.title if question else '' }}"
+                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                       placeholder="비워두면 문제 내용 앞 40자로 자동 설정">
+            </div>
+            <hr class="border-gray-100">
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">문제 *</label>
+                <textarea name="question" rows="3" required
+                          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          placeholder="학생에게 제시할 내용 확인 질문을 입력하세요.">{{ d.get('question', '') }}</textarea>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">보기 4개 (정답에 라디오 선택)</label>
+                {% for i in range(4) %}
+                {% set choices = d.get('choices', ['','','','']) %}
+                <div class="flex items-center gap-2 mb-2">
+                    <input type="radio" name="correct_idx" value="{{ i }}"
+                           {% if d.get('correct_idx', 0) == i %}checked{% endif %}>
+                    <input type="text" name="choice_{{ i }}"
+                           value="{{ choices[i] if i < choices|length else '' }}"
+                           placeholder="{{ i+1 }}번 보기"
+                           class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                {% endfor %}
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">해설 (선택)</label>
+                <textarea name="explanation" rows="2"
+                          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          placeholder="정답 해설을 입력하세요.">{{ d.get('explanation', '') }}</textarea>
+            </div>
+            <hr class="border-gray-100">
+            <div>
+                <label class="block text-xs text-gray-500 mb-2">분류</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <select name="cat_large" id="cat-large" onchange="updateMedium()"
+                            class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">대분류</option>
+                        {% for large in reading_categories %}
+                        <option value="{{ large }}"
+                            {% if question and question.cat_large == large %}selected{% endif %}>
+                            {{ large }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <select name="cat_medium" id="cat-medium" onchange="updateSmall()"
+                            class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">중분류</option>
+                    </select>
+                    <select name="cat_small" id="cat-small"
+                            class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">소분류</option>
+                    </select>
+                </div>
+            </div>
+            <hr class="border-gray-100">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">연결 도서 (선택)</label>
+                    <select name="book_id" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+                        <option value="">없음</option>
+                        {% for book in books %}
+                        <option value="{{ book.book_id }}"
+                            {% if question and question.book_id == book.book_id %}selected{% endif %}>
+                            {{ book.title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">주차</label>
+                    <input type="number" name="week_num" min="1"
+                           value="{{ question.week_num or '' if question else '' }}"
+                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">난이도</label>
+                    <select name="difficulty" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+                        {% for val, label in difficulty_choices %}
+                        <option value="{{ val }}" {% if question and question.difficulty == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">태그 (쉼표 구분)</label>
+                    <input type="text" name="tags" value="{{ question.tags or '' if question else '' }}"
+                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+                </div>
+            </div>
+        </div>
+        <button type="submit"
+                class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg text-sm">
+            저장
+        </button>
+    </form>
+</div>
+
+<script>
+const READING_CAT = {{ reading_categories | tojson }};
+const INIT_LARGE  = "{{ question.cat_large  if question and question.cat_large  else '' }}";
+const INIT_MEDIUM = "{{ question.cat_medium if question and question.cat_medium else '' }}";
+const INIT_SMALL  = "{{ question.cat_small  if question and question.cat_small  else '' }}";
+
+function setOptions(selectEl, options, selected) {
+    selectEl.innerHTML = '<option value="">선택 안함</option>';
+    options.forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt; o.textContent = opt;
+        if (opt === selected) o.selected = true;
+        selectEl.appendChild(o);
+    });
+}
+
+function updateMedium() {
+    const large = document.getElementById('cat-large').value;
+    const medSel = document.getElementById('cat-medium');
+    const smlSel = document.getElementById('cat-small');
+    const mediums = large ? Object.keys(READING_CAT[large] || {}) : [];
+    setOptions(medSel, mediums, '');
+    setOptions(smlSel, [], '');
+}
+
+function updateSmall() {
+    const large  = document.getElementById('cat-large').value;
+    const medium = document.getElementById('cat-medium').value;
+    const smlSel = document.getElementById('cat-small');
+    const smalls = (large && medium) ? (READING_CAT[large]?.[medium] || []) : [];
+    setOptions(smlSel, smalls, '');
+}
+
+(function init() {
+    if (!INIT_LARGE) return;
+    document.getElementById('cat-large').value = INIT_LARGE;
+    const mediums = Object.keys(READING_CAT[INIT_LARGE] || {});
+    setOptions(document.getElementById('cat-medium'), mediums, INIT_MEDIUM);
+    if (INIT_MEDIUM) {
+        const smalls = READING_CAT[INIT_LARGE]?.[INIT_MEDIUM] || [];
+        setOptions(document.getElementById('cat-small'), smalls, INIT_SMALL);
+    }
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% block title %}독서 퀴즈 관리{% endblock %}
+{% block content %}
+{% include 'cms/_subnav.html' %}
+
+<div class="flex items-center justify-between mb-4">
+    <h2 class="text-xl font-bold text-gray-800">독서 퀴즈 관리</h2>
+    <span class="text-sm text-gray-500">총 {{ questions|length }}개</span>
+</div>
+
+<div class="flex flex-wrap gap-2 mb-4">
+    <form method="GET" class="flex flex-wrap gap-2" id="filter-form">
+        <input type="text" name="q" value="{{ q }}" placeholder="검색..."
+               class="border border-gray-200 rounded-lg px-3 py-2 text-sm w-36 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        <select name="book_id" class="border border-gray-200 rounded-lg px-3 py-2 text-sm">
+            <option value="">전체 도서</option>
+            {% for book in books %}
+            <option value="{{ book.book_id }}" {% if book_id == book.book_id %}selected{% endif %}>{{ book.title }}</option>
+            {% endfor %}
+        </select>
+        <select name="cat_large" id="f-large" onchange="filterMedium(); this.form.submit()"
+                class="border border-gray-200 rounded-lg px-3 py-2 text-sm">
+            <option value="">대분류 전체</option>
+            {% for large in reading_categories %}
+            <option value="{{ large }}" {% if filter_large == large %}selected{% endif %}>{{ large }}</option>
+            {% endfor %}
+        </select>
+        <select name="cat_medium" id="f-medium" onchange="this.form.submit()"
+                class="border border-gray-200 rounded-lg px-3 py-2 text-sm">
+            <option value="">중분류 전체</option>
+            {% if filter_large and filter_large in reading_categories %}
+                {% for medium in reading_categories[filter_large] %}
+                <option value="{{ medium }}" {% if filter_medium == medium %}selected{% endif %}>{{ medium }}</option>
+                {% endfor %}
+            {% endif %}
+        </select>
+        <button class="bg-gray-700 text-white px-3 py-2 rounded-lg text-sm">검색</button>
+        {% if filter_large or filter_medium or filter_small or q or book_id %}
+        <a href="{{ url_for('cms.book_quiz_list') }}" class="border border-gray-300 text-gray-500 px-3 py-2 rounded-lg text-sm hover:bg-gray-50">초기화</a>
+        {% endif %}
+    </form>
+    <div class="ml-auto">
+        <a href="{{ url_for('cms.book_quiz_new') }}"
+           class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ 등록</a>
+    </div>
+</div>
+
+<script>
+const READING_CAT = {{ reading_categories | tojson }};
+function filterMedium() {
+    const large = document.getElementById('f-large').value;
+    const med = document.getElementById('f-medium');
+    med.innerHTML = '<option value="">중분류 전체</option>';
+    if (large && READING_CAT[large]) {
+        Object.keys(READING_CAT[large]).forEach(m => {
+            med.innerHTML += `<option value="${m}">${m}</option>`;
+        });
+    }
+}
+</script>
+
+{% if questions %}
+<div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50 border-b border-gray-100">
+            <tr>
+                <th class="text-left px-5 py-3 text-gray-600 font-medium">제목</th>
+                <th class="text-left px-4 py-3 text-gray-600 font-medium">문제</th>
+                <th class="text-left px-4 py-3 text-gray-600 font-medium">분류</th>
+                <th class="text-left px-4 py-3 text-gray-600 font-medium">연결 도서</th>
+                <th class="text-center px-3 py-3 text-gray-600 font-medium">주차</th>
+                <th class="text-center px-3 py-3 text-gray-600 font-medium">난이도</th>
+                <th class="text-center px-3 py-3 text-gray-600 font-medium">관리</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+            {% for q in questions %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-5 py-3 font-medium text-gray-800">{{ q.title }}</td>
+                <td class="px-4 py-3 text-gray-600 text-xs max-w-xs truncate">{{ (q.data or {}).get('question', '-') }}</td>
+                <td class="px-4 py-3 text-xs text-gray-500">
+                    {% if q.cat_large %}
+                    <div class="font-medium text-gray-700">{{ q.cat_large }}</div>
+                    {% if q.cat_medium %}<div>{{ q.cat_medium }}{% if q.cat_small %} › {{ q.cat_small }}{% endif %}</div>{% endif %}
+                    {% else %}<span class="text-gray-300">-</span>{% endif %}
+                </td>
+                <td class="px-4 py-3 text-gray-500 text-xs">{{ q.book.title if q.book else '-' }}</td>
+                <td class="px-3 py-3 text-center text-gray-500 text-xs">{{ q.week_num ~ '주' if q.week_num else '-' }}</td>
+                <td class="px-3 py-3 text-center">
+                    <span class="text-xs px-2 py-0.5 rounded
+                        {% if q.difficulty == 'easy' %}bg-green-100 text-green-700
+                        {% elif q.difficulty == 'hard' %}bg-red-100 text-red-700
+                        {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                        {{ q.difficulty_display }}
+                    </span>
+                </td>
+                <td class="px-3 py-3 text-center">
+                    <a href="{{ url_for('cms.book_quiz_edit', question_id=q.question_id) }}"
+                       class="text-xs text-indigo-600 hover:underline mr-2">수정</a>
+                    <form method="POST" action="{{ url_for('cms.book_quiz_delete', question_id=q.question_id) }}"
+                          class="inline" onsubmit="return confirm('삭제할까요?')">
+                        <button class="text-xs text-red-500 hover:underline">삭제</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="bg-white rounded-xl border border-gray-100 p-12 text-center text-gray-400">
+    <div class="text-3xl mb-2">📚</div>
+    <div>등록된 독서 퀴즈가 없습니다.</div>
+</div>
+{% endif %}
+{% endblock %}

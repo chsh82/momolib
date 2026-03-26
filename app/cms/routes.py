@@ -415,7 +415,116 @@ def vocab_bulk_upload():
 
 
 # ═══════════════════════════════════════════════
-# 2. 독서 퀴즈 관리
+# 2. 독서 퀴즈 관리 (간단한 내용 확인 퀴즈)
+# ═══════════════════════════════════════════════
+
+@cms_bp.route('/book-quiz')
+@login_required
+def book_quiz_list():
+    if not _hq_only(): abort(403)
+    q       = request.args.get('q', '').strip()
+    book_id = request.args.get('book_id', '')
+    filter_large  = request.args.get('cat_large', '')
+    filter_medium = request.args.get('cat_medium', '')
+    filter_small  = request.args.get('cat_small', '')
+    query = BankQuestion.query.filter_by(type='book_quiz', is_active=True)
+    if q:
+        query = query.filter(BankQuestion.title.ilike(f'%{q}%'))
+    if book_id:
+        query = query.filter_by(book_id=book_id)
+    if filter_large:
+        query = query.filter_by(cat_large=filter_large)
+    if filter_medium:
+        query = query.filter_by(cat_medium=filter_medium)
+    if filter_small:
+        query = query.filter_by(cat_small=filter_small)
+    questions = query.order_by(BankQuestion.created_at.desc()).all()
+    return render_template('cms/book_quiz/list.html', questions=questions,
+                           q=q, book_id=book_id, books=_all_books(),
+                           filter_large=filter_large, filter_medium=filter_medium,
+                           filter_small=filter_small,
+                           reading_categories=READING_CATEGORIES,
+                           difficulty_choices=DIFFICULTY_CHOICES)
+
+
+@cms_bp.route('/book-quiz/new', methods=['GET', 'POST'])
+@login_required
+def book_quiz_new():
+    if not _hq_only(): abort(403)
+    if request.method == 'POST':
+        choices = [request.form.get(f'choice_{i}', '') for i in range(4)]
+        data = {
+            'question':    request.form.get('question', ''),
+            'choices':     choices,
+            'correct_idx': int(request.form.get('correct_idx', 0)),
+            'explanation': request.form.get('explanation', ''),
+        }
+        title = request.form.get('title', '').strip() or data['question'][:40]
+        bq = BankQuestion(
+            type='book_quiz',
+            title=title,
+            book_id=request.form.get('book_id') or None,
+            week_num=request.form.get('week_num') or None,
+            difficulty=request.form.get('difficulty', 'medium'),
+            cat_large=request.form.get('cat_large') or None,
+            cat_medium=request.form.get('cat_medium') or None,
+            cat_small=request.form.get('cat_small') or None,
+            tags=request.form.get('tags'),
+            data=data,
+            created_by=current_user.user_id,
+        )
+        db.session.add(bq)
+        db.session.commit()
+        flash('독서 퀴즈가 등록되었습니다.', 'success')
+        return redirect(url_for('cms.book_quiz_list'))
+    return render_template('cms/book_quiz/form.html', books=_all_books(),
+                           difficulty_choices=DIFFICULTY_CHOICES,
+                           reading_categories=READING_CATEGORIES)
+
+
+@cms_bp.route('/book-quiz/<question_id>/edit', methods=['GET', 'POST'])
+@login_required
+def book_quiz_edit(question_id):
+    if not _hq_only(): abort(403)
+    bq = BankQuestion.query.filter_by(question_id=question_id, type='book_quiz').first_or_404()
+    if request.method == 'POST':
+        choices = [request.form.get(f'choice_{i}', '') for i in range(4)]
+        bq.title      = request.form.get('title', '').strip() or bq.title
+        bq.book_id    = request.form.get('book_id') or None
+        bq.week_num   = request.form.get('week_num') or None
+        bq.difficulty = request.form.get('difficulty', 'medium')
+        bq.cat_large  = request.form.get('cat_large') or None
+        bq.cat_medium = request.form.get('cat_medium') or None
+        bq.cat_small  = request.form.get('cat_small') or None
+        bq.tags       = request.form.get('tags')
+        bq.data = {
+            'question':    request.form.get('question', ''),
+            'choices':     choices,
+            'correct_idx': int(request.form.get('correct_idx', 0)),
+            'explanation': request.form.get('explanation', ''),
+        }
+        bq.updated_at = datetime.utcnow()
+        db.session.commit()
+        flash('독서 퀴즈가 수정되었습니다.', 'success')
+        return redirect(url_for('cms.book_quiz_list'))
+    return render_template('cms/book_quiz/form.html', question=bq, books=_all_books(),
+                           difficulty_choices=DIFFICULTY_CHOICES,
+                           reading_categories=READING_CATEGORIES)
+
+
+@cms_bp.route('/book-quiz/<question_id>/delete', methods=['POST'])
+@login_required
+def book_quiz_delete(question_id):
+    if not _hq_only(): abort(403)
+    bq = BankQuestion.query.filter_by(question_id=question_id, type='book_quiz').first_or_404()
+    bq.is_active = False
+    db.session.commit()
+    flash('삭제되었습니다.', 'success')
+    return redirect(url_for('cms.book_quiz_list'))
+
+
+# ═══════════════════════════════════════════════
+# 3. 토론질문 관리
 # ═══════════════════════════════════════════════
 
 @cms_bp.route('/reading-quiz')
@@ -489,7 +598,7 @@ def reading_quiz_new():
         )
         db.session.add(q)
         db.session.commit()
-        flash('독서 문항이 등록되었습니다.', 'success')
+        flash('토론질문이 등록되었습니다.', 'success')
         return redirect(url_for('cms.reading_quiz_list'))
     return render_template('cms/reading_quiz/form.html', books=_all_books(),
                            difficulty_choices=DIFFICULTY_CHOICES,
@@ -732,7 +841,7 @@ def reading_quiz_bulk_upload():
         flash(f'{saved}개 등록 완료. 오류 {len(errors)}건: ' + ' / '.join(errors[:3])
               + ('...' if len(errors) > 3 else ''), 'warning' if saved else 'error')
     else:
-        flash(f'{saved}개 독서 문항이 등록되었습니다.', 'success')
+        flash(f'{saved}개 토론질문이 등록되었습니다.', 'success')
 
     return redirect(url_for('cms.reading_quiz_list'))
 
