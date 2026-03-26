@@ -184,6 +184,12 @@ def item_submit(assignment_id, item_id):
     ).first_or_404()
 
     content = item.content_object
+    if content is None and item.content_type not in ('video', 'reading_quiz', 'essay'):
+        flash('콘텐츠를 찾을 수 없습니다.', 'error')
+        return redirect(url_for('learn.curriculum_view',
+                                assignment_id=assignment_id,
+                                curriculum_id=item.curriculum_id))
+
     score = None
     response_data = {}
 
