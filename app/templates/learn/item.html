@@ -109,7 +109,7 @@ function autoComplete() {
 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
     <div class="text-center mb-6">
         <div class="text-3xl font-bold text-gray-800 mb-2">{{ d.word }}</div>
-        {% if d.definition %}
+        {% if progress.status == 'completed' and d.definition %}
         <div class="text-sm text-gray-500 bg-gray-50 rounded-lg px-4 py-2 inline-block">{{ d.definition }}</div>
         {% endif %}
     </div>
