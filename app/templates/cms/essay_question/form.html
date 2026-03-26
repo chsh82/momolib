@@ -17,9 +17,20 @@
                        class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
             <div>
-                <label class="block text-xs text-gray-500 mb-1">문제 지문 *</label>
-                <textarea name="prompt" rows="5" required
-                          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ d.get('prompt', '') }}</textarea>
+                <label class="block text-xs text-gray-500 mb-1">문제 질문 *
+                    <span class="text-gray-400 font-normal">— 학생에게 제시하는 핵심 질문</span>
+                </label>
+                <textarea name="question" rows="2" required
+                          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          placeholder="예: 홍길동이 집을 떠난 이유를 자신의 말로 설명해보세요.">{{ d.get('question', '') }}</textarea>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">문제 지문
+                    <span class="text-gray-400 font-normal">— 참고 지문 또는 배경 설명 (선택)</span>
+                </label>
+                <textarea name="prompt" rows="4"
+                          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          placeholder="관련 지문이나 추가 설명을 입력하세요.">{{ d.get('prompt', '') }}</textarea>
             </div>
             <div>
                 <label class="block text-xs text-gray-500 mb-1">채점 기준 (루브릭)</label>

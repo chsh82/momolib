@@ -1354,6 +1354,7 @@ def essay_question_new():
     if not _hq_only(): abort(403)
     if request.method == 'POST':
         data = {
+            'question': request.form.get('question', ''),
             'prompt': request.form.get('prompt', ''),
             'rubric': request.form.get('rubric', ''),
             'max_score': float(request.form.get('max_score') or 100),
@@ -1371,7 +1372,7 @@ def essay_question_new():
         )
         db.session.add(q)
         db.session.commit()
-        flash('서술형 문항이 등록되었습니다.', 'success')
+        flash('글쓰기 질문이 등록되었습니다.', 'success')
         return redirect(url_for('cms.essay_question_list'))
     return render_template('cms/essay_question/form.html', books=_all_books(),
                            difficulty_choices=DIFFICULTY_CHOICES)
@@ -1389,6 +1390,7 @@ def essay_question_edit(question_id):
         q.difficulty = request.form.get('difficulty', 'medium')
         q.tags = request.form.get('tags')
         q.data = {
+            'question': request.form.get('question', ''),
             'prompt': request.form.get('prompt', ''),
             'rubric': request.form.get('rubric', ''),
             'max_score': float(request.form.get('max_score') or 100),
@@ -1408,6 +1410,165 @@ def essay_question_delete(question_id):
     q = BankQuestion.query.filter_by(question_id=question_id, type='essay').first_or_404()
     q.is_active = False
     db.session.commit()
+    return redirect(url_for('cms.essay_question_list'))
+
+
+@cms_bp.route('/essay-questions/template')
+@login_required
+def essay_question_template():
+    """글쓰기 질문 엑셀 템플릿 다운로드"""
+    if not _hq_only(): abort(403)
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    from io import BytesIO
+    from flask import send_file
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = '글쓰기질문'
+
+    headers = ['제목', '문제 질문', '문제 지문(선택)', '채점 기준(루브릭)',
+               '예시 답안', '만점(숫자)', '난이도(easy/medium/hard)', '주차(숫자)', '태그(쉼표구분)']
+    col_widths = [25, 45, 45, 45, 45, 12, 22, 12, 22]
+
+    header_fill = PatternFill('solid', fgColor='4F46E5')
+    header_font = Font(bold=True, color='FFFFFF', size=10)
+    req_fill    = PatternFill('solid', fgColor='EEF2FF')
+    thin        = Side(style='thin', color='D1D5DB')
+    border      = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    for col, (h, w) in enumerate(zip(headers, col_widths), 1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        cell.border = border
+        ws.column_dimensions[get_column_letter(col)].width = w
+    ws.row_dimensions[1].height = 36
+
+    samples = [
+        ['홍길동전 - 주제 파악', '홍길동이 집을 떠난 이유를 자신의 말로 설명해보세요.',
+         '홍길동은 서얼 출신으로 능력이 있음에도 불구하고 신분 차별을 받았다.',
+         'A(90~100): 신분 차별과 자아실현 욕구를 모두 언급\nB(70~89): 한 가지만 언급',
+         '홍길동은 서얼 차별로 인해 뜻을 펼칠 수 없었기 때문에 집을 떠났습니다.',
+         100, 'medium', 1, '독서,논술'],
+        ['과학 글쓰기 - 광합성', '광합성이 일어나는 과정을 단계별로 설명하세요.',
+         '', '', '', 100, 'hard', 3, '과학,서술'],
+    ]
+    for row_num, row_data in enumerate(samples, 2):
+        for col, val in enumerate(row_data, 1):
+            cell = ws.cell(row=row_num, column=col, value=val)
+            cell.fill = req_fill
+            cell.border = border
+            cell.alignment = Alignment(vertical='center', wrap_text=True)
+        ws.row_dimensions[row_num].height = 40
+
+    ws2 = wb.create_sheet('작성 안내')
+    notes = [
+        ('컬럼', '설명', '필수'),
+        ('제목', '문항 분류 이름', 'O'),
+        ('문제 질문', '학생에게 제시하는 핵심 질문', 'O'),
+        ('문제 지문', '참고 지문 또는 배경 설명 (없으면 비워도 됨)', 'X'),
+        ('채점 기준', '루브릭 (없으면 비워도 됨)', 'X'),
+        ('예시 답안', '모범 답안 (없으면 비워도 됨)', 'X'),
+        ('만점', '숫자 (기본값 100)', 'X'),
+        ('난이도', 'easy / medium / hard (기본값 medium)', 'X'),
+        ('주차', '커리큘럼 주차 숫자', 'X'),
+        ('태그', '쉼표로 구분', 'X'),
+    ]
+    ws2.column_dimensions['A'].width = 12
+    ws2.column_dimensions['B'].width = 50
+    ws2.column_dimensions['C'].width = 8
+    for r, (a, b, c) in enumerate(notes, 1):
+        ws2.cell(row=r, column=1, value=a).font = Font(bold=(r == 1))
+        ws2.cell(row=r, column=2, value=b)
+        ws2.cell(row=r, column=3, value=c)
+
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return send_file(buf, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                     as_attachment=True, download_name='글쓰기질문_업로드양식.xlsx')
+
+
+@cms_bp.route('/essay-questions/bulk-upload', methods=['POST'])
+@login_required
+def essay_question_bulk_upload():
+    """엑셀 파일로 글쓰기 질문 일괄 등록"""
+    if not _hq_only(): abort(403)
+    from openpyxl import load_workbook
+    from io import BytesIO
+
+    file = request.files.get('excel_file')
+    if not file or not file.filename.endswith('.xlsx'):
+        flash('xlsx 파일을 선택해주세요.', 'error')
+        return redirect(url_for('cms.essay_question_list'))
+
+    try:
+        wb = load_workbook(BytesIO(file.read()), data_only=True)
+        ws = wb.active
+    except Exception:
+        flash('파일을 읽을 수 없습니다. 올바른 xlsx 파일인지 확인해주세요.', 'error')
+        return redirect(url_for('cms.essay_question_list'))
+
+    DIFFICULTY_VALID = {'easy', 'medium', 'hard'}
+    saved  = 0
+    errors = []
+
+    for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), 2):
+        if not any(row):
+            continue
+
+        def cell(i): return str(row[i]).strip() if len(row) > i and row[i] is not None else ''
+
+        title         = cell(0)
+        question      = cell(1)
+        prompt        = cell(2)
+        rubric        = cell(3)
+        sample_answer = cell(4)
+        max_score_raw = cell(5)
+        difficulty    = cell(6).lower() or 'medium'
+        week_raw      = cell(7)
+        tags          = cell(8)
+
+        if not title:
+            errors.append(f'{row_num}행: 제목은 필수입니다.')
+            continue
+        if not question:
+            errors.append(f'{row_num}행: 문제 질문은 필수입니다.')
+            continue
+
+        try:
+            max_score = float(max_score_raw) if max_score_raw else 100.0
+        except ValueError:
+            max_score = 100.0
+        if difficulty not in DIFFICULTY_VALID:
+            difficulty = 'medium'
+        week_num = int(week_raw) if week_raw.isdigit() else None
+
+        q = BankQuestion(
+            type='essay',
+            title=title,
+            difficulty=difficulty,
+            week_num=week_num,
+            tags=tags or None,
+            data={'question': question, 'prompt': prompt, 'rubric': rubric,
+                  'max_score': max_score, 'sample_answer': sample_answer},
+            created_by=current_user.user_id,
+        )
+        db.session.add(q)
+        saved += 1
+
+    if saved:
+        db.session.commit()
+
+    if errors:
+        flash(f'{saved}개 등록 완료. 오류 {len(errors)}건: ' + ' / '.join(errors[:3])
+              + ('...' if len(errors) > 3 else ''), 'warning' if saved else 'error')
+    else:
+        flash(f'{saved}개 글쓰기 질문이 등록되었습니다.', 'success')
+
     return redirect(url_for('cms.essay_question_list'))
 
 
