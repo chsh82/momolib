@@ -138,6 +138,11 @@ class LectureVideo(db.Model):
     week_num = db.Column(db.Integer, nullable=True)
     tags = db.Column(db.String(300), nullable=True)
 
+    # 대/중/소 분류 (독서 퀴즈와 동일한 체계)
+    cat_large  = db.Column(db.String(30), nullable=True)
+    cat_medium = db.Column(db.String(30), nullable=True)
+    cat_small  = db.Column(db.String(30), nullable=True)
+
     is_published = db.Column(db.Boolean, default=False)
     view_count = db.Column(db.Integer, default=0)
     created_by = db.Column(db.String(36), db.ForeignKey('users.user_id',

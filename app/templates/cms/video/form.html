@@ -41,6 +41,30 @@
                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ video.description or '' if video else '' }}</textarea>
             </div>
             <hr class="border-gray-100">
+            <!-- 대/중/소 분류 -->
+            <div>
+                <label class="block text-xs text-gray-500 mb-2">독서 분류 (대/중/소)</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <select name="cat_large" id="cat-large" onchange="updateMedium()"
+                            class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">대분류</option>
+                        {% for large in reading_categories %}
+                        <option value="{{ large }}"
+                            {% if video and video.cat_large == large %}selected{% endif %}>
+                            {{ large }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <select name="cat_medium" id="cat-medium" onchange="updateSmall()"
+                            class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">중분류</option>
+                    </select>
+                    <select name="cat_small" id="cat-small"
+                            class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">소분류</option>
+                    </select>
+                </div>
+            </div>
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-xs text-gray-500 mb-1">연결 도서</label>
@@ -58,7 +82,7 @@
                 </div>
             </div>
             <div>
-                <label class="block text-xs text-gray-500 mb-1">태그</label>
+                <label class="block text-xs text-gray-500 mb-1">태그 (쉼표 구분)</label>
                 <input type="text" name="tags" value="{{ video.tags or '' if video else '' }}"
                        class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
             </div>
@@ -72,4 +96,39 @@
         <button type="submit" class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg text-sm">저장</button>
     </form>
 </div>
+
+<script>
+const READING_CAT = {{ reading_categories | tojson }};
+const INIT_LARGE  = "{{ video.cat_large  if video and video.cat_large  else '' }}";
+const INIT_MEDIUM = "{{ video.cat_medium if video and video.cat_medium else '' }}";
+const INIT_SMALL  = "{{ video.cat_small  if video and video.cat_small  else '' }}";
+
+function setOptions(selectEl, options, selected) {
+    selectEl.innerHTML = '<option value="">선택 안함</option>';
+    options.forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt; o.textContent = opt;
+        if (opt === selected) o.selected = true;
+        selectEl.appendChild(o);
+    });
+}
+function updateMedium() {
+    const large = document.getElementById('cat-large').value;
+    setOptions(document.getElementById('cat-medium'), large ? Object.keys(READING_CAT[large] || {}) : [], '');
+    setOptions(document.getElementById('cat-small'), [], '');
+}
+function updateSmall() {
+    const large = document.getElementById('cat-large').value;
+    const medium = document.getElementById('cat-medium').value;
+    setOptions(document.getElementById('cat-small'), (large && medium) ? (READING_CAT[large]?.[medium] || []) : [], '');
+}
+(function init() {
+    if (!INIT_LARGE) return;
+    document.getElementById('cat-large').value = INIT_LARGE;
+    setOptions(document.getElementById('cat-medium'), Object.keys(READING_CAT[INIT_LARGE] || {}), INIT_MEDIUM);
+    if (INIT_MEDIUM) {
+        setOptions(document.getElementById('cat-small'), READING_CAT[INIT_LARGE]?.[INIT_MEDIUM] || [], INIT_SMALL);
+    }
+})();
+</script>
 {% endblock %}

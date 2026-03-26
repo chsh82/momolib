@@ -745,16 +745,29 @@ def reading_quiz_bulk_upload():
 @login_required
 def video_list():
     if not _hq_only(): abort(403)
-    q = request.args.get('q', '').strip()
-    book_id = request.args.get('book_id', '')
+    q            = request.args.get('q', '').strip()
+    book_id      = request.args.get('book_id', '')
+    filter_large  = request.args.get('cat_large', '')
+    filter_medium = request.args.get('cat_medium', '')
+    filter_small  = request.args.get('cat_small', '')
     query = LectureVideo.query
     if q:
         query = query.filter(LectureVideo.title.ilike(f'%{q}%'))
     if book_id:
         query = query.filter_by(book_id=book_id)
+    if filter_large:
+        query = query.filter_by(cat_large=filter_large)
+    if filter_medium:
+        query = query.filter_by(cat_medium=filter_medium)
+    if filter_small:
+        query = query.filter_by(cat_small=filter_small)
     videos = query.order_by(LectureVideo.created_at.desc()).all()
     return render_template('cms/video/list.html', videos=videos,
-                           q=q, book_id=book_id, books=_all_books())
+                           q=q, book_id=book_id, books=_all_books(),
+                           filter_large=filter_large,
+                           filter_medium=filter_medium,
+                           filter_small=filter_small,
+                           reading_categories=READING_CATEGORIES)
 
 
 @cms_bp.route('/videos/new', methods=['GET', 'POST'])
@@ -772,6 +785,9 @@ def video_new():
             book_id=request.form.get('book_id') or None,
             week_num=request.form.get('week_num') or None,
             tags=request.form.get('tags'),
+            cat_large=request.form.get('cat_large') or None,
+            cat_medium=request.form.get('cat_medium') or None,
+            cat_small=request.form.get('cat_small') or None,
             is_published=bool(request.form.get('is_published')),
             created_by=current_user.user_id,
         )
@@ -779,7 +795,8 @@ def video_new():
         db.session.commit()
         flash('강의 영상이 등록되었습니다.', 'success')
         return redirect(url_for('cms.video_list'))
-    return render_template('cms/video/form.html', books=_all_books())
+    return render_template('cms/video/form.html', books=_all_books(),
+                           reading_categories=READING_CATEGORIES)
 
 
 @cms_bp.route('/videos/<video_id>/edit', methods=['GET', 'POST'])
@@ -796,11 +813,15 @@ def video_edit(video_id):
         v.book_id = request.form.get('book_id') or None
         v.week_num = request.form.get('week_num') or None
         v.tags = request.form.get('tags')
+        v.cat_large  = request.form.get('cat_large') or None
+        v.cat_medium = request.form.get('cat_medium') or None
+        v.cat_small  = request.form.get('cat_small') or None
         v.is_published = bool(request.form.get('is_published'))
         db.session.commit()
         flash('수정되었습니다.', 'success')
         return redirect(url_for('cms.video_list'))
-    return render_template('cms/video/form.html', video=v, books=_all_books())
+    return render_template('cms/video/form.html', video=v, books=_all_books(),
+                           reading_categories=READING_CATEGORIES)
 
 
 @cms_bp.route('/videos/<video_id>/delete', methods=['POST'])
@@ -822,6 +843,167 @@ def video_toggle_publish(video_id):
     v.is_published = not v.is_published
     db.session.commit()
     return jsonify({'published': v.is_published})
+
+
+@cms_bp.route('/videos/template')
+@login_required
+def video_template():
+    """강의 영상 엑셀 양식 다운로드"""
+    if not _hq_only(): abort(403)
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        from openpyxl.utils import get_column_letter
+        from io import BytesIO
+        from flask import send_file
+    except ImportError:
+        flash('openpyxl 패키지가 필요합니다.', 'error')
+        return redirect(url_for('cms.video_list'))
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = '강의영상'
+
+    # Row 1: 메타 정보 (병합)
+    ws.merge_cells('A1:I1')
+    ws['A1'] = '📹 독서 강의 영상 일괄 등록 양식  |  1행(헤더)는 수정하지 마세요'
+    ws['A1'].font = Font(bold=True, size=11)
+    ws['A1'].fill = PatternFill('solid', fgColor='4F46E5')
+    ws['A1'].font = Font(bold=True, color='FFFFFF', size=11)
+    ws['A1'].alignment = Alignment(horizontal='center')
+
+    # Row 2: 헤더
+    headers = ['제목*', '유튜브URL*', '설명', '대분류', '중분류', '소분류', '주차', '태그', '공개여부(Y/N)']
+    header_fill = PatternFill('solid', fgColor='E0E7FF')
+    thin = Side(style='thin', color='CCCCCC')
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=2, column=col, value=h)
+        cell.font = Font(bold=True, size=10)
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center')
+        cell.border = border
+
+    # Row 3-4: 샘플 데이터
+    samples = [
+        ['[소설·동화 초3] 강아지똥 해설 강의', 'https://youtu.be/xxxxxxxxxxxx',
+         '강아지똥 줄거리 및 독해 포인트 해설', '문학', '소설·동화', '초3', '1', '동화,초등', 'Y'],
+        ['[논설문 초5] 환경 보호 주장하기', 'https://youtu.be/yyyyyyyyyyyy',
+         '환경 보호 논설문 구조 분석', '비문학', '논설문·주장글', '초5', '2', '비문학,논설문', 'N'],
+    ]
+    for row_idx, sample in enumerate(samples, 3):
+        for col_idx, val in enumerate(sample, 1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=val)
+            cell.border = border
+
+    # 컬럼 너비
+    col_widths = [35, 40, 30, 12, 18, 8, 6, 20, 14]
+    for col, w in enumerate(col_widths, 1):
+        ws.column_dimensions[get_column_letter(col)].width = w
+
+    # 작성 안내 시트
+    ws2 = wb.create_sheet('작성 안내')
+    notes = [
+        ['항목', '설명'],
+        ['제목*', '영상 제목 (필수)'],
+        ['유튜브URL*', 'YouTube 영상 URL (필수) — https://youtu.be/... 또는 https://youtube.com/watch?v=...'],
+        ['설명', '영상 설명 (선택)'],
+        ['대분류', '문학 / 비문학'],
+        ['중분류', '소설·동화 / 시·동시 / 수필·일기 / 희곡·시나리오 / 설명문·정보글 / 논설문·주장글 / 전기·인물이야기 / 사회·역사 / 과학·기술 / 예술·문화'],
+        ['소분류', '초1 / 초2 / 초3 / 초4 / 초5 / 초6 / 중1 / 중2 / 중3 / 고등'],
+        ['주차', '숫자만 입력 (예: 1)'],
+        ['태그', '쉼표로 구분 (예: 동화,초등,서사)'],
+        ['공개여부(Y/N)', 'Y = 공개, N = 비공개 (기본값: N)'],
+    ]
+    ws2['A1'].font = Font(bold=True)
+    for row_data in notes:
+        ws2.append(row_data)
+    ws2.column_dimensions['A'].width = 18
+    ws2.column_dimensions['B'].width = 75
+
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return send_file(buf, download_name='강의영상_일괄등록_양식.xlsx',
+                     as_attachment=True,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
+@cms_bp.route('/videos/bulk-upload', methods=['POST'])
+@login_required
+def video_bulk_upload():
+    """강의 영상 엑셀 일괄 등록"""
+    if not _hq_only(): abort(403)
+    try:
+        import openpyxl
+    except ImportError:
+        flash('openpyxl 패키지가 필요합니다.', 'error')
+        return redirect(url_for('cms.video_list'))
+
+    file = request.files.get('excel_file')
+    if not file or not file.filename.endswith('.xlsx'):
+        flash('xlsx 파일을 선택하세요.', 'error')
+        return redirect(url_for('cms.video_list'))
+
+    try:
+        wb = openpyxl.load_workbook(file, data_only=True)
+        ws = wb.active
+    except Exception:
+        flash('파일을 읽을 수 없습니다. xlsx 형식인지 확인하세요.', 'error')
+        return redirect(url_for('cms.video_list'))
+
+    def _s(cell):
+        return str(cell.value).strip() if cell.value is not None else ''
+
+    count = 0
+    errors = []
+    rows = list(ws.iter_rows(min_row=3))  # Row 1=메타, Row 2=헤더 skip
+    if len(rows) > 200:
+        flash('한 번에 최대 200행까지 등록 가능합니다.', 'error')
+        return redirect(url_for('cms.video_list'))
+
+    for row_num, row in enumerate(rows, 3):
+        title = _s(row[0]) if len(row) > 0 else ''
+        url   = _s(row[1]) if len(row) > 1 else ''
+        if not title or not url:
+            continue  # 빈 행 스킵
+
+        description = _s(row[2]) if len(row) > 2 else ''
+        cat_large   = _s(row[3]) or None if len(row) > 3 else None
+        cat_medium  = _s(row[4]) or None if len(row) > 4 else None
+        cat_small   = _s(row[5]) or None if len(row) > 5 else None
+        week_num    = _s(row[6]) if len(row) > 6 else ''
+        tags        = _s(row[7]) if len(row) > 7 else ''
+        is_pub_str  = _s(row[8]).upper() if len(row) > 8 else ''
+
+        try:
+            week_num = int(week_num) if week_num.isdigit() else None
+        except Exception:
+            week_num = None
+
+        is_published = (is_pub_str == 'Y')
+
+        v = LectureVideo(
+            title=title,
+            description=description or None,
+            url=url,
+            cat_large=cat_large,
+            cat_medium=cat_medium,
+            cat_small=cat_small,
+            week_num=week_num,
+            tags=tags or None,
+            is_published=is_published,
+            created_by=current_user.user_id,
+        )
+        db.session.add(v)
+        count += 1
+
+    if count:
+        db.session.commit()
+        flash(f'{count}개의 강의 영상이 등록되었습니다.', 'success')
+    else:
+        flash('등록할 데이터가 없습니다. 양식을 확인하세요.', 'warning')
+    return redirect(url_for('cms.video_list'))
 
 
 # ═══════════════════════════════════════════════
