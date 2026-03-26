@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% block title %}학습 진도 현황{% endblock %}
+{% block content %}
+
+<div class="mb-6 flex items-center justify-between">
+    <div>
+        <h2 class="text-xl font-bold text-gray-800">학습 진도 현황</h2>
+        <p class="text-sm text-gray-500 mt-0.5">학생별 패키지 학습 진도를 확인합니다.</p>
+    </div>
+</div>
+
+{% if not packages %}
+<div class="bg-white rounded-2xl border border-dashed border-gray-200 p-16 text-center">
+    <div class="text-4xl mb-3">📦</div>
+    <p class="text-gray-500 text-sm">배정된 학습 패키지가 없습니다.</p>
+    <p class="text-gray-400 text-xs mt-1">본사에 패키지 배정을 요청해주세요.</p>
+</div>
+{% else %}
+
+<!-- 패키지 탭 -->
+<div class="flex flex-wrap gap-2 mb-5">
+{% for pkg in packages %}
+<a href="{{ url_for('branch.lms_dashboard') }}?package_id={{ pkg.package_id }}"
+   class="px-4 py-2 rounded-lg text-sm font-medium border transition
+          {% if selected_pkg and selected_pkg.package_id == pkg.package_id %}
+              bg-indigo-600 text-white border-indigo-600
+          {% else %}
+              bg-white text-gray-600 border-gray-200 hover:border-indigo-400
+          {% endif %}">
+    {{ pkg.title }}
+</a>
+{% endfor %}
+</div>
+
+{% if selected_pkg %}
+<!-- 선택된 패키지 정보 -->
+<div class="bg-indigo-50 rounded-xl px-4 py-3 mb-4 flex items-center gap-4 text-sm">
+    <span class="font-semibold text-indigo-800">{{ selected_pkg.title }}</span>
+    <span class="text-indigo-500">{{ selected_pkg.curriculum_count }}개 주차</span>
+    {% if student_rows %}
+    <span class="text-indigo-500">{{ student_rows|length }}명 배정</span>
+    {% set avg_pct = (student_rows | map(attribute='pct') | sum / student_rows|length) | int %}
+    <span class="text-indigo-500">평균 진도 {{ avg_pct }}%</span>
+    {% endif %}
+</div>
+
+{% if student_rows %}
+<!-- 학생 진도 테이블 -->
+<div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50 border-b border-gray-100">
+            <tr>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500">학생</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500">진도율</th>
+                <th class="text-center px-4 py-3 text-xs font-semibold text-gray-500">완료</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 hidden sm:table-cell">마지막 활동</th>
+                <th class="px-4 py-3"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+        {% for row in student_rows %}
+        <tr class="hover:bg-gray-50 transition">
+            <td class="px-4 py-3">
+                <div class="font-medium text-gray-800">{{ row.student.name }}</div>
+                {% if row.student.student_profile %}
+                <div class="text-xs text-gray-400">{{ row.student.student_profile.grade_display }}</div>
+                {% endif %}
+            </td>
+            <td class="px-4 py-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-24 bg-gray-100 rounded-full h-2 hidden sm:block">
+                        <div class="h-2 rounded-full transition-all
+                                    {% if row.pct == 100 %}bg-green-400
+                                    {% elif row.pct >= 50 %}bg-indigo-400
+                                    {% else %}bg-gray-300{% endif %}"
+                             style="width: {{ row.pct }}%"></div>
+                    </div>
+                    <span class="font-semibold text-sm
+                                 {% if row.pct == 100 %}text-green-600
+                                 {% elif row.pct >= 50 %}text-indigo-600
+                                 {% else %}text-gray-500{% endif %}">
+                        {{ row.pct }}%
+                    </span>
+                </div>
+            </td>
+            <td class="px-4 py-3 text-center text-xs text-gray-500">
+                {{ row.done }}/{{ row.total }}
+            </td>
+            <td class="px-4 py-3 text-xs text-gray-400 hidden sm:table-cell">
+                {% if row.last_at %}
+                {{ row.last_at.strftime('%m/%d %H:%M') }}
+                {% else %}
+                <span class="text-gray-300">활동 없음</span>
+                {% endif %}
+            </td>
+            <td class="px-4 py-3 text-right">
+                <button onclick="showDetail({{ row.assignment.id }}, '{{ row.student.name }}')"
+                        class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+                    상세 보기
+                </button>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% else %}
+<div class="bg-white rounded-xl border border-dashed border-gray-200 p-12 text-center text-gray-400 text-sm">
+    이 패키지를 배정받은 학생이 없습니다.
+</div>
+{% endif %}
+{% endif %}
+{% endif %}
+
+<!-- 상세 모달 -->
+<div id="detail-modal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <h3 id="modal-title" class="font-bold text-gray-800 text-base"></h3>
+            <button onclick="closeDetail()" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+        </div>
+        <div id="modal-body" class="overflow-y-auto flex-1 px-5 py-4 space-y-4">
+            <div class="text-center text-gray-400 text-sm py-8">로딩 중...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showDetail(assignmentId, name) {
+    document.getElementById('modal-title').textContent = name + ' — 진도 상세';
+    document.getElementById('detail-modal').classList.remove('hidden');
+    document.getElementById('modal-body').innerHTML =
+        '<div class="text-center text-gray-400 text-sm py-8">로딩 중...</div>';
+
+    fetch(`/branch/lms/student/${assignmentId}/`)
+        .then(r => r.json())
+        .then(data => {
+            const html = data.curricula.map(c => `
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-semibold text-sm text-gray-700">${c.curriculum_title}</span>
+                        <span class="text-xs text-gray-400">${c.done}/${c.total} 완료</span>
+                    </div>
+                    <div class="space-y-1">
+                    ${c.items.map(item => `
+                        <div class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg
+                                    ${item.status === 'completed' ? 'bg-green-50' : 'bg-gray-50'}">
+                            <span class="${item.status === 'completed' ? 'text-green-500' : 'text-gray-300'}">
+                                ${item.status === 'completed' ? '✓' : '○'}
+                            </span>
+                            <span class="text-gray-500 shrink-0">${item.type}</span>
+                            <span class="flex-1 truncate text-gray-700">${item.title}</span>
+                            ${item.score !== null ? `<span class="text-indigo-600 font-medium shrink-0">${item.score}점</span>` : ''}
+                        </div>
+                    `).join('')}
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('modal-body').innerHTML = html || '<p class="text-gray-400 text-sm text-center py-4">학습 기록 없음</p>';
+        });
+}
+
+function closeDetail() {
+    document.getElementById('detail-modal').classList.add('hidden');
+}
+
+document.getElementById('detail-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeDetail();
+});
+</script>
+
+{% endblock %}

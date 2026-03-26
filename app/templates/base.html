@@ -57,8 +57,10 @@
                     {% if current_user.role == 'teacher' %}
                     <a href="{{ url_for('branch.teacher_students') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">담당 학생</a>
                     <a href="{{ url_for('branch.teacher_queue') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">첨삭 대기</a>
+                    <a href="{{ url_for('branch.lms_dashboard') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">학습 진도</a>
                     {% endif %}
                     {% if current_user.role in ['branch_owner', 'branch_manager'] %}
+                    <a href="{{ url_for('branch.lms_dashboard') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">학습 진도</a>
                     <a href="{{ url_for('branch.scores') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">성적 현황</a>
                     <a href="{{ url_for('branch.credits') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">이용권</a>
                     <a href="{{ url_for('branch.my_revenue') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">정산 내역</a>

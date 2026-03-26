@@ -11,7 +11,8 @@ from app.models.revenue import RevenueRecord
 from app.models.branch_post import BranchPost, BranchPostRead
 from app.models.essay import Essay, EssayResult
 from app.models.credit import EssayCredit, EssayCreditLog
-from app.models.lms import BranchPackageAssignment, Package
+from app.models.lms import (BranchPackageAssignment, Package,
+                              StudentPackageAssignment, StudentItemProgress)
 from datetime import datetime
 from app.utils.decorators import requires_role
 
@@ -749,3 +750,113 @@ def revenue_report():
     return render_template('branch/revenue_report.html',
                            branch=branch, record=record,
                            year=year, month=month, now_str=now_str)
+
+
+# ─── LMS 진도 대시보드 ────────────────────────────────────────
+
+@branch_bp.route('/lms/')
+@login_required
+@requires_role('branch_owner', 'branch_manager', 'teacher')
+def lms_dashboard():
+    """학생별 패키지 진도 현황"""
+    branch_id = current_user.branch_id
+
+    # 지점에 배정된 패키지 목록
+    branch_assignments = BranchPackageAssignment.query.filter_by(
+        branch_id=branch_id, is_active=True).all()
+    packages = [a.package for a in branch_assignments if a.package.is_active]
+
+    selected_pkg_id = request.args.get('package_id')
+    selected_pkg = None
+    student_rows = []
+
+    if selected_pkg_id:
+        selected_pkg = next((p for p in packages if p.package_id == selected_pkg_id), None)
+
+    if not selected_pkg and packages:
+        selected_pkg = packages[0]
+        selected_pkg_id = selected_pkg.package_id
+
+    if selected_pkg:
+        # 해당 패키지를 배정받은 지점 학생 목록
+        student_assignments = StudentPackageAssignment.query.filter_by(
+            package_id=selected_pkg_id,
+            branch_id=branch_id,
+            is_active=True
+        ).all()
+
+        # 전체 아이템 수 계산
+        total_items = sum(len(pc.curriculum.items) for pc in selected_pkg.curricula)
+
+        for sa in student_assignments:
+            done = StudentItemProgress.query.filter_by(
+                student_id=sa.student_id,
+                assignment_id=sa.id,
+                status='completed'
+            ).count()
+            pct = round(done / total_items * 100) if total_items > 0 else 0
+
+            # 마지막 활동
+            last = StudentItemProgress.query.filter_by(
+                student_id=sa.student_id,
+                assignment_id=sa.id,
+            ).filter(
+                StudentItemProgress.completed_at.isnot(None)
+            ).order_by(StudentItemProgress.completed_at.desc()).first()
+
+            student_rows.append({
+                'assignment': sa,
+                'student': sa.student,
+                'done': done,
+                'total': total_items,
+                'pct': pct,
+                'last_at': last.completed_at if last else None,
+            })
+
+        student_rows.sort(key=lambda r: r['pct'], reverse=True)
+
+    return render_template('branch/lms_dashboard.html',
+                           packages=packages,
+                           selected_pkg=selected_pkg,
+                           student_rows=student_rows)
+
+
+@branch_bp.route('/lms/student/<int:assignment_id>/')
+@login_required
+@requires_role('branch_owner', 'branch_manager', 'teacher')
+def lms_student_detail(assignment_id):
+    """학생 개별 진도 상세 (JSON API for modal)"""
+    branch_id = current_user.branch_id
+    sa = StudentPackageAssignment.query.filter_by(
+        id=assignment_id, branch_id=branch_id).first_or_404()
+
+    rows = []
+    for pc in sa.package.curricula:
+        c = pc.curriculum
+        items_data = []
+        for item in c.items:
+            p = StudentItemProgress.query.filter_by(
+                student_id=sa.student_id,
+                assignment_id=assignment_id,
+                item_id=item.item_id
+            ).first()
+            items_data.append({
+                'title': item.content_title,
+                'type': item.content_type_display,
+                'status': p.status if p else 'not_started',
+                'score': round(p.score * 100) if p and p.score is not None else None,
+            })
+        done = sum(1 for x in items_data if x['status'] == 'completed')
+        rows.append({
+            'curriculum_title': c.title,
+            'items': items_data,
+            'done': done,
+            'total': len(items_data),
+        })
+
+    from flask import jsonify
+    return jsonify({
+        'student_name': sa.student.name,
+        'package_title': sa.package.title,
+        'curricula': rows,
+    })
