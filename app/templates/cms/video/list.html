@@ -128,39 +128,57 @@ document.getElementById('upload-modal').addEventListener('click', function(e) {
 </script>
 
 {% if videos %}
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-    {% for v in videos %}
-    <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        {% if v.thumbnail_url %}
-        <img src="{{ v.thumbnail_url }}" class="w-full h-36 object-cover">
-        {% elif v.is_youtube and v.youtube_id %}
-        <img src="https://img.youtube.com/vi/{{ v.youtube_id }}/mqdefault.jpg"
-             class="w-full h-36 object-cover">
-        {% else %}
-        <div class="w-full h-36 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-3xl">🎬</div>
-        {% endif %}
-        <div class="p-4">
-            <div class="font-medium text-gray-800 text-sm line-clamp-1">{{ v.title }}</div>
-            <div class="text-xs text-gray-400 mt-0.5">
-                {{ v.duration_display }}
-                {% if v.book %}· {{ v.book.title }}{% endif %}
-                {% if v.week_num %}· {{ v.week_num }}주차{% endif %}
-            </div>
-            {% if v.cat_large %}
-            <div class="text-xs text-indigo-600 mt-1">
-                {{ v.cat_large }}{% if v.cat_medium %} › {{ v.cat_medium }}{% endif %}{% if v.cat_small %} › {{ v.cat_small }}{% endif %}
-            </div>
-            {% endif %}
-            <div class="flex items-center justify-between mt-3">
-                <span class="text-xs {% if v.is_published %}text-green-600{% else %}text-gray-400{% endif %}">
+<div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="border-b border-gray-100 bg-gray-50 text-xs text-gray-500">
+                <th class="px-4 py-2.5 text-left font-medium w-16">썸네일</th>
+                <th class="px-4 py-2.5 text-left font-medium">제목</th>
+                <th class="px-4 py-2.5 text-left font-medium w-28">분류</th>
+                <th class="px-4 py-2.5 text-left font-medium w-24">도서 / 주차</th>
+                <th class="px-4 py-2.5 text-left font-medium w-16">길이</th>
+                <th class="px-4 py-2.5 text-center font-medium w-16">공개</th>
+                <th class="px-4 py-2.5 text-center font-medium w-24">관리</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+        {% for v in videos %}
+        <tr class="hover:bg-gray-50 transition">
+            <td class="px-4 py-2">
+                {% if v.thumbnail_url %}
+                <img src="{{ v.thumbnail_url }}" class="w-16 h-10 object-cover rounded">
+                {% elif v.is_youtube and v.youtube_id %}
+                <img src="https://img.youtube.com/vi/{{ v.youtube_id }}/mqdefault.jpg"
+                     class="w-16 h-10 object-cover rounded">
+                {% else %}
+                <div class="w-16 h-10 bg-gray-100 rounded flex items-center justify-center text-lg">🎬</div>
+                {% endif %}
+            </td>
+            <td class="px-4 py-2">
+                <div class="font-medium text-gray-800 line-clamp-1">{{ v.title }}</div>
+            </td>
+            <td class="px-4 py-2">
+                {% if v.cat_large %}
+                <div class="text-xs text-indigo-600">{{ v.cat_large }}</div>
+                {% if v.cat_medium %}<div class="text-xs text-gray-400">{{ v.cat_medium }}{% if v.cat_small %} › {{ v.cat_small }}{% endif %}</div>{% endif %}
+                {% else %}
+                <span class="text-xs text-gray-300">-</span>
+                {% endif %}
+            </td>
+            <td class="px-4 py-2 text-xs text-gray-500">
+                {% if v.book %}{{ v.book.title }}{% endif %}
+                {% if v.week_num %}<div class="text-gray-400">{{ v.week_num }}주차</div>{% endif %}
+            </td>
+            <td class="px-4 py-2 text-xs text-gray-400">{{ v.duration_display }}</td>
+            <td class="px-4 py-2 text-center">
+                <button onclick="togglePublish('{{ v.video_id }}', this)"
+                        data-published="{{ 'true' if v.is_published else 'false' }}"
+                        class="text-xs px-2 py-0.5 rounded-full {% if v.is_published %}bg-green-100 text-green-600{% else %}bg-gray-100 text-gray-400{% endif %} hover:opacity-80">
                     {{ '공개' if v.is_published else '비공개' }}
-                </span>
-                <div class="flex gap-2">
-                    <button onclick="togglePublish('{{ v.video_id }}', this)"
-                            data-published="{{ 'true' if v.is_published else 'false' }}"
-                            class="text-xs text-gray-500 hover:text-indigo-600">
-                        {{ '비공개로' if v.is_published else '공개' }}
-                    </button>
+                </button>
+            </td>
+            <td class="px-4 py-2 text-center">
+                <div class="flex items-center justify-center gap-2">
                     <a href="{{ url_for('cms.video_edit', video_id=v.video_id) }}"
                        class="text-xs text-indigo-600 hover:underline">수정</a>
                     <form method="POST" action="{{ url_for('cms.video_delete', video_id=v.video_id) }}"
@@ -168,10 +186,11 @@ document.getElementById('upload-modal').addEventListener('click', function(e) {
                         <button class="text-xs text-red-500 hover:underline">삭제</button>
                     </form>
                 </div>
-            </div>
-        </div>
-    </div>
-    {% endfor %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
 </div>
 {% else %}
 <div class="bg-white rounded-xl border border-gray-100 p-12 text-center text-gray-400">
