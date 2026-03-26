@@ -455,17 +455,27 @@ def reading_quiz_list():
 def reading_quiz_new():
     if not _hq_only(): abort(403)
     if request.method == 'POST':
-        choices = [request.form.get(f'choice_{i}', '') for i in range(4)]
         data = {
-            'passage': request.form.get('passage', ''),
-            'question': request.form.get('question', ''),
-            'choices': choices,
-            'correct_idx': int(request.form.get('correct_idx', 0)),
-            'explanation': request.form.get('explanation', ''),
+            'step':          request.form.get('step', ''),
+            'question_no':   request.form.get('question_no', ''),
+            'passage':       request.form.get('passage', ''),
+            'page':          request.form.get('page', ''),
+            'question':      request.form.get('question', ''),
+            'sample_answer': request.form.get('sample_answer', ''),
         }
+        step = data['step']
+        qno  = data['question_no']
+        raw_title = request.form.get('title', '').strip()
+        if raw_title:
+            title = raw_title
+        elif qno:
+            title = f'{step} {qno}'.strip() if step else qno
+        else:
+            title = data['question'][:30] + ('...' if len(data['question']) > 30 else '')
+
         q = BankQuestion(
             type='reading_quiz',
-            title=request.form['title'],
+            title=title,
             book_id=request.form.get('book_id') or None,
             week_num=request.form.get('week_num') or None,
             difficulty=request.form.get('difficulty', 'medium'),
@@ -479,7 +489,7 @@ def reading_quiz_new():
         )
         db.session.add(q)
         db.session.commit()
-        flash('독서 퀴즈가 등록되었습니다.', 'success')
+        flash('독서 문항이 등록되었습니다.', 'success')
         return redirect(url_for('cms.reading_quiz_list'))
     return render_template('cms/reading_quiz/form.html', books=_all_books(),
                            difficulty_choices=DIFFICULTY_CHOICES,
@@ -493,22 +503,22 @@ def reading_quiz_edit(question_id):
     if not _hq_only(): abort(403)
     q = BankQuestion.query.filter_by(question_id=question_id, type='reading_quiz').first_or_404()
     if request.method == 'POST':
-        choices = [request.form.get(f'choice_{i}', '') for i in range(4)]
-        q.title = request.form['title']
-        q.book_id = request.form.get('book_id') or None
-        q.week_num = request.form.get('week_num') or None
-        q.difficulty = request.form.get('difficulty', 'medium')
-        q.reading_type = request.form.get('reading_type') or None
-        q.cat_large  = request.form.get('cat_large') or None
-        q.cat_medium = request.form.get('cat_medium') or None
-        q.cat_small  = request.form.get('cat_small') or None
-        q.tags = request.form.get('tags')
+        q.title       = request.form['title']
+        q.book_id     = request.form.get('book_id') or None
+        q.week_num    = request.form.get('week_num') or None
+        q.difficulty  = request.form.get('difficulty', 'medium')
+        q.reading_type= request.form.get('reading_type') or None
+        q.cat_large   = request.form.get('cat_large') or None
+        q.cat_medium  = request.form.get('cat_medium') or None
+        q.cat_small   = request.form.get('cat_small') or None
+        q.tags        = request.form.get('tags')
         q.data = {
-            'passage': request.form.get('passage', ''),
-            'question': request.form.get('question', ''),
-            'choices': choices,
-            'correct_idx': int(request.form.get('correct_idx', 0)),
-            'explanation': request.form.get('explanation', ''),
+            'step':          request.form.get('step', ''),
+            'question_no':   request.form.get('question_no', ''),
+            'passage':       request.form.get('passage', ''),
+            'page':          request.form.get('page', ''),
+            'question':      request.form.get('question', ''),
+            'sample_answer': request.form.get('sample_answer', ''),
         }
         db.session.commit()
         flash('수정되었습니다.', 'success')
@@ -532,7 +542,7 @@ def reading_quiz_delete(question_id):
 @cms_bp.route('/reading-quiz/template')
 @login_required
 def reading_quiz_template():
-    """독서 퀴즈 엑셀 템플릿 다운로드"""
+    """독서 퀴즈 엑셀 템플릿 다운로드 (기존 DB 파일 형식 호환)"""
     if not _hq_only(): abort(403)
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -542,73 +552,83 @@ def reading_quiz_template():
 
     wb = Workbook()
     ws = wb.active
-    ws.title = '독서퀴즈'
+    ws.title = '독서논술문항DB'
 
-    headers = ['제목', '지문', '문제', '보기1', '보기2', '보기3', '보기4',
-               '정답번호(1~4)', '해설', '난이도(easy/medium/hard)', '독해유형',
-               '주차(숫자)', '태그(쉼표구분)', '대분류', '중분류', '소분류']
-    col_widths = [25, 40, 30, 20, 20, 20, 20, 14, 30, 22, 14, 12, 25, 16, 18, 12]
+    # Row 1: 메타 정보 행 (기존 파일 형식과 동일)
+    meta_cell = ws.cell(row=1, column=1,
+                        value='책제목 | LV레벨 | 분기 주차 | 독서논술 문항 DB')
+    meta_cell.font = Font(bold=True, size=11)
+    meta_cell.fill = PatternFill('solid', fgColor='1E1B4B')
+    meta_cell.font = Font(bold=True, color='FFFFFF', size=11)
+    meta_cell.alignment = Alignment(vertical='center')
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=12)
+    ws.row_dimensions[1].height = 28
+
+    # Row 2: 컬럼 헤더 (기존 파일 7개 + 추가 5개)
+    headers = ['단계', '문항번호', '독해유형', '지문(발췌문)', '책페이지',
+               '질문', '예시답안', '난이도(easy/medium/hard)', '태그(쉼표구분)',
+               '대분류', '중분류', '소분류']
+    col_widths = [10, 12, 22, 50, 12, 35, 50, 22, 20, 12, 18, 10]
 
     header_fill = PatternFill('solid', fgColor='4F46E5')
     header_font = Font(bold=True, color='FFFFFF', size=10)
-    req_fill   = PatternFill('solid', fgColor='EEF2FF')
+    req_fill    = PatternFill('solid', fgColor='EEF2FF')
     thin = Side(style='thin', color='D1D5DB')
     border = Border(left=thin, right=thin, top=thin, bottom=thin)
 
     for col, (h, w) in enumerate(zip(headers, col_widths), 1):
-        cell = ws.cell(row=1, column=col, value=h)
+        cell = ws.cell(row=2, column=col, value=h)
         cell.font = header_font
         cell.fill = header_fill
         cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
         cell.border = border
         ws.column_dimensions[get_column_letter(col)].width = w
+    ws.row_dimensions[2].height = 36
 
-    ws.row_dimensions[1].height = 36
-
-    # 예시 데이터 2행
+    # 예시 데이터 (Row 3~4)
     samples = [
-        ['흥부와 놀부 - 문제1',
-         '옛날 어느 마을에 형제가 살았습니다. 형 놀부는 심술궂고 욕심이 많았으며, 동생 흥부는 착하고 마음이 따뜻했습니다.',
-         '이 글에서 흥부의 성격으로 알맞은 것은?',
-         '욕심이 많다', '심술궂다', '착하고 따뜻하다', '거만하다',
-         3, '흥부는 착하고 마음이 따뜻하다고 나와 있습니다.', 'easy', '사실적',
-         1, '독서,문학', '문학', '소설·동화', '초3'],
-        ['지구 온난화 - 문제1',
-         '지구 온난화란 지구의 평균 기온이 점점 높아지는 현상입니다. 이산화탄소 등 온실가스 증가가 주요 원인입니다.',
-         '이 글을 바탕으로 추론할 수 있는 내용으로 가장 적절한 것은?',
-         '지구 온난화는 자연적인 현상이다', '온실가스를 줄이면 온난화를 늦출 수 있다',
-         '이산화탄소는 지구에 도움이 된다', '지구 기온은 앞으로 낮아질 것이다',
-         2, '온실가스 증가가 원인이므로 이를 줄이면 온난화를 늦출 수 있습니다.', 'medium', '추론적',
-         2, '환경,과학', '비문학', '과학·기술', '중1'],
+        ['2단계', '2-1-1)', '추론적/비판적 독해',
+         '유엔 안전보장이사회는 상임 이사국 다섯 나라가 있습니다. 미국, 영국, 프랑스, 러시아, 중국입니다.',
+         '120p',
+         '유엔 안전보장이사회는 왜 만장일치제를 택했을까요? 다수결을 택했을 경우 일어날 수 있는 혼란에 대해 생각해 봅시다.',
+         '다수결 원칙을 따른다면 다섯 나라 중 세 나라만 동의해도 합의가 된 것으로 인정된다...',
+         'medium', '정치,독서논술', '비문학', '사회·역사', '중1'],
+        ['3단계', '3-1', '사실적 독해',
+         '선출직 공무원, 즉 정치인은 목표를 설정하며 그 과정을 감독합니다.',
+         '195p',
+         '임용직 공무원과 선출직 공무원의 뜻은 무엇인가요?',
+         '임용직 공무원은 시험을 통해 뽑는 행정 관료로, 결정된 목표를 효율적으로 집행하는 역할을 한다.',
+         'easy', '정치,독서논술', '비문학', '사회·역사', '중2'],
     ]
-    for row_num, row_data in enumerate(samples, 2):
+    for row_num, row_data in enumerate(samples, 3):
         for col, val in enumerate(row_data, 1):
             cell = ws.cell(row=row_num, column=col, value=val)
             cell.fill = req_fill
             cell.border = border
             cell.alignment = Alignment(vertical='center', wrap_text=True)
-        ws.row_dimensions[row_num].height = 50
+        ws.row_dimensions[row_num].height = 60
 
     # 안내 시트
     ws2 = wb.create_sheet('작성 안내')
     notes = [
         ('컬럼', '설명', '필수'),
-        ('제목', '문항 분류 이름 (예: 책제목-문제1)', 'O'),
-        ('지문', '독해 지문 텍스트 (없으면 빈칸)', 'X'),
-        ('문제', '문항 질문', 'O'),
-        ('보기1~4', '4개 보기 입력', 'O'),
-        ('정답번호', '1~4 중 정답 보기 번호', 'O'),
-        ('해설', '정답 해설 (없으면 빈칸)', 'X'),
+        ('(1행)', '책제목/레벨/주차 등 메타 정보 — 업로드 시 자동 스킵됨', '-'),
+        ('(2행)', '헤더 행 — 수정하지 마세요', '-'),
+        ('단계', '2단계, 3단계 등 레벨 구분', 'X'),
+        ('문항번호', '2-1-1), 3-2 등 문항 식별 번호', 'X'),
+        ('독해유형', '사실적 / 분석적 / 추론적 / 적용적 / 비판적 독해 (복합 가능: 추론적/비판적 독해)', 'X'),
+        ('지문(발췌문)', '책에서 발췌한 지문 텍스트 (없으면 빈칸)', 'X'),
+        ('책페이지', '120p, 128~129p 등 출처 페이지', 'X'),
+        ('질문', '학생에게 제시할 서술형 문항 질문', 'O'),
+        ('예시답안', '모범 답안 / 예시 답안', 'X'),
         ('난이도', 'easy / medium / hard (빈칸이면 medium)', 'X'),
-        ('독해유형', '사실적 / 분석적 / 추론적 / 적용적 / 비판적 중 하나', 'X'),
-        ('주차', '커리큘럼 주차 숫자 (빈칸 가능)', 'X'),
-        ('태그', '쉼표로 구분 (예: 독서,문학,초등)', 'X'),
+        ('태그', '쉼표로 구분 (예: 독서,사회,중등)', 'X'),
         ('대분류', '문학 또는 비문학', 'X'),
-        ('중분류', '소설·동화 / 시·동시 / 수필·일기 / 희곡·시나리오 / 설명문·정보글 / 논설문·주장글 / 전기·인물이야기 / 사회·역사 / 과학·기술 / 예술·문화', 'X'),
+        ('중분류', '설명문·정보글 / 논설문·주장글 / 사회·역사 / 과학·기술 / 소설·동화 등', 'X'),
         ('소분류', '초1 / 초2 / 초3 / 초4 / 초5 / 초6 / 중1 / 중2 / 중3 / 고등', 'X'),
     ]
-    ws2.column_dimensions['A'].width = 14
-    ws2.column_dimensions['B'].width = 80
+    ws2.column_dimensions['A'].width = 16
+    ws2.column_dimensions['B'].width = 75
     ws2.column_dimensions['C'].width = 8
     for r, (a, b, c) in enumerate(notes, 1):
         ws2.cell(row=r, column=1, value=a).font = Font(bold=(r == 1))
@@ -619,13 +639,18 @@ def reading_quiz_template():
     wb.save(buf)
     buf.seek(0)
     return send_file(buf, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                     as_attachment=True, download_name='독서퀴즈_업로드양식.xlsx')
+                     as_attachment=True, download_name='독서논술문항DB_업로드양식.xlsx')
 
 
 @cms_bp.route('/reading-quiz/bulk-upload', methods=['POST'])
 @login_required
 def reading_quiz_bulk_upload():
-    """엑셀 파일로 독서 퀴즈 일괄 등록"""
+    """엑셀 파일로 독서 퀴즈 일괄 등록 (기존 DB 파일 형식 지원)
+    Row 1: 메타 정보 (스킵)
+    Row 2: 헤더 (스킵)
+    Row 3~: 데이터
+    컬럼: 단계, 문항번호, 독해유형, 지문, 책페이지, 질문, 예시답안, 난이도, 태그, 대분류, 중분류, 소분류
+    """
     if not _hq_only(): abort(403)
     from openpyxl import load_workbook
     from io import BytesIO
@@ -643,59 +668,58 @@ def reading_quiz_bulk_upload():
         return redirect(url_for('cms.reading_quiz_list'))
 
     DIFFICULTY_VALID = {'easy', 'medium', 'hard'}
-    READING_TYPE_VALID = {v for v, _ in READING_TYPE_CHOICES}
     saved = 0
     errors = []
 
-    for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), 2):
+    # Row 1: 메타, Row 2: 헤더 → Row 3부터 데이터
+    for row_num, row in enumerate(ws.iter_rows(min_row=3, values_only=True), 3):
         if not any(row):
             continue
 
-        title       = str(row[0]).strip()  if row[0] else ''
-        passage     = str(row[1]).strip()  if row[1] else ''
-        question    = str(row[2]).strip()  if row[2] else ''
-        choices     = [str(row[i]).strip() if row[i] else '' for i in range(3, 7)]
-        correct_raw = row[7]
-        explanation = str(row[8]).strip()  if len(row) > 8 and row[8] else ''
-        difficulty  = str(row[9]).strip().lower()  if len(row) > 9 and row[9] else 'medium'
-        reading_type= str(row[10]).strip() if len(row) > 10 and row[10] else None
-        week_num    = int(row[11]) if len(row) > 11 and row[11] and str(row[11]).strip().isdigit() else None
-        tags        = str(row[12]).strip() if len(row) > 12 and row[12] else ''
-        cat_large   = str(row[13]).strip() if len(row) > 13 and row[13] else None
-        cat_medium  = str(row[14]).strip() if len(row) > 14 and row[14] else None
-        cat_small   = str(row[15]).strip() if len(row) > 15 and row[15] else None
+        def _s(v): return str(v).strip() if v else ''
 
-        if not title or not question:
-            errors.append(f'{row_num}행: 제목/문제는 필수입니다.')
-            continue
-        if not all(choices):
-            errors.append(f'{row_num}행: 보기1~4를 모두 입력해주세요.')
-            continue
-        try:
-            correct_idx = int(correct_raw) - 1
-            if correct_idx not in range(4):
-                raise ValueError
-        except (TypeError, ValueError):
-            errors.append(f'{row_num}행: 정답번호는 1~4 사이 숫자여야 합니다.')
+        step         = _s(row[0])
+        question_no  = _s(row[1])
+        reading_type = _s(row[2]) or None
+        passage      = _s(row[3])
+        page         = _s(row[4])
+        question     = _s(row[5])
+        sample_answer= _s(row[6])
+        difficulty   = _s(row[7]).lower() if len(row) > 7 and row[7] else 'medium'
+        tags         = _s(row[8])         if len(row) > 8 else ''
+        cat_large    = _s(row[9])  or None if len(row) > 9 else None
+        cat_medium   = _s(row[10]) or None if len(row) > 10 else None
+        cat_small    = _s(row[11]) or None if len(row) > 11 else None
+
+        if not question:
+            errors.append(f'{row_num}행: 질문은 필수입니다.')
             continue
         if difficulty not in DIFFICULTY_VALID:
             difficulty = 'medium'
-        if reading_type and reading_type not in READING_TYPE_VALID:
-            reading_type = None
+
+        # 제목: 문항번호가 있으면 "단계 문항번호", 없으면 질문 앞 30자
+        if question_no:
+            title = f'{step} {question_no}'.strip() if step else question_no
+        else:
+            title = question[:30] + ('...' if len(question) > 30 else '')
 
         q = BankQuestion(
             type='reading_quiz',
             title=title,
             difficulty=difficulty,
             reading_type=reading_type,
-            week_num=week_num,
             tags=tags or None,
             cat_large=cat_large,
             cat_medium=cat_medium,
             cat_small=cat_small,
-            data={'passage': passage, 'question': question,
-                  'choices': choices, 'correct_idx': correct_idx,
-                  'explanation': explanation},
+            data={
+                'step':          step,
+                'question_no':   question_no,
+                'passage':       passage,
+                'page':          page,
+                'question':      question,
+                'sample_answer': sample_answer,
+            },
             created_by=current_user.user_id,
         )
         db.session.add(q)
@@ -708,7 +732,7 @@ def reading_quiz_bulk_upload():
         flash(f'{saved}개 등록 완료. 오류 {len(errors)}건: ' + ' / '.join(errors[:3])
               + ('...' if len(errors) > 3 else ''), 'warning' if saved else 'error')
     else:
-        flash(f'{saved}개 독서 퀴즈가 등록되었습니다.', 'success')
+        flash(f'{saved}개 독서 문항이 등록되었습니다.', 'success')
 
     return redirect(url_for('cms.reading_quiz_list'))
 

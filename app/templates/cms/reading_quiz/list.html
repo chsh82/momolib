@@ -138,8 +138,9 @@ document.getElementById('upload-modal').addEventListener('click', function(e) {
     <table class="w-full text-sm">
         <thead class="bg-gray-50 border-b border-gray-100">
             <tr>
-                <th class="text-left px-5 py-3 text-gray-600 font-medium">제목</th>
-                <th class="text-left px-4 py-3 text-gray-600 font-medium">문제</th>
+                <th class="text-left px-4 py-3 text-gray-600 font-medium w-16">단계</th>
+                <th class="text-left px-4 py-3 text-gray-600 font-medium w-20">문항번호</th>
+                <th class="text-left px-4 py-3 text-gray-600 font-medium">질문</th>
                 <th class="text-left px-4 py-3 text-gray-600 font-medium">분류</th>
                 <th class="text-left px-4 py-3 text-gray-600 font-medium">독해유형</th>
                 <th class="text-center px-3 py-3 text-gray-600 font-medium">난이도</th>
@@ -148,14 +149,18 @@ document.getElementById('upload-modal').addEventListener('click', function(e) {
         </thead>
         <tbody class="divide-y divide-gray-50">
             {% for q in questions %}
+            {% set d = q.data or {} %}
             <tr class="hover:bg-gray-50">
-                <td class="px-5 py-3 font-medium text-gray-800">
-                    {{ q.title }}
-                    {% if q.week_num %}<span class="text-xs text-gray-400 ml-1">{{ q.week_num }}주</span>{% endif %}
-                    {% if q.book %}<div class="text-xs text-indigo-500">{{ q.book.title }}</div>{% endif %}
+                <td class="px-4 py-3 text-xs text-gray-500">
+                    {{ d.get('step', '-') }}
                 </td>
-                <td class="px-4 py-3 text-gray-600 text-xs max-w-xs">
-                    <div class="line-clamp-2">{{ (q.data or {}).get('question', '-') }}</div>
+                <td class="px-4 py-3 text-xs font-medium text-indigo-700">
+                    {{ d.get('question_no', '') }}
+                    {% if q.book %}<div class="text-gray-400 font-normal mt-0.5">{{ q.book.title }}</div>{% endif %}
+                </td>
+                <td class="px-4 py-3 text-gray-700 text-xs max-w-sm">
+                    <div class="line-clamp-2">{{ d.get('question', '-') }}</div>
+                    {% if d.get('page') %}<span class="text-gray-400">p.{{ d.get('page') }}</span>{% endif %}
                 </td>
                 <td class="px-4 py-3 text-xs text-gray-500">
                     {% if q.cat_large %}
@@ -165,7 +170,7 @@ document.getElementById('upload-modal').addEventListener('click', function(e) {
                 </td>
                 <td class="px-4 py-3 text-xs">
                     {% if q.reading_type %}
-                    <span class="px-2 py-0.5 rounded bg-purple-100 text-purple-700">{{ q.reading_type }}</span>
+                    <span class="px-2 py-0.5 rounded bg-purple-100 text-purple-700 whitespace-nowrap">{{ q.reading_type }}</span>
                     {% else %}<span class="text-gray-300">-</span>{% endif %}
                 </td>
                 <td class="px-3 py-3 text-center">
