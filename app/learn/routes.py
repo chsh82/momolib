@@ -237,6 +237,7 @@ def item_submit(assignment_id, item_id):
     db.session.commit()
 
     flash('제출 완료!', 'success')
+
     # 다음 아이템으로 이동
     all_items = item.curriculum.items
     idx = next((i for i, x in enumerate(all_items) if x.item_id == item_id), None)
@@ -244,6 +245,19 @@ def item_submit(assignment_id, item_id):
         next_id = all_items[idx + 1].item_id
         return redirect(url_for('learn.item_view',
                                 assignment_id=assignment_id, item_id=next_id))
+
+    # 패키지 전체 완료 여부 확인
+    total_items = sum(len(pc.curriculum.items) for pc in a.package.curricula)
+    done_count = StudentItemProgress.query.filter_by(
+        student_id=current_user.user_id,
+        assignment_id=assignment_id,
+        status='completed'
+    ).count()
+
+    if total_items > 0 and done_count >= total_items:
+        return redirect(url_for('learn.package_view',
+                                assignment_id=assignment_id, completed=1))
+
     return redirect(url_for('learn.curriculum_view',
                             assignment_id=assignment_id,
                             curriculum_id=item.curriculum_id))
