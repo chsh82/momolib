@@ -63,6 +63,152 @@ def book_new():
                            genre_choices=GENRE_CHOICES, level_choices=LEVEL_CHOICES)
 
 
+@library_bp.route('/books/template')
+@login_required
+def book_template():
+    """도서 엑셀 양식 다운로드"""
+    if not current_user.is_hq:
+        abort(403)
+    import openpyxl
+    from flask import send_file
+    import io
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = '도서목록'
+
+    headers = ['제목*', '저자', '출판사', '출판연도', 'ISBN', '장르', '수준', '쪽수', '태그(쉼표구분)', '표지URL', '설명']
+    ws.append(headers)
+
+    # 헤더 스타일
+    from openpyxl.styles import Font, PatternFill
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(fill_type='solid', fgColor='E8EAF6')
+
+    # 장르/수준 안내 시트
+    ws2 = wb.create_sheet('장르코드')
+    ws2.append(['코드', '장르명'])
+    for val, label in GENRE_CHOICES:
+        ws2.append([val, label])
+
+    ws3 = wb.create_sheet('수준코드')
+    ws3.append(['코드', '수준명'])
+    for val, label in LEVEL_CHOICES:
+        ws3.append([val, label])
+
+    # 예시 행
+    ws.append(['파친코', '이민진', '인플루엔셜', 2017, '9791186560846',
+               'literature', 'high', 490, '소설,디아스포라', '', '재일 한국인 4대에 걸친 이야기'])
+
+    ws.column_dimensions['A'].width = 30
+    ws.column_dimensions['B'].width = 15
+    ws.column_dimensions['C'].width = 15
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return send_file(buf, as_attachment=True,
+                     download_name='도서등록양식.xlsx',
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
+@library_bp.route('/books/bulk-upload', methods=['POST'])
+@login_required
+def book_bulk_upload():
+    """도서 엑셀 일괄 업로드"""
+    if not current_user.is_hq:
+        abort(403)
+    import openpyxl
+
+    f = request.files.get('excel_file')
+    if not f:
+        flash('파일을 선택해주세요.', 'error')
+        return redirect(url_for('library.book_list'))
+
+    try:
+        wb = openpyxl.load_workbook(f, read_only=True, data_only=True)
+        ws = wb.active
+        rows = list(ws.iter_rows(min_row=2, values_only=True))
+    except Exception:
+        flash('엑셀 파일을 읽을 수 없습니다.', 'error')
+        return redirect(url_for('library.book_list'))
+
+    added = skipped = errors = 0
+    error_msgs = []
+
+    for i, row in enumerate(rows, start=2):
+        if not row or not row[0]:
+            continue
+        title = str(row[0]).strip()
+        if not title:
+            continue
+
+        author        = str(row[1]).strip() if row[1] else None
+        publisher     = str(row[2]).strip() if row[2] else None
+        pub_year      = int(row[3]) if row[3] and str(row[3]).strip().isdigit() else None
+        isbn          = str(row[4]).strip() if row[4] else None
+        genre         = str(row[5]).strip() if row[5] else None
+        level         = str(row[6]).strip() if row[6] else 'all'
+        page_count    = int(row[7]) if row[7] and str(row[7]).strip().isdigit() else None
+        tags          = str(row[8]).strip() if row[8] else None
+        cover_url     = str(row[9]).strip() if row[9] else None
+        description   = str(row[10]).strip() if row[10] else None
+
+        # ISBN 중복 체크
+        if isbn:
+            exists = Book.query.filter_by(isbn=isbn).first()
+            if exists:
+                skipped += 1
+                continue
+
+        # 장르/수준 유효성
+        valid_genres = [v for v, _ in GENRE_CHOICES]
+        valid_levels = [v for v, _ in LEVEL_CHOICES]
+        if genre and genre not in valid_genres:
+            error_msgs.append(f'{i}행: 장르 코드 "{genre}" 오류')
+            errors += 1
+            continue
+        if level not in valid_levels:
+            level = 'all'
+
+        try:
+            book = Book(
+                title=title,
+                author=author,
+                publisher=publisher,
+                publication_year=pub_year,
+                isbn=isbn or None,
+                genre=genre or None,
+                level=level,
+                page_count=page_count,
+                tags=tags,
+                cover_image_url=cover_url,
+                description=description,
+                created_by=current_user.user_id,
+            )
+            db.session.add(book)
+            added += 1
+        except Exception as e:
+            error_msgs.append(f'{i}행 오류: {str(e)}')
+            errors += 1
+
+    db.session.commit()
+
+    msg = f'{added}권 등록 완료.'
+    if skipped:
+        msg += f' {skipped}권 중복(ISBN) 건너뜀.'
+    if errors:
+        msg += f' {errors}건 오류.'
+    flash(msg, 'success' if not errors else 'warning')
+
+    if error_msgs:
+        for m in error_msgs[:5]:
+            flash(m, 'error')
+
+    return redirect(url_for('library.book_list'))
+
+
 @library_bp.route('/books/isbn-lookup')
 @login_required
 def isbn_lookup():
