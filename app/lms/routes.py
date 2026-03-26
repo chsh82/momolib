@@ -97,26 +97,27 @@ def curriculum_item_add(curriculum_id):
     c = Curriculum.query.filter_by(curriculum_id=curriculum_id, is_active=True).first_or_404()
 
     content_type = request.form.get('content_type')
-    content_id   = request.form.get('content_id')
+    content_ids  = request.form.getlist('content_ids')  # 여러 개
     option_group = request.form.get('option_group') or None
 
-    if content_type not in CONTENT_TYPES or not content_id:
-        flash('콘텐츠를 선택해주세요.', 'error')
+    if content_type not in CONTENT_TYPES or not content_ids:
+        flash('콘텐츠를 하나 이상 선택해주세요.', 'error')
         return redirect(url_for('lms.curriculum_detail', curriculum_id=curriculum_id))
 
     max_order = max((i.order_num for i in c.items), default=-1)
-    item = CurriculumItem(
-        curriculum_id=curriculum_id,
-        order_num=max_order + 1,
-        content_type=content_type,
-        content_id=content_id,
-        option_group=option_group,
-    )
-    db.session.add(item)
-    # 커리큘럼 버전 증가
+    for idx, content_id in enumerate(content_ids):
+        item = CurriculumItem(
+            curriculum_id=curriculum_id,
+            order_num=max_order + 1 + idx,
+            content_type=content_type,
+            content_id=content_id,
+            option_group=option_group,
+        )
+        db.session.add(item)
     c.version   += 1
     c.updated_at = datetime.utcnow()
     db.session.commit()
+    flash(f'{len(content_ids)}개 추가되었습니다.', 'success')
     return redirect(url_for('lms.curriculum_detail', curriculum_id=curriculum_id))
 
 
