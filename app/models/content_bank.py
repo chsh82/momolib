@@ -23,6 +23,33 @@ VOCAB_CATEGORIES = {
     },
 }
 
+# 독서 퀴즈 대/중/소 분류 체계
+READING_CATEGORIES = {
+    '문학': {
+        '소설·동화': ['초1', '초2', '초3', '초4', '초5', '초6', '중1', '중2', '중3', '고등'],
+        '시·동시':   ['초1', '초2', '초3', '초4', '초5', '초6', '중1', '중2', '중3', '고등'],
+        '수필·일기': ['초1', '초2', '초3', '초4', '초5', '초6', '중1', '중2', '중3', '고등'],
+        '희곡·시나리오': ['초1', '초2', '초3', '초4', '초5', '초6', '중1', '중2', '중3', '고등'],
+    },
+    '비문학': {
+        '설명문·정보글': ['초1', '초2', '초3', '초4', '초5', '초6', '중1', '중2', '중3', '고등'],
+        '논설문·주장글': ['초1', '초2', '초3', '초4', '초5', '초6', '중1', '중2', '중3', '고등'],
+        '전기·인물이야기': ['초1', '초2', '초3', '초4', '초5', '초6', '중1', '중2', '중3', '고등'],
+        '사회·역사':    ['초1', '초2', '초3', '초4', '초5', '초6', '중1', '중2', '중3', '고등'],
+        '과학·기술':    ['초1', '초2', '초3', '초4', '초5', '초6', '중1', '중2', '중3', '고등'],
+        '예술·문화':    ['초1', '초2', '초3', '초4', '초5', '초6', '중1', '중2', '중3', '고등'],
+    },
+}
+
+# 독해 유형 (5가지)
+READING_TYPE_CHOICES = [
+    ('사실적', '사실적 독해'),
+    ('분석적', '분석적 독해'),
+    ('추론적', '추론적 독해'),
+    ('적용적', '적용적 독해'),
+    ('비판적', '비판적 독해'),
+]
+
 BANK_QUESTION_TYPES = [
     ('vocab_quiz',   '어휘 퀴즈'),
     ('reading_quiz', '독서 퀴즈'),
@@ -53,10 +80,13 @@ class BankQuestion(db.Model):
     difficulty = db.Column(db.String(10), nullable=True, default='medium')
     tags = db.Column(db.String(300), nullable=True)    # 쉼표 구분
 
-    # 대/중/소 분류 (어휘 퀴즈 전용)
-    cat_large  = db.Column(db.String(30), nullable=True)   # 배경지식·스키마 어휘 / 학습 도구어
-    cat_medium = db.Column(db.String(30), nullable=True)   # 문학 / 비문학 / 사고·인지 동사 등
-    cat_small  = db.Column(db.String(30), nullable=True)   # 소설 / 원인·결과 등
+    # 대/중/소 분류 (어휘·독서 퀴즈 공통)
+    cat_large  = db.Column(db.String(30), nullable=True)
+    cat_medium = db.Column(db.String(30), nullable=True)
+    cat_small  = db.Column(db.String(30), nullable=True)
+
+    # 독서 퀴즈 전용: 독해 유형 (사실적/분석적/추론적/적용적/비판적)
+    reading_type = db.Column(db.String(20), nullable=True)
 
     # 타입별 JSON 데이터
     # vocab_quiz:   {word, definition, choices:[str×4], correct_idx:0~3}

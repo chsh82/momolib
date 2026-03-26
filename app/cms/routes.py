@@ -13,7 +13,7 @@ from app.models.library import Book
 from app.models.content_bank import (
     BankQuestion, LectureVideo, MockExam, MockExamQuestion, StudyMaterial,
     BANK_QUESTION_TYPES, DIFFICULTY_CHOICES, EXAM_QUESTION_TYPES, MATERIAL_TYPES,
-    VOCAB_CATEGORIES,
+    VOCAB_CATEGORIES, READING_CATEGORIES, READING_TYPE_CHOICES,
 )
 from app.utils.decorators import requires_role
 from app.models.notification import Notification
@@ -422,16 +422,32 @@ def vocab_bulk_upload():
 @login_required
 def reading_quiz_list():
     if not _hq_only(): abort(403)
-    q = request.args.get('q', '').strip()
-    book_id = request.args.get('book_id', '')
+    q            = request.args.get('q', '').strip()
+    book_id      = request.args.get('book_id', '')
+    filter_large = request.args.get('cat_large', '')
+    filter_medium= request.args.get('cat_medium', '')
+    filter_small = request.args.get('cat_small', '')
+    filter_rtype = request.args.get('reading_type', '')
     query = BankQuestion.query.filter_by(type='reading_quiz', is_active=True)
     if q:
         query = query.filter(BankQuestion.title.ilike(f'%{q}%'))
     if book_id:
         query = query.filter_by(book_id=book_id)
+    if filter_large:
+        query = query.filter_by(cat_large=filter_large)
+    if filter_medium:
+        query = query.filter_by(cat_medium=filter_medium)
+    if filter_small:
+        query = query.filter_by(cat_small=filter_small)
+    if filter_rtype:
+        query = query.filter_by(reading_type=filter_rtype)
     questions = query.order_by(BankQuestion.created_at.desc()).all()
     return render_template('cms/reading_quiz/list.html', questions=questions,
-                           q=q, book_id=book_id, books=_all_books())
+                           q=q, book_id=book_id, books=_all_books(),
+                           filter_large=filter_large, filter_medium=filter_medium,
+                           filter_small=filter_small, filter_rtype=filter_rtype,
+                           reading_categories=READING_CATEGORIES,
+                           reading_type_choices=READING_TYPE_CHOICES)
 
 
 @cms_bp.route('/reading-quiz/new', methods=['GET', 'POST'])
@@ -453,6 +469,10 @@ def reading_quiz_new():
             book_id=request.form.get('book_id') or None,
             week_num=request.form.get('week_num') or None,
             difficulty=request.form.get('difficulty', 'medium'),
+            reading_type=request.form.get('reading_type') or None,
+            cat_large=request.form.get('cat_large') or None,
+            cat_medium=request.form.get('cat_medium') or None,
+            cat_small=request.form.get('cat_small') or None,
             tags=request.form.get('tags'),
             data=data,
             created_by=current_user.user_id,
@@ -462,7 +482,9 @@ def reading_quiz_new():
         flash('독서 퀴즈가 등록되었습니다.', 'success')
         return redirect(url_for('cms.reading_quiz_list'))
     return render_template('cms/reading_quiz/form.html', books=_all_books(),
-                           difficulty_choices=DIFFICULTY_CHOICES)
+                           difficulty_choices=DIFFICULTY_CHOICES,
+                           reading_categories=READING_CATEGORIES,
+                           reading_type_choices=READING_TYPE_CHOICES)
 
 
 @cms_bp.route('/reading-quiz/<question_id>/edit', methods=['GET', 'POST'])
@@ -476,6 +498,10 @@ def reading_quiz_edit(question_id):
         q.book_id = request.form.get('book_id') or None
         q.week_num = request.form.get('week_num') or None
         q.difficulty = request.form.get('difficulty', 'medium')
+        q.reading_type = request.form.get('reading_type') or None
+        q.cat_large  = request.form.get('cat_large') or None
+        q.cat_medium = request.form.get('cat_medium') or None
+        q.cat_small  = request.form.get('cat_small') or None
         q.tags = request.form.get('tags')
         q.data = {
             'passage': request.form.get('passage', ''),
@@ -488,7 +514,9 @@ def reading_quiz_edit(question_id):
         flash('수정되었습니다.', 'success')
         return redirect(url_for('cms.reading_quiz_list'))
     return render_template('cms/reading_quiz/form.html', question=q,
-                           books=_all_books(), difficulty_choices=DIFFICULTY_CHOICES)
+                           books=_all_books(), difficulty_choices=DIFFICULTY_CHOICES,
+                           reading_categories=READING_CATEGORIES,
+                           reading_type_choices=READING_TYPE_CHOICES)
 
 
 @cms_bp.route('/reading-quiz/<question_id>/delete', methods=['POST'])
@@ -498,6 +526,190 @@ def reading_quiz_delete(question_id):
     q = BankQuestion.query.filter_by(question_id=question_id, type='reading_quiz').first_or_404()
     q.is_active = False
     db.session.commit()
+    return redirect(url_for('cms.reading_quiz_list'))
+
+
+@cms_bp.route('/reading-quiz/template')
+@login_required
+def reading_quiz_template():
+    """독서 퀴즈 엑셀 템플릿 다운로드"""
+    if not _hq_only(): abort(403)
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    from io import BytesIO
+    from flask import send_file
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = '독서퀴즈'
+
+    headers = ['제목', '지문', '문제', '보기1', '보기2', '보기3', '보기4',
+               '정답번호(1~4)', '해설', '난이도(easy/medium/hard)', '독해유형',
+               '주차(숫자)', '태그(쉼표구분)', '대분류', '중분류', '소분류']
+    col_widths = [25, 40, 30, 20, 20, 20, 20, 14, 30, 22, 14, 12, 25, 16, 18, 12]
+
+    header_fill = PatternFill('solid', fgColor='4F46E5')
+    header_font = Font(bold=True, color='FFFFFF', size=10)
+    req_fill   = PatternFill('solid', fgColor='EEF2FF')
+    thin = Side(style='thin', color='D1D5DB')
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    for col, (h, w) in enumerate(zip(headers, col_widths), 1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        cell.border = border
+        ws.column_dimensions[get_column_letter(col)].width = w
+
+    ws.row_dimensions[1].height = 36
+
+    # 예시 데이터 2행
+    samples = [
+        ['흥부와 놀부 - 문제1',
+         '옛날 어느 마을에 형제가 살았습니다. 형 놀부는 심술궂고 욕심이 많았으며, 동생 흥부는 착하고 마음이 따뜻했습니다.',
+         '이 글에서 흥부의 성격으로 알맞은 것은?',
+         '욕심이 많다', '심술궂다', '착하고 따뜻하다', '거만하다',
+         3, '흥부는 착하고 마음이 따뜻하다고 나와 있습니다.', 'easy', '사실적',
+         1, '독서,문학', '문학', '소설·동화', '초3'],
+        ['지구 온난화 - 문제1',
+         '지구 온난화란 지구의 평균 기온이 점점 높아지는 현상입니다. 이산화탄소 등 온실가스 증가가 주요 원인입니다.',
+         '이 글을 바탕으로 추론할 수 있는 내용으로 가장 적절한 것은?',
+         '지구 온난화는 자연적인 현상이다', '온실가스를 줄이면 온난화를 늦출 수 있다',
+         '이산화탄소는 지구에 도움이 된다', '지구 기온은 앞으로 낮아질 것이다',
+         2, '온실가스 증가가 원인이므로 이를 줄이면 온난화를 늦출 수 있습니다.', 'medium', '추론적',
+         2, '환경,과학', '비문학', '과학·기술', '중1'],
+    ]
+    for row_num, row_data in enumerate(samples, 2):
+        for col, val in enumerate(row_data, 1):
+            cell = ws.cell(row=row_num, column=col, value=val)
+            cell.fill = req_fill
+            cell.border = border
+            cell.alignment = Alignment(vertical='center', wrap_text=True)
+        ws.row_dimensions[row_num].height = 50
+
+    # 안내 시트
+    ws2 = wb.create_sheet('작성 안내')
+    notes = [
+        ('컬럼', '설명', '필수'),
+        ('제목', '문항 분류 이름 (예: 책제목-문제1)', 'O'),
+        ('지문', '독해 지문 텍스트 (없으면 빈칸)', 'X'),
+        ('문제', '문항 질문', 'O'),
+        ('보기1~4', '4개 보기 입력', 'O'),
+        ('정답번호', '1~4 중 정답 보기 번호', 'O'),
+        ('해설', '정답 해설 (없으면 빈칸)', 'X'),
+        ('난이도', 'easy / medium / hard (빈칸이면 medium)', 'X'),
+        ('독해유형', '사실적 / 분석적 / 추론적 / 적용적 / 비판적 중 하나', 'X'),
+        ('주차', '커리큘럼 주차 숫자 (빈칸 가능)', 'X'),
+        ('태그', '쉼표로 구분 (예: 독서,문학,초등)', 'X'),
+        ('대분류', '문학 또는 비문학', 'X'),
+        ('중분류', '소설·동화 / 시·동시 / 수필·일기 / 희곡·시나리오 / 설명문·정보글 / 논설문·주장글 / 전기·인물이야기 / 사회·역사 / 과학·기술 / 예술·문화', 'X'),
+        ('소분류', '초1 / 초2 / 초3 / 초4 / 초5 / 초6 / 중1 / 중2 / 중3 / 고등', 'X'),
+    ]
+    ws2.column_dimensions['A'].width = 14
+    ws2.column_dimensions['B'].width = 80
+    ws2.column_dimensions['C'].width = 8
+    for r, (a, b, c) in enumerate(notes, 1):
+        ws2.cell(row=r, column=1, value=a).font = Font(bold=(r == 1))
+        ws2.cell(row=r, column=2, value=b)
+        ws2.cell(row=r, column=3, value=c)
+
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return send_file(buf, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                     as_attachment=True, download_name='독서퀴즈_업로드양식.xlsx')
+
+
+@cms_bp.route('/reading-quiz/bulk-upload', methods=['POST'])
+@login_required
+def reading_quiz_bulk_upload():
+    """엑셀 파일로 독서 퀴즈 일괄 등록"""
+    if not _hq_only(): abort(403)
+    from openpyxl import load_workbook
+    from io import BytesIO
+
+    file = request.files.get('excel_file')
+    if not file or not file.filename.endswith('.xlsx'):
+        flash('xlsx 파일을 선택해주세요.', 'error')
+        return redirect(url_for('cms.reading_quiz_list'))
+
+    try:
+        wb = load_workbook(BytesIO(file.read()), data_only=True)
+        ws = wb.active
+    except Exception:
+        flash('파일을 읽을 수 없습니다. 올바른 xlsx 파일인지 확인해주세요.', 'error')
+        return redirect(url_for('cms.reading_quiz_list'))
+
+    DIFFICULTY_VALID = {'easy', 'medium', 'hard'}
+    READING_TYPE_VALID = {v for v, _ in READING_TYPE_CHOICES}
+    saved = 0
+    errors = []
+
+    for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), 2):
+        if not any(row):
+            continue
+
+        title       = str(row[0]).strip()  if row[0] else ''
+        passage     = str(row[1]).strip()  if row[1] else ''
+        question    = str(row[2]).strip()  if row[2] else ''
+        choices     = [str(row[i]).strip() if row[i] else '' for i in range(3, 7)]
+        correct_raw = row[7]
+        explanation = str(row[8]).strip()  if len(row) > 8 and row[8] else ''
+        difficulty  = str(row[9]).strip().lower()  if len(row) > 9 and row[9] else 'medium'
+        reading_type= str(row[10]).strip() if len(row) > 10 and row[10] else None
+        week_num    = int(row[11]) if len(row) > 11 and row[11] and str(row[11]).strip().isdigit() else None
+        tags        = str(row[12]).strip() if len(row) > 12 and row[12] else ''
+        cat_large   = str(row[13]).strip() if len(row) > 13 and row[13] else None
+        cat_medium  = str(row[14]).strip() if len(row) > 14 and row[14] else None
+        cat_small   = str(row[15]).strip() if len(row) > 15 and row[15] else None
+
+        if not title or not question:
+            errors.append(f'{row_num}행: 제목/문제는 필수입니다.')
+            continue
+        if not all(choices):
+            errors.append(f'{row_num}행: 보기1~4를 모두 입력해주세요.')
+            continue
+        try:
+            correct_idx = int(correct_raw) - 1
+            if correct_idx not in range(4):
+                raise ValueError
+        except (TypeError, ValueError):
+            errors.append(f'{row_num}행: 정답번호는 1~4 사이 숫자여야 합니다.')
+            continue
+        if difficulty not in DIFFICULTY_VALID:
+            difficulty = 'medium'
+        if reading_type and reading_type not in READING_TYPE_VALID:
+            reading_type = None
+
+        q = BankQuestion(
+            type='reading_quiz',
+            title=title,
+            difficulty=difficulty,
+            reading_type=reading_type,
+            week_num=week_num,
+            tags=tags or None,
+            cat_large=cat_large,
+            cat_medium=cat_medium,
+            cat_small=cat_small,
+            data={'passage': passage, 'question': question,
+                  'choices': choices, 'correct_idx': correct_idx,
+                  'explanation': explanation},
+            created_by=current_user.user_id,
+        )
+        db.session.add(q)
+        saved += 1
+
+    if saved:
+        db.session.commit()
+
+    if errors:
+        flash(f'{saved}개 등록 완료. 오류 {len(errors)}건: ' + ' / '.join(errors[:3])
+              + ('...' if len(errors) > 3 else ''), 'warning' if saved else 'error')
+    else:
+        flash(f'{saved}개 독서 퀴즈가 등록되었습니다.', 'success')
+
     return redirect(url_for('cms.reading_quiz_list'))
 
 
