@@ -70,6 +70,7 @@
                 {% elif current_user.role == 'student' %}
                 <div class="flex space-x-4">
                     <a href="{{ url_for('essays.student_dashboard') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">대시보드</a>
+                    <a href="{{ url_for('learn.index') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">내 학습</a>
                     <a href="{{ url_for('library.catalog') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">📚 도서</a>
                     <a href="{{ url_for('library.my_books') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">내 독서</a>
                     <a href="{{ url_for('library.my_analytics') }}" class="text-gray-600 hover:text-indigo-600 text-sm font-medium">학습 분석</a>

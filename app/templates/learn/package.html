@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}{{ assignment.package.title }}{% endblock %}
+{% block content %}
+
+<div class="mb-6">
+    <a href="{{ url_for('learn.index') }}" class="text-sm text-gray-400 hover:text-indigo-600">← 내 학습</a>
+    <h2 class="text-xl font-bold text-gray-800 mt-2">{{ assignment.package.title }}</h2>
+    {% if assignment.package.description %}
+    <p class="text-sm text-gray-500 mt-0.5">{{ assignment.package.description }}</p>
+    {% endif %}
+    {% if assignment.end_date %}
+    <span class="text-xs text-gray-400">학습 기간: ~{{ assignment.end_date.strftime('%Y.%m.%d') }}</span>
+    {% endif %}
+</div>
+
+{% if assignment.package.curricula %}
+<div class="space-y-3">
+{% for pc in assignment.package.curricula %}
+{% set c = pc.curriculum %}
+{% set prog = curriculum_progress.get(c.curriculum_id) %}
+{% set done = prog[0] if prog else 0 %}
+{% set total = prog[1] if prog else c.item_count %}
+{% set pct = (done / total * 100) | int if total > 0 else 0 %}
+{% set completed = (done == total and total > 0) %}
+
+<a href="{{ url_for('learn.curriculum_view', assignment_id=assignment.id, curriculum_id=c.curriculum_id) }}"
+   class="block bg-white rounded-xl border shadow-sm p-4 hover:shadow-md hover:border-indigo-200 transition
+          {% if completed %}border-green-200{% else %}border-gray-100{% endif %}">
+    <div class="flex items-center gap-4">
+        <!-- 순번/완료 뱃지 -->
+        <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-bold
+                    {% if completed %}bg-green-100 text-green-600{% else %}bg-indigo-50 text-indigo-600{% endif %}">
+            {% if completed %}✓{% else %}{{ loop.index }}{% endif %}
+        </div>
+        <div class="flex-1 min-w-0">
+            <div class="font-semibold text-gray-800 text-sm">{{ c.title }}</div>
+            {% if c.description %}
+            <div class="text-xs text-gray-400 truncate">{{ c.description }}</div>
+            {% endif %}
+            <div class="mt-2">
+                <div class="flex justify-between text-xs text-gray-400 mb-1">
+                    <span>{{ done }}/{{ total }} 완료</span>
+                    <span>{{ pct }}%</span>
+                </div>
+                <div class="w-full bg-gray-100 rounded-full h-1.5">
+                    <div class="h-1.5 rounded-full transition-all
+                                {% if completed %}bg-green-400{% else %}bg-indigo-400{% endif %}"
+                         style="width: {{ pct }}%"></div>
+                </div>
+            </div>
+        </div>
+        <div class="text-gray-300 shrink-0">›</div>
+    </div>
+</a>
+{% endfor %}
+</div>
+{% else %}
+<div class="bg-white rounded-xl border border-dashed border-gray-200 p-12 text-center text-gray-400 text-sm">
+    콘텐츠가 아직 없습니다.
+</div>
+{% endif %}
+
+{% endblock %}

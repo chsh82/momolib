@@ -58,6 +58,9 @@ def create_app(config_name='default'):
     from app.lms import lms_bp
     app.register_blueprint(lms_bp, url_prefix='/lms')
 
+    from app.learn import learn_bp
+    app.register_blueprint(learn_bp, url_prefix='/learn')
+
     # 메인 라우트
     from flask import redirect, url_for
     from flask_login import current_user
@@ -75,7 +78,9 @@ def create_app(config_name='default'):
                 return redirect(url_for('essays.parent_dashboard'))
         return render_template('landing.html')
 
-    # Jinja2 전역 필터
+    # Jinja2 전역 함수/필터
+    app.jinja_env.globals['enumerate'] = enumerate
+
     from datetime import datetime
 
     @app.template_filter('format_number')

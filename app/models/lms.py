@@ -173,3 +173,37 @@ class StudentPackageAssignment(db.Model):
     package     = db.relationship('Package', backref='student_assignments')
     branch      = db.relationship('Branch', backref='student_package_assignments')
     assigner    = db.relationship('User', foreign_keys=[assigned_by])
+
+    @property
+    def is_expired(self):
+        from datetime import date
+        return self.end_date is not None and self.end_date < date.today()
+
+
+class StudentItemProgress(db.Model):
+    """학생별 콘텐츠 아이템 진도 기록"""
+    __tablename__ = 'student_item_progress'
+
+    id            = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    student_id    = db.Column(db.String(36), db.ForeignKey('users.user_id',
+                               ondelete='CASCADE'), nullable=False, index=True)
+    assignment_id = db.Column(db.Integer, db.ForeignKey('student_package_assignments.id',
+                               ondelete='CASCADE'), nullable=False)
+    item_id       = db.Column(db.Integer, db.ForeignKey('curriculum_items.item_id',
+                               ondelete='CASCADE'), nullable=False)
+    status        = db.Column(db.String(20), default='not_started')
+    # not_started / in_progress / completed
+    score         = db.Column(db.Float, nullable=True)      # 퀴즈 점수 (0.0~1.0)
+    response_data = db.Column(db.JSON, nullable=True)       # 학생 답변 저장
+    started_at    = db.Column(db.DateTime, nullable=True)
+    completed_at  = db.Column(db.DateTime, nullable=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('student_id', 'assignment_id', 'item_id',
+                            name='uq_student_assignment_item'),
+    )
+
+    student    = db.relationship('User', foreign_keys=[student_id])
+    assignment = db.relationship('StudentPackageAssignment',
+                                 backref='item_progresses')
+    item       = db.relationship('CurriculumItem')
