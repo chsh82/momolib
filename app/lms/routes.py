@@ -4,8 +4,11 @@ from flask import render_template, redirect, url_for, flash, request, jsonify, a
 from flask_login import login_required, current_user
 from app.lms import lms_bp
 from app.models import db
-from app.models.lms import Curriculum, CurriculumItem, Package, PackageCurriculum
+from app.models.lms import (Curriculum, CurriculumItem, Package, PackageCurriculum,
+                             BranchPackageAssignment, StudentPackageAssignment)
 from app.models.content_bank import BankQuestion, LectureVideo
+from app.models.branch import Branch
+from app.models.member import StudentProfile
 
 CONTENT_TYPES = ['vocab_quiz', 'book_quiz', 'reading_quiz', 'video', 'essay']
 DEFAULT_ORDER = ['vocab_quiz', 'book_quiz', 'reading_quiz', 'video', 'essay']
@@ -229,7 +232,10 @@ def package_new():
 def package_detail(package_id):
     if not _hq_only(): abort(403)
     p = Package.query.filter_by(package_id=package_id, is_active=True).first_or_404()
-    return render_template('lms/package/detail.html', package=p)
+    branches = Branch.query.filter_by(status='active').order_by(Branch.name).all()
+    assigned_branch_ids = {a.branch_id for a in p.branch_assignments if a.is_active}
+    return render_template('lms/package/detail.html', package=p,
+                           branches=branches, assigned_branch_ids=assigned_branch_ids)
 
 
 @lms_bp.route('/packages/<package_id>/edit', methods=['POST'])
@@ -317,6 +323,146 @@ def package_curriculum_move(package_id, pc_id):
         p.updated_at = datetime.utcnow()
         db.session.commit()
     return redirect(url_for('lms.package_detail', package_id=package_id))
+
+
+# ═══════════════════════════════════════════════
+# 지점 패키지 배정 (HQ 전용)
+# ═══════════════════════════════════════════════
+
+@lms_bp.route('/packages/<package_id>/branches/add', methods=['POST'])
+@login_required
+def package_branch_add(package_id):
+    if not _hq_only(): abort(403)
+    p = Package.query.filter_by(package_id=package_id, is_active=True).first_or_404()
+    branch_id = request.form.get('branch_id')
+    if not branch_id:
+        flash('지점을 선택해주세요.', 'error')
+        return redirect(url_for('lms.package_detail', package_id=package_id))
+
+    exists = BranchPackageAssignment.query.filter_by(
+        branch_id=branch_id, package_id=package_id, is_active=True).first()
+    if exists:
+        flash('이미 배정된 지점입니다.', 'warning')
+        return redirect(url_for('lms.package_detail', package_id=package_id))
+
+    expires_at = request.form.get('expires_at') or None
+    if expires_at:
+        from datetime import date
+        expires_at = date.fromisoformat(expires_at)
+
+    assignment = BranchPackageAssignment(
+        branch_id=branch_id,
+        package_id=package_id,
+        assigned_by=current_user.user_id,
+        expires_at=expires_at,
+    )
+    db.session.add(assignment)
+    db.session.commit()
+    flash('지점에 패키지를 배정했습니다.', 'success')
+    return redirect(url_for('lms.package_detail', package_id=package_id))
+
+
+@lms_bp.route('/packages/<package_id>/branches/<int:assignment_id>/delete', methods=['POST'])
+@login_required
+def package_branch_delete(package_id, assignment_id):
+    if not _hq_only(): abort(403)
+    a = BranchPackageAssignment.query.filter_by(
+        id=assignment_id, package_id=package_id).first_or_404()
+    a.is_active = False
+    db.session.commit()
+    flash('배정을 해제했습니다.', 'success')
+    return redirect(url_for('lms.package_detail', package_id=package_id))
+
+
+# ── 지점용 패키지 목록 API ─────────────────────────
+
+@lms_bp.route('/branch-packages')
+@login_required
+def branch_packages():
+    """지점에 배정된 패키지 목록 (지점 포털용 API)"""
+    from app.models.user import User
+    if current_user.is_hq: abort(403)
+    if not (current_user.is_branch_owner or current_user.is_branch_staff): abort(403)
+
+    branch_id = current_user.branch_id
+    assignments = BranchPackageAssignment.query.filter_by(
+        branch_id=branch_id, is_active=True).all()
+    results = [{'id': a.package_id, 'title': a.package.title,
+                'sub': f'{a.package.curriculum_count}개 커리큘럼 · v{a.package.version}'}
+               for a in assignments if a.package.is_active]
+    return jsonify(results)
+
+
+# ═══════════════════════════════════════════════
+# 학생 패키지 배정 (지점 포털용)
+# ═══════════════════════════════════════════════
+
+def _branch_staff_only():
+    return current_user.is_branch_owner or current_user.is_branch_staff
+
+
+@lms_bp.route('/students/<student_id>/packages/assign', methods=['POST'])
+@login_required
+def student_package_assign(student_id):
+    if not _branch_staff_only(): abort(403)
+    branch_id = current_user.branch_id
+
+    # 해당 지점 학생인지 확인
+    profile = StudentProfile.query.filter_by(
+        user_id=student_id, branch_id=branch_id).first_or_404()
+
+    package_id = request.form.get('package_id')
+    if not package_id:
+        flash('패키지를 선택해주세요.', 'error')
+        return redirect(url_for('branch.member_detail', user_id=student_id))
+
+    # 지점에 배정된 패키지인지 확인
+    branch_assignment = BranchPackageAssignment.query.filter_by(
+        branch_id=branch_id, package_id=package_id, is_active=True).first()
+    if not branch_assignment:
+        flash('해당 패키지를 사용할 권한이 없습니다.', 'error')
+        return redirect(url_for('branch.member_detail', user_id=student_id))
+
+    # 이미 배정됐는지 확인
+    exists = StudentPackageAssignment.query.filter_by(
+        student_id=student_id, package_id=package_id, is_active=True).first()
+    if exists:
+        flash('이미 배정된 패키지입니다.', 'warning')
+        return redirect(url_for('branch.member_detail', user_id=student_id))
+
+    from datetime import date
+    start_date = request.form.get('start_date') or None
+    end_date   = request.form.get('end_date') or None
+    if start_date:
+        start_date = date.fromisoformat(start_date)
+    if end_date:
+        end_date = date.fromisoformat(end_date)
+
+    a = StudentPackageAssignment(
+        student_id=student_id,
+        package_id=package_id,
+        branch_id=branch_id,
+        assigned_by=current_user.user_id,
+        start_date=start_date,
+        end_date=end_date,
+    )
+    db.session.add(a)
+    db.session.commit()
+    flash('패키지를 배정했습니다.', 'success')
+    return redirect(url_for('branch.member_detail', user_id=student_id))
+
+
+@lms_bp.route('/students/<student_id>/packages/<int:assignment_id>/revoke', methods=['POST'])
+@login_required
+def student_package_revoke(student_id, assignment_id):
+    if not _branch_staff_only(): abort(403)
+    branch_id = current_user.branch_id
+    a = StudentPackageAssignment.query.filter_by(
+        id=assignment_id, student_id=student_id, branch_id=branch_id).first_or_404()
+    a.is_active = False
+    db.session.commit()
+    flash('배정을 해제했습니다.', 'success')
+    return redirect(url_for('branch.member_detail', user_id=student_id))
 
 
 # ── 패키지 커리큘럼 검색 API ──────────────────────

@@ -11,6 +11,7 @@ from app.models.revenue import RevenueRecord
 from app.models.branch_post import BranchPost, BranchPostRead
 from app.models.essay import Essay, EssayResult
 from app.models.credit import EssayCredit, EssayCreditLog
+from app.models.lms import BranchPackageAssignment, Package
 from datetime import datetime
 from app.utils.decorators import requires_role
 
@@ -237,13 +238,23 @@ def member_detail(user_id):
     all_teachers = User.query.filter_by(branch_id=branch_id, role='teacher',
                                         is_active=True).order_by(User.name).all()
 
+    # 지점에 배정된 패키지 목록 (학생 배정용)
+    branch_packages = []
+    if user.role == 'student':
+        assigned_pkg_ids = {a.package_id for a in user.package_assignments if a.is_active}
+        branch_pkg_assignments = BranchPackageAssignment.query.filter_by(
+            branch_id=branch_id, is_active=True).all()
+        branch_packages = [a.package for a in branch_pkg_assignments
+                           if a.package.is_active and a.package_id not in assigned_pkg_ids]
+
     return render_template('branch/member_detail.html',
                            member=user,
                            parents=parents, children=children,
                            all_students=all_students,
                            all_parents=all_parents,
                            all_teachers=all_teachers,
-                           grade_choices=GRADE_CHOICES)
+                           grade_choices=GRADE_CHOICES,
+                           branch_packages=branch_packages)
 
 
 @branch_bp.route('/members/<user_id>/edit', methods=['POST'])

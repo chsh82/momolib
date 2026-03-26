@@ -124,3 +124,52 @@ class PackageCurriculum(db.Model):
 
     package    = db.relationship('Package', back_populates='curricula')
     curriculum = db.relationship('Curriculum')
+
+
+class BranchPackageAssignment(db.Model):
+    """HQ가 지점에 패키지 사용 권한 부여"""
+    __tablename__ = 'branch_package_assignments'
+
+    id          = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    branch_id   = db.Column(db.String(36), db.ForeignKey('branches.branch_id',
+                             ondelete='CASCADE'), nullable=False, index=True)
+    package_id  = db.Column(db.String(36), db.ForeignKey('packages.package_id',
+                             ondelete='CASCADE'), nullable=False)
+    assigned_by = db.Column(db.String(36), db.ForeignKey('users.user_id',
+                             ondelete='SET NULL'), nullable=True)
+    assigned_at = db.Column(db.DateTime, default=datetime.utcnow)
+    expires_at  = db.Column(db.Date, nullable=True)   # None = 영구
+    is_active   = db.Column(db.Boolean, default=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('branch_id', 'package_id', name='uq_branch_package'),
+    )
+
+    branch      = db.relationship('Branch', backref='package_assignments')
+    package     = db.relationship('Package', backref='branch_assignments')
+    assigner    = db.relationship('User', foreign_keys=[assigned_by])
+
+
+class StudentPackageAssignment(db.Model):
+    """지점이 학생에게 패키지 배정"""
+    __tablename__ = 'student_package_assignments'
+
+    id          = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    student_id  = db.Column(db.String(36), db.ForeignKey('users.user_id',
+                             ondelete='CASCADE'), nullable=False, index=True)
+    package_id  = db.Column(db.String(36), db.ForeignKey('packages.package_id',
+                             ondelete='CASCADE'), nullable=False)
+    branch_id   = db.Column(db.String(36), db.ForeignKey('branches.branch_id',
+                             ondelete='CASCADE'), nullable=False)
+    assigned_by = db.Column(db.String(36), db.ForeignKey('users.user_id',
+                             ondelete='SET NULL'), nullable=True)
+    assigned_at = db.Column(db.DateTime, default=datetime.utcnow)
+    start_date  = db.Column(db.Date, nullable=True)
+    end_date    = db.Column(db.Date, nullable=True)
+    is_active   = db.Column(db.Boolean, default=True)
+
+    student     = db.relationship('User', foreign_keys=[student_id],
+                                  backref='package_assignments')
+    package     = db.relationship('Package', backref='student_assignments')
+    branch      = db.relationship('Branch', backref='student_package_assignments')
+    assigner    = db.relationship('User', foreign_keys=[assigned_by])

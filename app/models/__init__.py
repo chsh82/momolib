@@ -18,4 +18,5 @@ from app.models.reading_mbti import (ReadingMBTITest, ReadingMBTIQuestion,
                                       ReadingMBTIType, ReadingMBTIResponse, ReadingMBTIResult)
 from app.models.content_bank import (BankQuestion, LectureVideo,
                                       MockExam, MockExamQuestion, StudyMaterial)
-from app.models.lms import (Curriculum, CurriculumItem, Package, PackageCurriculum)
+from app.models.lms import (Curriculum, CurriculumItem, Package, PackageCurriculum,
+                             BranchPackageAssignment, StudentPackageAssignment)
