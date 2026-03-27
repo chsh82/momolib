@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-from flask import jsonify, request, render_template
+from flask import jsonify, request, render_template, current_app
 from flask_login import login_required, current_user
 from app.notifications import notif_bp
 from app.models import db
 from app.models.notification import Notification
+from app.models.push_subscription import PushSubscription
 
 
 @notif_bp.route('/api/unread-count')
@@ -45,6 +46,47 @@ def mark_all_read():
     Notification.query.filter_by(
         user_id=current_user.user_id, is_read=False).update(
         {'is_read': True})
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@notif_bp.route('/api/push/vapid-key')
+@login_required
+def vapid_public_key():
+    key = current_app.config.get('VAPID_PUBLIC_KEY', '')
+    return jsonify({'publicKey': key})
+
+
+@notif_bp.route('/api/push/subscribe', methods=['POST'])
+@login_required
+def push_subscribe():
+    data = request.get_json()
+    endpoint = data.get('endpoint')
+    p256dh = data.get('keys', {}).get('p256dh')
+    auth = data.get('keys', {}).get('auth')
+
+    if not all([endpoint, p256dh, auth]):
+        return jsonify({'error': 'invalid'}), 400
+
+    existing = PushSubscription.query.filter_by(
+        user_id=current_user.user_id, endpoint=endpoint).first()
+    if not existing:
+        sub = PushSubscription(
+            user_id=current_user.user_id,
+            endpoint=endpoint, p256dh=p256dh, auth=auth)
+        db.session.add(sub)
+        db.session.commit()
+
+    return jsonify({'success': True})
+
+
+@notif_bp.route('/api/push/unsubscribe', methods=['POST'])
+@login_required
+def push_unsubscribe():
+    data = request.get_json()
+    endpoint = data.get('endpoint')
+    PushSubscription.query.filter_by(
+        user_id=current_user.user_id, endpoint=endpoint).delete()
     db.session.commit()
     return jsonify({'success': True})
 
