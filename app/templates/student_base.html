@@ -209,12 +209,12 @@
 <header class="student-header">
     <div class="max-w-[960px] mx-auto px-4 py-3 flex items-center justify-between gap-3">
         <!-- 로고 + 마스코트 -->
-        <div class="flex items-center gap-2">
-            <img src="{{ url_for('static', filename='img/characters/momo_girl_nobg.png') }}"
-                 alt="모모"
-                 class="h-10 w-10 object-contain">
+        <a href="{{ url_for('index') }}" class="flex items-center gap-2 no-underline">
+            <img src="{{ url_for('static', filename='img/icon-192.png') }}"
+                 alt="모모립 로고"
+                 class="h-10 w-10 object-contain rounded-xl">
             <span class="text-xl font-black text-orange-500 tracking-tight">MOMOLIB</span>
-        </div>
+        </a>
 
         <!-- 오른쪽: 이름 + 마일리지 + 알림 + 로그아웃 -->
         <div class="flex items-center gap-3">
