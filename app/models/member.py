@@ -62,6 +62,7 @@ class StudentProfile(db.Model):
 
     enrolled_at = db.Column(db.Date, nullable=True)         # 등록일
     status = db.Column(db.String(20), default='active')     # active / inactive / graduated
+    mileage = db.Column(db.Integer, nullable=False, default=0)  # 마일리지 잔액
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -9,6 +9,8 @@ from app.models.library import (Book, LearningContent, QuizQuestion,
 from app.models.reading_mbti import (ReadingMBTITest, ReadingMBTIQuestion,
                                       ReadingMBTIType, ReadingMBTIResponse, ReadingMBTIResult)
 from app.models.user import User
+from app.utils.mileage import award_mileage
+from app.models.avatar import MileageReason
 
 
 # ─────────────────────────────────────────────
@@ -570,6 +572,9 @@ def finish_reading(book_id):
     record.finished_at = datetime.utcnow()
     record.rating = request.form.get('rating') or None
     record.review = request.form.get('review')
+    award_mileage(current_user.user_id, MileageReason.BOOK_FINISH,
+                  description=f'독서 완료: {record.book.title}',
+                  ref_type='book_finish', ref_id=book_id)
     db.session.commit()
     flash('독서 완료를 기록했습니다!', 'success')
     return redirect(url_for('library.my_books'))
@@ -599,6 +604,9 @@ def content_submit(content_id):
 
     if ctype == 'video':
         _complete_content(content_id, score=None, max_score=None, answer_data=None)
+        award_mileage(current_user.user_id, MileageReason.LIBRARY_CONTENT,
+                      description=f'도서 영상: {content.title}',
+                      ref_type='library_content', ref_id=content_id)
         flash('영상을 완료했습니다.', 'success')
 
     elif ctype in ('quiz', 'initial_quiz', 'vocab_quiz'):
@@ -612,6 +620,9 @@ def content_submit(content_id):
                 score += 1
         _complete_content(content_id, score=score, max_score=max_score,
                           answer_data=answers)
+        award_mileage(current_user.user_id, MileageReason.LIBRARY_CONTENT,
+                      description=f'도서 퀴즈: {content.title}',
+                      ref_type='library_content', ref_id=content_id)
         flash(f'퀴즈 완료! {score}/{max_score}점', 'success')
 
     elif ctype == 'essay':
@@ -861,6 +872,9 @@ def mbti_submit():
         scores=scores,
     )
     db.session.add(result)
+    award_mileage(current_user.user_id, MileageReason.MBTI_TEST,
+                  description='독서MBTI 검사 완료',
+                  ref_type='mbti_result', ref_id=result.result_id)
     db.session.commit()
     return redirect(url_for('library.mbti_result', result_id=result.result_id))
 

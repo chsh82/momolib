@@ -1,0 +1,257 @@
+{% extends 'student_base.html' %}
+{% block title %}내 아바타{% endblock %}
+
+{% block content %}
+
+<!-- 헤더 -->
+<div class="mb-5">
+    <h2 class="text-2xl font-black text-gray-800">🎨 내 아바타</h2>
+    <p class="text-base text-gray-400 mt-1">캐릭터를 선택하고 마일리지로 꾸며보세요!</p>
+</div>
+
+<!-- 현재 아바타 + 마일리지 -->
+<div class="s-card p-6 mb-5 flex items-center gap-6"
+     style="background: linear-gradient(135deg, #fdf4ff 0%, #ede9fe 100%);">
+    <!-- 캐릭터 이미지 -->
+    <div class="relative shrink-0">
+        <!-- 배경 아이템 -->
+        {% set bg_item = None %}
+        {% if avatar.equipped and avatar.equipped.get('background') %}
+            {% for item in shop_items if item.item_id == avatar.equipped.background %}
+                {% set bg_item = item %}
+            {% endfor %}
+        {% endif %}
+        <div class="w-28 h-28 rounded-3xl flex items-center justify-center overflow-hidden
+                    {% if bg_item and bg_item.data %}{% else %}bg-white{% endif %}"
+             {% if bg_item and bg_item.data and bg_item.data.get('color') %}
+             style="background: {{ bg_item.data.color }};"
+             {% endif %}>
+            <img src="{{ url_for('static', filename='img/characters/' ~ avatar.character) }}"
+                 alt="{{ avatar.character_display }}"
+                 class="h-24 object-contain">
+        </div>
+        <!-- 프레임 -->
+        {% if avatar.equipped and avatar.equipped.get('frame') %}
+            {% for item in shop_items if item.item_id == avatar.equipped.frame %}
+            <div class="absolute inset-0 rounded-3xl border-4 pointer-events-none"
+                 style="border-color: {{ item.data.color if item.data else '#f97316' }};"></div>
+            {% endfor %}
+        {% endif %}
+        <!-- 뱃지 -->
+        {% if avatar.equipped and avatar.equipped.get('badge') %}
+            {% for item in shop_items if item.item_id == avatar.equipped.badge %}
+            <div class="absolute -top-2 -right-2 text-2xl">{{ item.data.emoji if item.data else '⭐' }}</div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <!-- 정보 -->
+    <div class="flex-1 min-w-0">
+        <div class="text-xl font-black text-purple-700">{{ avatar.character_display }}</div>
+        <div class="text-sm text-gray-500 mt-0.5">{{ current_user.name }}님의 캐릭터</div>
+        <div class="mt-3 flex items-center gap-2">
+            <div class="mileage-chip text-base px-4 py-1.5">
+                🪙 {{ profile.mileage }} 마일리지
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 탭 -->
+<div class="flex gap-2 mb-5" id="tab-btns">
+    <button onclick="showTab('character')"
+            class="tab-btn flex-1 py-3 rounded-2xl font-bold text-base transition border-2 border-purple-300 bg-purple-600 text-white"
+            data-tab="character">🧑 캐릭터 선택</button>
+    <button onclick="showTab('shop')"
+            class="tab-btn flex-1 py-3 rounded-2xl font-bold text-base transition border-2 border-gray-200 bg-white text-gray-600"
+            data-tab="shop">🛍️ 아이템 상점</button>
+    <button onclick="showTab('mileage')"
+            class="tab-btn flex-1 py-3 rounded-2xl font-bold text-base transition border-2 border-gray-200 bg-white text-gray-600"
+            data-tab="mileage">🪙 내역</button>
+</div>
+
+<!-- 탭: 캐릭터 선택 -->
+<div id="tab-character" class="tab-content">
+    <div class="grid grid-cols-3 gap-3">
+        {% for char in characters %}
+        <div class="s-card p-3 text-center {% if avatar.character == char.file %}ring-3 ring-purple-500{% endif %}">
+            <div class="relative mx-auto w-20 h-20 mb-2">
+                <img src="{{ url_for('static', filename='img/characters/' ~ char.file) }}"
+                     alt="{{ char.name }}"
+                     class="w-full h-full object-contain">
+                {% if avatar.character == char.file %}
+                <div class="absolute -top-1 -right-1 text-lg">✅</div>
+                {% endif %}
+            </div>
+            <div class="font-black text-gray-800 text-sm">{{ char.name }}</div>
+            <div class="text-xs text-gray-400 mt-0.5 leading-snug">{{ char.desc }}</div>
+            {% if avatar.character != char.file %}
+            <form method="POST" action="{{ url_for('avatar.set_character') }}" class="mt-2">
+                <input type="hidden" name="character" value="{{ char.file }}">
+                <button type="submit"
+                        class="w-full text-sm font-bold py-2 rounded-xl bg-purple-100 text-purple-700 hover:bg-purple-600 hover:text-white transition">
+                    선택
+                </button>
+            </form>
+            {% else %}
+            <div class="mt-2 text-sm font-bold text-purple-600 py-2">현재 선택됨</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- 탭: 아이템 상점 -->
+<div id="tab-shop" class="tab-content hidden">
+    {% set categories = [('badge','뱃지'),('background','배경'),('frame','프레임')] %}
+    {% for cat_key, cat_name in categories %}
+    {% set cat_items = shop_items | selectattr('category', 'equalto', cat_key) | list %}
+    {% if cat_items %}
+    <div class="mb-6">
+        <h3 class="font-black text-gray-700 text-lg mb-3">{{ cat_name }}</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {% for item in cat_items %}
+            {% set owned = item.item_id in owned_ids %}
+            {% set equipped = avatar.equipped and avatar.equipped.get(item.category) == item.item_id %}
+            <div class="s-card p-4 text-center {% if equipped %}ring-2 ring-orange-400{% endif %}">
+                <!-- 아이템 시각화 -->
+                <div class="text-4xl mb-2">
+                    {% if item.data and item.data.get('emoji') %}
+                        {{ item.data.emoji }}
+                    {% elif item.category == 'background' and item.data and item.data.get('color') %}
+                        <div class="w-10 h-10 rounded-xl mx-auto" style="background: {{ item.data.color }};"></div>
+                    {% elif item.category == 'frame' and item.data and item.data.get('color') %}
+                        <div class="w-10 h-10 rounded-xl mx-auto border-4" style="border-color: {{ item.data.color }};"></div>
+                    {% else %}
+                        🎁
+                    {% endif %}
+                </div>
+                <div class="font-black text-gray-800 text-sm mb-0.5">{{ item.name }}</div>
+                <div class="text-xs text-gray-400 mb-3 leading-snug">{{ item.description or '' }}</div>
+
+                {% if owned %}
+                    {% if equipped %}
+                    <!-- 장착 중 → 해제 버튼 -->
+                    <form method="POST" action="{{ url_for('avatar.equip_item', item_id=item.item_id) }}">
+                        <button type="submit"
+                                class="w-full text-sm font-bold py-2 rounded-xl bg-orange-500 text-white hover:bg-orange-600 transition">
+                            ✓ 장착 중 (해제)
+                        </button>
+                    </form>
+                    {% else %}
+                    <!-- 보유 중 → 장착 버튼 -->
+                    <form method="POST" action="{{ url_for('avatar.equip_item', item_id=item.item_id) }}">
+                        <button type="submit"
+                                class="w-full text-sm font-bold py-2 rounded-xl bg-green-100 text-green-700 hover:bg-green-600 hover:text-white transition">
+                            장착하기
+                        </button>
+                    </form>
+                    {% endif %}
+                {% else %}
+                <!-- 미보유 → 구매 버튼 -->
+                <div class="mileage-chip text-xs justify-center mb-2">🪙 {{ item.price }}</div>
+                <form method="POST" action="{{ url_for('avatar.buy_item', item_id=item.item_id) }}">
+                    <button type="submit"
+                            class="w-full text-sm font-bold py-2 rounded-xl
+                                   {% if profile.mileage >= item.price %}
+                                   bg-orange-500 text-white hover:bg-orange-600
+                                   {% else %}
+                                   bg-gray-100 text-gray-400 cursor-not-allowed
+                                   {% endif %} transition">
+                        {% if profile.mileage >= item.price %}구매하기{% else %}마일리지 부족{% endif %}
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+
+    {% if not shop_items %}
+    <div class="s-card p-12 text-center">
+        <div class="text-5xl mb-3">🛍️</div>
+        <p class="text-gray-400">아직 상점 아이템이 없어요.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- 탭: 마일리지 내역 -->
+<div id="tab-mileage" class="tab-content hidden">
+    <div class="s-card p-5">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-black text-gray-800 text-lg">마일리지 내역</h3>
+            <div class="mileage-chip">🪙 {{ profile.mileage }}</div>
+        </div>
+
+        <!-- 획득 방법 안내 -->
+        <div class="grid grid-cols-2 gap-2 mb-5">
+            {% set earn_info = [
+                ('📹', 'LMS 영상', '10'),
+                ('🎯', '퀴즈 정답', '20'),
+                ('💪', '퀴즈 도전', '5'),
+                ('💬', '토론/글쓰기', '15'),
+                ('📖', '도서 콘텐츠', '10'),
+                ('📚', '독서 완료', '20'),
+                ('🧠', '독서MBTI', '30'),
+                ('☀️', '일일 로그인', '5'),
+            ] %}
+            {% for emoji, label, pts in earn_info %}
+            <div class="flex items-center gap-2 bg-yellow-50 rounded-xl px-3 py-2">
+                <span class="text-lg">{{ emoji }}</span>
+                <div class="flex-1 min-w-0">
+                    <div class="text-xs font-bold text-gray-700 truncate">{{ label }}</div>
+                </div>
+                <span class="text-xs font-black text-yellow-600 shrink-0">+{{ pts }}🪙</span>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- 최근 내역 -->
+        {% if mileage_logs %}
+        <div class="space-y-2">
+            {% for log in mileage_logs %}
+            <div class="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-0">
+                <div class="flex items-center gap-3">
+                    <div class="text-xl">{{ log.reason_display.split(' ')[0] }}</div>
+                    <div>
+                        <div class="text-sm font-bold text-gray-700">{{ log.description or log.reason_display }}</div>
+                        <div class="text-xs text-gray-400">{{ log.created_at | kst('%m.%d %H:%M') }}</div>
+                    </div>
+                </div>
+                <div class="font-black text-base shrink-0
+                            {% if log.amount > 0 %}text-yellow-500{% else %}text-red-400{% endif %}">
+                    {{ '+' if log.amount > 0 else '' }}{{ log.amount }}🪙
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-8">
+            <div class="text-4xl mb-2">🪙</div>
+            <p class="text-gray-400">아직 마일리지 내역이 없어요.<br>학습을 시작해보세요!</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showTab(name) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        if (btn.dataset.tab === name) {
+            btn.classList.remove('bg-white', 'text-gray-600', 'border-gray-200');
+            btn.classList.add('bg-purple-600', 'text-white', 'border-purple-300');
+        } else {
+            btn.classList.remove('bg-purple-600', 'text-white', 'border-purple-300');
+            btn.classList.add('bg-white', 'text-gray-600', 'border-gray-200');
+        }
+    });
+    document.getElementById('tab-' + name).classList.remove('hidden');
+}
+</script>
+{% endblock %}

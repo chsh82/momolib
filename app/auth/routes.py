@@ -30,6 +30,12 @@ def login():
         user.last_login_at = datetime.utcnow()
         db.session.commit()
 
+        # 학생 일일 로그인 마일리지
+        if user.role == 'student':
+            from app.utils.mileage import check_daily_login
+            check_daily_login(user.user_id)
+            db.session.commit()
+
         login_user(user, remember=bool(remember))
         next_page = request.args.get('next')
         return redirect(next_page or url_for('index'))

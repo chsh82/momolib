@@ -21,3 +21,5 @@ from app.models.content_bank import (BankQuestion, LectureVideo,
 from app.models.lms import (Curriculum, CurriculumItem, Package, PackageCurriculum,
                              BranchPackageAssignment, StudentPackageAssignment,
                              StudentItemProgress)
+from app.models.avatar import (MileageLog, MileageReason,
+                                AvatarItem, StudentAvatar, StudentAvatarInventory)

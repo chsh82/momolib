@@ -7,6 +7,8 @@ from app.models import db
 from app.models.lms import (StudentPackageAssignment, StudentItemProgress,
                               CurriculumItem)
 from app.models.content_bank import BankQuestion, LectureVideo
+from app.utils.mileage import award_mileage, check_daily_login
+from app.models.avatar import MileageReason
 
 
 def _student_only():
@@ -234,8 +236,24 @@ def item_submit(assignment_id, item_id):
     progress.score = score
     progress.response_data = response_data
     progress.completed_at = datetime.utcnow()
-    db.session.commit()
 
+    # 마일리지 지급
+    ref_key = f'lms_item_{item_id}'
+    if item.content_type == 'video':
+        award_mileage(current_user.user_id, MileageReason.LMS_VIDEO,
+                      description=f'{item.content_title} 시청',
+                      ref_type='lms_item', ref_id=ref_key)
+    elif item.content_type in ('vocab_quiz', 'book_quiz'):
+        reason = MileageReason.LMS_QUIZ_PASS if score == 1.0 else MileageReason.LMS_QUIZ_FAIL
+        award_mileage(current_user.user_id, reason,
+                      description=f'{item.content_title}',
+                      ref_type='lms_item', ref_id=ref_key)
+    elif item.content_type in ('reading_quiz', 'essay'):
+        award_mileage(current_user.user_id, MileageReason.LMS_DISCUSSION,
+                      description=f'{item.content_title} 제출',
+                      ref_type='lms_item', ref_id=ref_key)
+
+    db.session.commit()
     flash('제출 완료!', 'success')
 
     # 다음 아이템으로 이동

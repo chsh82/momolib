@@ -61,6 +61,9 @@ def create_app(config_name='default'):
     from app.learn import learn_bp
     app.register_blueprint(learn_bp, url_prefix='/learn')
 
+    from app.avatar import avatar_bp
+    app.register_blueprint(avatar_bp, url_prefix='/avatar')
+
     # 메인 라우트
     from flask import redirect, url_for
     from flask_login import current_user

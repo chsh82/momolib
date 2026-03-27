@@ -212,9 +212,9 @@
         <!-- 오른쪽: 이름 + 마일리지 + 알림 + 로그아웃 -->
         <div class="flex items-center gap-3">
             <!-- 마일리지 -->
-            <div class="mileage-chip">
-                🪙 <span>{{ current_user.mileage if current_user.mileage is defined else 0 }}</span>
-            </div>
+            <a href="{{ url_for('avatar.index') }}" class="mileage-chip hover:opacity-90 transition">
+                🪙 <span>{{ current_user.student_profile.mileage if current_user.student_profile else 0 }}</span>
+            </a>
 
             <!-- 학생 이름 -->
             <span class="text-sm font-bold text-gray-700 hidden sm:block">
@@ -280,10 +280,10 @@
         <span class="tab-icon">📖</span>
         <span>도서관</span>
     </a>
-    <a href="{{ url_for('library.my_analytics') }}"
-       class="tab-item {% if cur == 'library.my_analytics' %}active{% endif %}">
-        <span class="tab-icon">📊</span>
-        <span>분석</span>
+    <a href="{{ url_for('avatar.index') }}"
+       class="tab-item {% if cur.startswith('avatar.') %}active{% endif %}">
+        <span class="tab-icon">🎨</span>
+        <span>아바타</span>
     </a>
 </nav>
 
