@@ -53,8 +53,20 @@ def mark_all_read():
 @notif_bp.route('/api/push/vapid-key')
 @login_required
 def vapid_public_key():
-    key = current_app.config.get('VAPID_PUBLIC_KEY', '')
-    return jsonify({'publicKey': key})
+    pem_key = current_app.config.get('VAPID_PUBLIC_KEY', '')
+    if not pem_key:
+        return jsonify({'publicKey': ''})
+    try:
+        from cryptography.hazmat.primitives.serialization import load_pem_public_key, Encoding, PublicFormat
+        import base64
+        # \n 이스케이프 처리
+        pem_bytes = pem_key.replace('\\n', '\n').encode()
+        pub_key = load_pem_public_key(pem_bytes)
+        raw = pub_key.public_bytes(Encoding.X962, PublicFormat.UncompressedPoint)
+        b64url = base64.urlsafe_b64encode(raw).rstrip(b'=').decode()
+        return jsonify({'publicKey': b64url})
+    except Exception:
+        return jsonify({'publicKey': pem_key})
 
 
 @notif_bp.route('/api/push/subscribe', methods=['POST'])
