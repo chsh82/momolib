@@ -1,6 +1,6 @@
 {
-  "name": "MOMOLIB",
-  "short_name": "모모립",
+  "name": "모모도서관",
+  "short_name": "모모도서관",
   "description": "모모립 독서 학습 플랫폼",
   "start_url": "/",
   "display": "standalone",
