@@ -13,7 +13,7 @@
 <div class="s-card p-6 mb-5 flex items-center gap-6"
      style="background: linear-gradient(135deg, #fdf4ff 0%, #ede9fe 100%);">
     <!-- 캐릭터 이미지 -->
-    <div class="relative shrink-0">
+    <div class="relative shrink-0 mt-2">
         <!-- 배경 아이템 -->
         {% set bg_item = None %}
         {% if avatar.equipped and avatar.equipped.get('background') %}
@@ -41,18 +41,19 @@
         {% if avatar.equipped and avatar.equipped.get('badge') %}
             {% for item in shop_items if item.item_id == avatar.equipped.badge %}
             {% set pos = item.data.pos if item.data and item.data.get('pos') else 'top-right' %}
-            <div class="absolute text-3xl pointer-events-none"
+            <div class="absolute pointer-events-none"
                  style="
                  {% if pos == 'top-center' %}
-                     top: -22px; left: 50%; transform: translateX(-50%);
+                     top: -4px; left: 50%; transform: translateX(-50%);
+                     font-size: 1.6rem; line-height: 1;
                  {% elif pos == 'top-right' %}
-                     top: -10px; right: -10px;
+                     top: -8px; right: -8px; font-size: 1.4rem;
                  {% elif pos == 'top-left' %}
-                     top: -10px; left: -10px;
+                     top: -8px; left: -8px; font-size: 1.4rem;
                  {% elif pos == 'bottom-right' %}
-                     bottom: -10px; right: -10px;
+                     bottom: -8px; right: -8px; font-size: 1.4rem;
                  {% elif pos == 'bottom-left' %}
-                     bottom: -10px; left: -10px;
+                     bottom: -8px; left: -8px; font-size: 1.4rem;
                  {% endif %}
                  ">{{ item.data.emoji if item.data else '⭐' }}</div>
             {% endfor %}
