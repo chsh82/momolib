@@ -228,6 +228,13 @@
                 {{ current_user.name }}
             </span>
 
+            <!-- 푸시 알림 허용 버튼 (미허용 시만 표시) -->
+            <button id="push-enable-btn"
+                    onclick="enablePush()"
+                    class="hidden text-xs font-bold px-3 py-1.5 rounded-xl bg-orange-100 text-orange-600 hover:bg-orange-500 hover:text-white transition">
+                🔔 알림 허용
+            </button>
+
             <!-- 알림 -->
             <div class="relative" id="notif-wrapper">
                 <button onclick="toggleNotifDropdown()"
@@ -390,42 +397,53 @@ setInterval(updateBadge, 60000);
 </div>
 
 <script>
-// ── PWA 서비스 워커 등록 + 푸시 구독 ─────────────────────
-if ('serviceWorker' in navigator && 'PushManager' in window) {
-    navigator.serviceWorker.register('/sw.js').then(async reg => {
-        // 이미 구독 중이면 스킵
+// ── PWA 서비스 워커 등록 ─────────────────────────────────
+let _swReg = null;
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+        _swReg = reg;
+        // 이미 알림 허용 + 구독 없으면 버튼 표시
+        if ('PushManager' in window && Notification.permission === 'default') {
+            document.getElementById('push-enable-btn').classList.remove('hidden');
+        } else if ('PushManager' in window && Notification.permission === 'granted') {
+            _subscribePush(reg);
+        }
+    }).catch(() => {});
+}
+
+async function enablePush() {
+    const perm = await Notification.requestPermission();
+    document.getElementById('push-enable-btn').classList.add('hidden');
+    if (perm === 'granted' && _swReg) {
+        await _subscribePush(_swReg);
+    }
+}
+
+async function _subscribePush(reg) {
+    try {
         const existing = await reg.pushManager.getSubscription();
         if (existing) return;
 
-        // 알림 권한 요청 (이미 허용된 경우 자동 진행)
-        const perm = await Notification.requestPermission();
-        if (perm !== 'granted') return;
-
-        // VAPID 공개키 가져오기
         const res = await fetch('/notifications/api/push/vapid-key');
         const { publicKey } = await res.json();
         if (!publicKey) return;
 
-        // URL-safe base64 → Uint8Array 변환
         const key = publicKey.replace(/-/g, '+').replace(/_/g, '/');
-        const raw = atob(key);
+        const pad = key.length % 4 ? '='.repeat(4 - key.length % 4) : '';
+        const raw = atob(key + pad);
         const appKey = new Uint8Array(raw.split('').map(c => c.charCodeAt(0)));
 
-        // 푸시 구독
         const sub = await reg.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: appKey,
         });
 
-        // 서버에 저장
         await fetch('/notifications/api/push/subscribe', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(sub.toJSON()),
         });
-    }).catch(() => {});
-} else if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js');
+    } catch(e) {}
 }
 
 // ── 이미 설치된 경우(standalone) 배너 숨김 ────────────────
