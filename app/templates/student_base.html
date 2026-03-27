@@ -374,7 +374,7 @@ setInterval(updateBadge, 60000);
         <img src="/static/img/icon-192.png" alt="모모립" class="w-12 h-12 rounded-xl shrink-0">
         <div class="flex-1 min-w-0">
             <div class="font-black text-gray-800 text-sm">모모립 앱으로 설치하기</div>
-            <div class="text-xs text-gray-400 mt-0.5">홈 화면에 추가하면 앱처럼 사용할 수 있어요!</div>
+            <div id="pwa-banner-desc" class="text-xs text-gray-400 mt-0.5">홈 화면에 추가하면 앱처럼 사용할 수 있어요!</div>
         </div>
         <div class="flex flex-col gap-2 shrink-0">
             <button id="pwa-install-btn"
@@ -395,37 +395,76 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js');
 }
 
-// ── 설치 배너 ─────────────────────────────────────────────
-let deferredPrompt = null;
-const banner = document.getElementById('pwa-banner');
+// ── 이미 설치된 경우(standalone) 배너 숨김 ────────────────
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+                     || window.navigator.standalone === true;
 
-window.addEventListener('beforeinstallprompt', e => {
-    e.preventDefault();
-    deferredPrompt = e;
-    // 이미 닫은 적 있으면 배너 안 보임
-    if (!sessionStorage.getItem('pwa-dismissed')) {
-        banner.classList.remove('hidden');
+if (!isStandalone && !localStorage.getItem('pwa-dismissed')) {
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isAndroid = /android/i.test(navigator.userAgent);
+    let deferredPrompt = null;
+    const banner = document.getElementById('pwa-banner');
+    const desc = document.getElementById('pwa-banner-desc');
+    const installBtn = document.getElementById('pwa-install-btn');
+
+    if (isIOS) {
+        // iOS: Safari 공유 버튼 안내
+        desc.textContent = 'Safari 하단 공유(□↑) → "홈 화면에 추가"를 눌러주세요.';
+        installBtn.textContent = '확인';
+        installBtn.addEventListener('click', () => {
+            banner.classList.add('hidden');
+            localStorage.setItem('pwa-dismissed', '1');
+        });
+        setTimeout(() => banner.classList.remove('hidden'), 2000);
+    } else {
+        // Android/Chrome: beforeinstallprompt 대기, 없으면 5초 후 안내
+        window.addEventListener('beforeinstallprompt', e => {
+            e.preventDefault();
+            deferredPrompt = e;
+            banner.classList.remove('hidden');
+        });
+
+        installBtn.addEventListener('click', () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(() => {
+                    deferredPrompt = null;
+                    banner.classList.add('hidden');
+                });
+            } else {
+                // 브라우저 메뉴 안내
+                desc.textContent = '브라우저 메뉴(⋮) → "앱 설치" 또는 "홈 화면에 추가"를 눌러주세요.';
+                installBtn.textContent = '확인';
+                installBtn.addEventListener('click', () => {
+                    banner.classList.add('hidden');
+                    localStorage.setItem('pwa-dismissed', '1');
+                }, { once: true });
+            }
+        });
+
+        // 5초 후에도 prompt 없으면 수동 안내 배너 표시
+        setTimeout(() => {
+            if (!deferredPrompt && !isStandalone && !localStorage.getItem('pwa-dismissed')) {
+                desc.textContent = '브라우저 메뉴(⋮) → "앱 설치" 또는 "홈 화면에 추가"를 눌러주세요.';
+                installBtn.textContent = '확인';
+                installBtn.addEventListener('click', () => {
+                    banner.classList.add('hidden');
+                    localStorage.setItem('pwa-dismissed', '1');
+                }, { once: true });
+                banner.classList.remove('hidden');
+            }
+        }, 5000);
     }
-});
 
-document.getElementById('pwa-install-btn').addEventListener('click', () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(() => {
-        deferredPrompt = null;
+    document.getElementById('pwa-dismiss-btn').addEventListener('click', () => {
+        banner.classList.add('hidden');
+        localStorage.setItem('pwa-dismissed', '1');
+    });
+
+    window.addEventListener('appinstalled', () => {
         banner.classList.add('hidden');
     });
-});
-
-document.getElementById('pwa-dismiss-btn').addEventListener('click', () => {
-    banner.classList.add('hidden');
-    sessionStorage.setItem('pwa-dismissed', '1');
-});
-
-// 이미 설치된 경우 배너 숨김
-window.addEventListener('appinstalled', () => {
-    banner.classList.add('hidden');
-});
+}
 </script>
 </body>
 </html>
