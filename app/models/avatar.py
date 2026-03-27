@@ -125,15 +125,19 @@ class StudentAvatar(db.Model):
     @property
     def character_display(self):
         name_map = {
-            'momo_girl_nobg.png':    '모모',
-            'captain_nemo_nobg.png': '네모선장',
-            'nature_boy_nobg.png':   '콩세유',
-            'purple_boy_nobg.png':   '기기',
-            'traveler_nobg.png':     '파스파르투',
-            'indian_girl_nobg.png':  '아우다부인',
-            'phileas_fogg_nobg.png': '필리어스 포그',
-            'turtle_nobg.png':       '카시오페이아',
-            'old_man_broom_nobg.png':'베포',
+            'momo_girl_nobg.png':       '모모',
+            'scientist_nobg.png':       '호라박사',
+            'turtle_nobg.png':          '카시오페이아',
+            'old_man_broom_clean.png':  '베포',
+            'purple_boy_clean.png':     '기기',
+            'captain_nemo_clean.png':   '네모선장',
+            'nature_boy_clean.png':     '콩세유',
+            'traveler_clean.png':       '파스파르투',
+            'indian_girl_clean.png':    '아우다부인',
+            'black_suit_man_clean.png': '회색신사',
+            'napoleon_pig_clean.png':   '나폴레옹',
+            'old_professor_clean.png':  '아로낙스박사',
+            'phileas_fogg_clean.png':   '필리어스 포그',
         }
         return name_map.get(self.character, self.character)
 

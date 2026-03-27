@@ -9,15 +9,19 @@ from app.utils.mileage import deduct_mileage, get_or_create_avatar
 
 # 선택 가능한 기본 캐릭터 목록
 CHARACTERS = [
-    {'file': 'momo_girl_nobg.png',     'name': '모모',          'desc': '이야기 속 시간의 수호자'},
-    {'file': 'old_man_broom_nobg.png', 'name': '베포',          'desc': '느리지만 꾸준한 청소부'},
-    {'file': 'purple_boy_nobg.png',    'name': '기기',          'desc': '호기심 많은 모험가'},
-    {'file': 'scientist_nobg.png',     'name': '호라박사',      'desc': '지혜로운 시간 관리자'},
-    {'file': 'turtle_nobg.png',        'name': '카시오페이아',  'desc': '미래를 아는 거북이'},
-    {'file': 'captain_nemo_nobg.png',  'name': '네모선장',      'desc': '바다 깊은 곳의 탐험가'},
-    {'file': 'nature_boy_nobg.png',    'name': '콩세유',        'desc': '박식한 자연 관찰자'},
-    {'file': 'traveler_nobg.png',      'name': '파스파르투',    'desc': '세계를 누비는 모험가'},
-    {'file': 'indian_girl_nobg.png',   'name': '아우다부인',    'desc': '용감하고 우아한 여행자'},
+    {'file': 'momo_girl_nobg.png',       'name': '모모',          'desc': '이야기 속 시간의 수호자'},
+    {'file': 'old_man_broom_clean.png',  'name': '베포',          'desc': '느리지만 꾸준한 청소부'},
+    {'file': 'purple_boy_clean.png',     'name': '기기',          'desc': '호기심 많은 모험가'},
+    {'file': 'scientist_nobg.png',       'name': '호라박사',      'desc': '지혜로운 시간 관리자'},
+    {'file': 'turtle_nobg.png',          'name': '카시오페이아',  'desc': '미래를 아는 거북이'},
+    {'file': 'captain_nemo_clean.png',   'name': '네모선장',      'desc': '바다 깊은 곳의 탐험가'},
+    {'file': 'nature_boy_clean.png',     'name': '콩세유',        'desc': '박식한 자연 관찰자'},
+    {'file': 'traveler_clean.png',       'name': '파스파르투',    'desc': '세계를 누비는 모험가'},
+    {'file': 'indian_girl_clean.png',    'name': '아우다부인',    'desc': '용감하고 우아한 여행자'},
+    {'file': 'black_suit_man_clean.png', 'name': '회색신사',      'desc': '시간을 훔치는 수수께끼의 인물'},
+    {'file': 'napoleon_pig_clean.png',   'name': '나폴레옹',      'desc': '농장의 지배자, 권력을 꿈꾸는 돼지'},
+    {'file': 'old_professor_clean.png',  'name': '아로낙스박사',  'desc': '바다의 신비를 연구하는 학자'},
+    {'file': 'phileas_fogg_clean.png',   'name': '필리어스 포그', 'desc': '80일 만에 세계를 일주한 신사'},
 ]
 
 
