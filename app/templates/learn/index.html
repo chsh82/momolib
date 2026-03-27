@@ -1,54 +1,103 @@
-{% extends 'base.html' %}
+{% extends 'student_base.html' %}
 {% block title %}내 학습{% endblock %}
 {% block content %}
 
-<div class="mb-6">
-    <h2 class="text-xl font-bold text-gray-800">내 학습</h2>
-    <p class="text-sm text-gray-500 mt-0.5">배정된 학습 패키지 목록입니다.</p>
+<!-- 환영 배너 -->
+<div class="relative s-card mb-6 overflow-visible"
+     style="background: linear-gradient(135deg, #f97316 0%, #a855f7 100%);">
+    <div class="p-6 pr-32">
+        <div class="text-white/80 text-sm font-medium mb-1">안녕하세요!</div>
+        <div class="text-white text-2xl font-black leading-tight">
+            {{ current_user.name }}님,<br>오늘도 함께해요! 🌟
+        </div>
+        <div class="mt-3 text-white/90 text-sm">
+            배정된 패키지 <span class="font-bold text-yellow-200">{{ assignments|length }}개</span>
+        </div>
+    </div>
+    <!-- 캐릭터 -->
+    <img src="{{ url_for('static', filename='img/characters/momo_girl_nobg.png') }}"
+         alt="모모"
+         class="absolute bottom-0 right-4 h-28 object-contain float-anim pointer-events-none">
 </div>
 
+<!-- 패키지 목록 -->
 {% if assignments %}
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 {% for a in assignments %}
 {% set pct = progress_map.get(a.id) %}
+{% set is_complete = (pct == 100) %}
+{% set is_expired = a.is_expired %}
+
+<!-- 패키지 카드 -->
 <a href="{{ url_for('learn.package_view', assignment_id=a.id) }}"
-   class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md hover:border-indigo-200 transition">
-    <div class="flex items-start justify-between gap-2">
-        <div>
-            <h3 class="font-bold text-gray-800 text-base leading-snug">{{ a.package.title }}</h3>
-            {% if a.package.description %}
-            <p class="text-xs text-gray-400 mt-0.5 line-clamp-2">{{ a.package.description }}</p>
+   class="s-card block p-5 hover:scale-[1.02] transition-transform active:scale-[0.98]
+          {% if is_expired %}opacity-60{% endif %}">
+
+    <!-- 상단: 아이콘 + 상태 뱃지 -->
+    <div class="flex items-start justify-between mb-4">
+        <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shrink-0
+                    {% if is_complete %}bg-green-100
+                    {% elif is_expired %}bg-gray-100
+                    {% else %}bg-orange-100{% endif %}">
+            {% if is_complete %}✅
+            {% elif is_expired %}🔒
+            {% else %}📚{% endif %}
+        </div>
+        <div class="shrink-0 ml-2">
+            {% if is_complete %}
+            <span class="done-badge">완료! 🎉</span>
+            {% elif is_expired %}
+            <span class="text-xs bg-red-100 text-red-500 font-bold px-3 py-1 rounded-full">기간 만료</span>
+            {% else %}
+            <span class="text-xs bg-orange-100 text-orange-600 font-bold px-3 py-1 rounded-full">진행 중</span>
             {% endif %}
         </div>
-        {% if a.is_expired %}
-        <span class="text-xs bg-red-50 text-red-500 px-2 py-0.5 rounded-full shrink-0">기간 만료</span>
-        {% else %}
-        <span class="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full shrink-0">진행 중</span>
+    </div>
+
+    <!-- 제목 + 설명 -->
+    <div class="mb-4">
+        <h3 class="font-black text-gray-800 text-lg leading-snug">{{ a.package.title }}</h3>
+        {% if a.package.description %}
+        <p class="text-sm text-gray-400 mt-1 line-clamp-2">{{ a.package.description }}</p>
+        {% endif %}
+        {% if a.end_date %}
+        <p class="text-xs text-gray-400 mt-1">
+            📅 ~{{ a.end_date.strftime('%m월 %d일') }}까지
+        </p>
         {% endif %}
     </div>
-    <div class="text-xs text-gray-400">
-        {{ a.package.curriculum_count }}개 주차
-        {% if a.end_date %} · ~{{ a.end_date.strftime('%Y.%m.%d') }}{% endif %}
-    </div>
+
+    <!-- 진행률 -->
     {% if pct is not none %}
     <div>
-        <div class="flex justify-between text-xs text-gray-500 mb-1">
-            <span>진행률</span>
-            <span class="font-medium text-indigo-600">{{ pct }}%</span>
+        <div class="flex justify-between text-sm mb-2">
+            <span class="text-gray-500 font-medium">진행률</span>
+            <span class="font-black {% if is_complete %}text-green-500{% else %}text-orange-500{% endif %}">
+                {{ pct }}%
+            </span>
         </div>
-        <div class="w-full bg-gray-100 rounded-full h-2">
-            <div class="bg-indigo-500 h-2 rounded-full transition-all" style="width: {{ pct }}%"></div>
+        <div class="progress-bar">
+            <div class="progress-fill {% if is_complete %}bg-gradient-to-r from-green-400 to-emerald-500
+                                       {% else %}bg-gradient-to-r from-orange-400 to-amber-400{% endif %}"
+                 style="width: {{ pct }}%"></div>
         </div>
+    </div>
+    {% else %}
+    <div class="progress-bar">
+        <div class="progress-fill bg-gradient-to-r from-orange-200 to-amber-200" style="width: 0%"></div>
     </div>
     {% endif %}
 </a>
 {% endfor %}
 </div>
+
 {% else %}
-<div class="bg-white rounded-2xl border border-dashed border-gray-200 p-16 text-center">
-    <div class="text-4xl mb-3">📚</div>
-    <p class="text-gray-500 text-sm">아직 배정된 학습 패키지가 없습니다.</p>
-    <p class="text-gray-400 text-xs mt-1">선생님께 문의해주세요.</p>
+<!-- 빈 상태 -->
+<div class="s-card p-12 text-center">
+    <img src="{{ url_for('static', filename='img/characters/captain_nemo_nobg.png') }}"
+         alt="" class="h-32 mx-auto mb-4 object-contain opacity-60">
+    <p class="text-xl font-bold text-gray-500 mb-2">아직 학습 패키지가 없어요</p>
+    <p class="text-sm text-gray-400">선생님께서 곧 배정해 주실 거예요!</p>
 </div>
 {% endif %}
 

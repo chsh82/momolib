@@ -1,67 +1,87 @@
-{% extends 'base.html' %}
+{% extends 'student_base.html' %}
 {% block title %}{{ curriculum.title }}{% endblock %}
 {% block content %}
 
-<div class="mb-6">
+<!-- 뒤로가기 + 헤더 -->
+<div class="flex items-center gap-3 mb-5">
     <a href="{{ url_for('learn.package_view', assignment_id=assignment.id) }}"
-       class="text-sm text-gray-400 hover:text-indigo-600">← {{ assignment.package.title }}</a>
-    <h2 class="text-xl font-bold text-gray-800 mt-2">{{ curriculum.title }}</h2>
-    {% if curriculum.description %}
-    <p class="text-sm text-gray-500 mt-0.5">{{ curriculum.description }}</p>
-    {% endif %}
+       class="w-10 h-10 rounded-full bg-white shadow flex items-center justify-center text-gray-500 hover:text-orange-500 shrink-0">
+        ←
+    </a>
+    <div class="flex-1 min-w-0">
+        <h2 class="text-xl font-black text-gray-800 truncate">{{ curriculum.title }}</h2>
+        {% if curriculum.description %}
+        <p class="text-sm text-gray-400 mt-0.5 truncate">{{ curriculum.description }}</p>
+        {% endif %}
+    </div>
 </div>
 
 {% set type_icons = {
-    'vocab_quiz': '📖', 'book_quiz': '📚',
-    'reading_quiz': '💬', 'video': '🎬', 'essay': '✏️'
+    'vocab_quiz': '🔤',
+    'book_quiz': '📚',
+    'reading_quiz': '💬',
+    'video': '🎬',
+    'essay': '✏️'
 } %}
 {% set type_colors = {
-    'vocab_quiz': 'blue', 'book_quiz': 'green',
-    'reading_quiz': 'purple', 'video': 'orange', 'essay': 'pink'
+    'vocab_quiz': ['bg-blue-100', 'text-blue-700'],
+    'book_quiz': ['bg-green-100', 'text-green-700'],
+    'reading_quiz': ['bg-purple-100', 'text-purple-700'],
+    'video': ['bg-orange-100', 'text-orange-700'],
+    'essay': ['bg-pink-100', 'text-pink-700']
 } %}
 
 {% if curriculum.items %}
-<div class="space-y-2">
+<div class="space-y-3">
 {% for item in curriculum.items %}
 {% set p = progresses.get(item.item_id) %}
 {% set is_done = (p and p.status == 'completed') %}
-{% set col = type_colors.get(item.content_type, 'gray') %}
+{% set colors = type_colors.get(item.content_type, ['bg-gray-100', 'text-gray-600']) %}
 
 <a href="{{ url_for('learn.item_view', assignment_id=assignment.id, item_id=item.item_id) }}"
-   class="flex items-center gap-4 bg-white rounded-xl border shadow-sm px-4 py-3
-          hover:shadow-md hover:border-indigo-200 transition
-          {% if is_done %}border-green-100 bg-green-50/30{% else %}border-gray-100{% endif %}">
+   class="s-card flex items-center gap-4 px-5 py-4
+          hover:scale-[1.01] transition-transform active:scale-[0.99]
+          {% if is_done %}ring-2 ring-green-200{% endif %}">
 
-    <!-- 완료 여부 표시 -->
-    <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-sm
-                {% if is_done %}bg-green-100 text-green-600{% else %}bg-gray-100 text-gray-400{% endif %}">
+    <!-- 번호 / 완료 -->
+    <div class="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 text-lg font-black
+                {% if is_done %}bg-green-100 text-green-600{% else %}bg-gray-100 text-gray-500{% endif %}">
         {% if is_done %}✓{% else %}{{ loop.index }}{% endif %}
     </div>
 
-    <!-- 타입 아이콘 + 제목 -->
+    <!-- 콘텐츠 정보 -->
     <div class="flex-1 min-w-0">
-        <div class="flex items-center gap-2">
-            <span class="text-xs px-2 py-0.5 rounded-full
-                         bg-{{ col }}-50 text-{{ col }}-700 shrink-0">
-                {{ type_icons.get(item.content_type, '') }} {{ item.content_type_display }}
+        <!-- 타입 뱃지 -->
+        <div class="flex flex-wrap gap-1.5 mb-1">
+            <span class="text-xs font-bold px-2.5 py-1 rounded-full {{ colors[0] }} {{ colors[1] }}">
+                {{ type_icons.get(item.content_type, '📄') }} {{ item.content_type_display }}
             </span>
             {% if item.option_group %}
-            <span class="text-xs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded shrink-0">선택형</span>
+            <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">선택형</span>
+            {% endif %}
+            {% if is_done %}
+            <span class="done-badge">완료</span>
             {% endif %}
         </div>
-        <div class="text-sm font-medium text-gray-800 mt-0.5 truncate">{{ item.content_title }}</div>
+        <!-- 제목 -->
+        <div class="font-bold text-gray-800 text-base truncate">{{ item.content_title }}</div>
+        <!-- 점수 -->
         {% if is_done and p.score is not none %}
-        <div class="text-xs text-green-600 mt-0.5">점수: {{ (p.score * 100) | int }}점</div>
+        <div class="text-sm text-orange-500 font-bold mt-0.5">
+            🏅 {{ (p.score * 100) | int }}점
+        </div>
         {% endif %}
     </div>
 
-    <div class="text-gray-300 shrink-0">›</div>
+    <div class="text-gray-300 text-xl shrink-0">›</div>
 </a>
 {% endfor %}
 </div>
+
 {% else %}
-<div class="bg-white rounded-xl border border-dashed border-gray-200 p-12 text-center text-gray-400 text-sm">
-    콘텐츠가 없습니다.
+<div class="s-card p-12 text-center">
+    <div class="text-5xl mb-4">📭</div>
+    <p class="text-gray-400">아직 콘텐츠가 없어요.</p>
 </div>
 {% endif %}
 

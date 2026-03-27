@@ -1,63 +1,144 @@
-{% extends 'base.html' %}
-{% block title %}독서MBTI{% endblock %}
+{% extends 'student_base.html' %}
+{% block title %}독서논술 MBTI{% endblock %}
 
 {% block content %}
-<div class="max-w-lg mx-auto text-center py-8">
-    <div class="text-6xl mb-4">🧠</div>
-    <h2 class="text-2xl font-bold text-gray-800 mb-2">독서MBTI 테스트</h2>
-    <p class="text-gray-500 text-sm mb-8 leading-relaxed">
-        나의 독서 역량을 분석해보세요.<br>
-        독해력, 사고력, 서술력 3가지 영역에서 나의 수준을 파악하고,<br>
-        맞춤형 학습 방향을 제안받을 수 있습니다.
-    </p>
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">독서논술 MBTI 자가평가</h2>
+    <p class="text-sm text-gray-500 mt-1">나의 독서, 사고, 서술 역량을 진단하고 맞춤형 학습 전략을 확인하세요.</p>
+</div>
+
+<!-- 메인 소개 카드 -->
+<div class="bg-gradient-to-r from-purple-500 to-indigo-600 rounded-xl shadow-lg p-8 text-white mb-6">
+    <div class="flex items-center gap-4 mb-6">
+        <div class="text-5xl">🎯</div>
+        <div>
+            <h3 class="text-xl font-bold mb-1">{{ test.name if test else 'MOMO 논술 MBTI 역량 진단' }}</h3>
+            <p class="text-purple-100 text-sm">독해력, 사고력, 서술력을 9가지 세부 능력으로 분석합니다</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-3 mb-6">
+        <div class="bg-white/10 rounded-xl p-4 text-center">
+            <div class="text-2xl mb-1">📝</div>
+            <div class="text-xs text-purple-100">총 문항</div>
+            <div class="text-xl font-bold">50문항</div>
+        </div>
+        <div class="bg-white/10 rounded-xl p-4 text-center">
+            <div class="text-2xl mb-1">⏱️</div>
+            <div class="text-xs text-purple-100">소요 시간</div>
+            <div class="text-xl font-bold">10~15분</div>
+        </div>
+        <div class="bg-white/10 rounded-xl p-4 text-center">
+            <div class="text-2xl mb-1">🎨</div>
+            <div class="text-xs text-purple-100">결과 유형</div>
+            <div class="text-xl font-bold">27가지</div>
+        </div>
+    </div>
 
     {% if my_result %}
-    {% set ti = my_result.type_info %}
-    <div class="bg-indigo-50 border border-indigo-200 rounded-2xl p-6 mb-6 text-left">
-        <div class="flex items-center gap-3 mb-3">
-            <div class="text-3xl">{{ ti.emoji if ti else '📚' }}</div>
+    <div class="bg-white/10 rounded-xl p-4 mb-4">
+        <div class="flex items-center justify-between">
             <div>
-                <div class="font-bold text-indigo-800">{{ ti.type_name if ti else my_result.type_code }}</div>
-                <div class="text-xs text-indigo-500">최근 측정 결과</div>
+                <div class="text-xs text-purple-100 mb-1">최근 측정 결과</div>
+                {% set ti = my_result.type_info %}
+                <div class="font-bold text-lg">{{ ti.type_name if ti else my_result.type_code }}</div>
+                <div class="text-xs text-purple-100 mt-1">{{ my_result.submitted_at | kst('%Y년 %m월 %d일') }}</div>
             </div>
+            <a href="{{ url_for('library.mbti_result', result_id=my_result.result_id) }}"
+               class="bg-white text-purple-600 font-medium px-4 py-2 rounded-lg hover:bg-purple-50 transition text-sm">
+                결과 보기 →
+            </a>
         </div>
-        <div class="grid grid-cols-3 gap-2 text-center">
-            {% set levels = my_result.level_display %}
-            <div class="bg-white rounded-xl p-2">
-                <div class="text-xs text-gray-500">독해력</div>
-                <div class="font-bold text-indigo-700">{{ levels.reading }}</div>
-            </div>
-            <div class="bg-white rounded-xl p-2">
-                <div class="text-xs text-gray-500">사고력</div>
-                <div class="font-bold text-indigo-700">{{ levels.thinking }}</div>
-            </div>
-            <div class="bg-white rounded-xl p-2">
-                <div class="text-xs text-gray-500">서술력</div>
-                <div class="font-bold text-indigo-700">{{ levels.writing }}</div>
-            </div>
-        </div>
-        <a href="{{ url_for('library.mbti_result', result_id=my_result.result_id) }}"
-           class="block mt-3 text-center text-sm text-indigo-600 hover:underline">결과 상세 보기 →</a>
     </div>
     {% endif %}
-
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 text-left mb-6">
-        <h3 class="font-semibold text-gray-700 mb-3">테스트 안내</h3>
-        <ul class="space-y-2 text-sm text-gray-600">
-            <li>• 총 50문항 (절대평가 45문항 + 비교평가 5문항)</li>
-            <li>• 소요 시간: 약 10~15분</li>
-            <li>• 3가지 영역 (독해력, 사고력, 서술력) × 3가지 수준 = 27가지 유형</li>
-            <li>• 솔직하게 답할수록 더 정확한 결과가 나옵니다</li>
-        </ul>
-    </div>
 
     {% if test %}
     <a href="{{ url_for('library.mbti_test') }}"
-       class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-semibold text-sm">
-        테스트 시작하기 →
+       class="block w-full bg-white text-purple-600 font-bold text-center py-3 rounded-xl hover:bg-purple-50 transition">
+        {{ '재검사 시작하기' if my_result else '검사 시작하기' }} 🚀
     </a>
     {% else %}
-    <p class="text-sm text-gray-400">테스트가 준비되지 않았습니다.</p>
+    <div class="text-center text-purple-200 text-sm">테스트가 준비되지 않았습니다.</div>
     {% endif %}
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- 9가지 능력 설명 -->
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        <h3 class="font-semibold text-gray-800 mb-4">3개 영역 × 3단계 수준 = 9가지 능력</h3>
+        <div class="space-y-4 text-sm">
+            <div>
+                <div class="font-medium text-gray-700 mb-2">📖 독해력 (읽기 역량)</div>
+                <div class="pl-3 space-y-1 text-gray-500">
+                    <div>• <span class="font-medium">초급</span> — 기본 문해력 (어휘, 문장 이해)</div>
+                    <div>• <span class="font-medium">중급</span> — 구조적 독해 (단락, 주제 파악)</div>
+                    <div>• <span class="font-medium">고급</span> — 비판적 독해 (분석, 추론, 평가)</div>
+                </div>
+            </div>
+            <div>
+                <div class="font-medium text-gray-700 mb-2">💬 사고력 (발표/토론)</div>
+                <div class="pl-3 space-y-1 text-gray-500">
+                    <div>• <span class="font-medium">초급</span> — 내용 전달 (이해한 내용 표현)</div>
+                    <div>• <span class="font-medium">중급</span> — 논리적 표현 (근거 제시, 확장)</div>
+                    <div>• <span class="font-medium">고급</span> — 창의적 확장 (토론 주도, 종합)</div>
+                </div>
+            </div>
+            <div>
+                <div class="font-medium text-gray-700 mb-2">✍️ 서술력 (글쓰기 역량)</div>
+                <div class="pl-3 space-y-1 text-gray-500">
+                    <div>• <span class="font-medium">초급</span> — 간결한 요약 (핵심 정리)</div>
+                    <div>• <span class="font-medium">중급</span> — 체계적 구성 (논리적 서술)</div>
+                    <div>• <span class="font-medium">고급</span> — 창의적 재구성 (비판적 표현)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 검사 이력 -->
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        <h3 class="font-semibold text-gray-800 mb-4">검사 이력</h3>
+        {% if all_results %}
+        <div class="space-y-3 max-h-80 overflow-y-auto">
+            {% for r in all_results %}
+            {% set ti = r.type_info %}
+            <div class="border border-gray-200 rounded-xl p-3 hover:border-purple-300 transition">
+                <div class="flex items-center justify-between mb-1">
+                    <div class="font-medium text-gray-800 text-sm">{{ ti.type_name if ti else r.type_code }}</div>
+                    <span class="text-xs text-gray-400">{{ r.submitted_at | kst('%Y.%m.%d') }}</span>
+                </div>
+                {% if ti and ti.combo_description %}
+                <div class="text-xs text-gray-500 mb-2">{{ ti.combo_description }}</div>
+                {% endif %}
+                <div class="flex items-center justify-between">
+                    <div class="flex gap-2 text-xs">
+                        {% set ld = r.level_display %}
+                        <span class="bg-purple-50 text-purple-600 px-2 py-0.5 rounded">독해 {{ ld.reading }}</span>
+                        <span class="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded">사고 {{ ld.thinking }}</span>
+                        <span class="bg-pink-50 text-pink-600 px-2 py-0.5 rounded">서술 {{ ld.writing }}</span>
+                    </div>
+                    <a href="{{ url_for('library.mbti_result', result_id=r.result_id) }}"
+                       class="text-xs text-indigo-600 hover:underline">보기 →</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-10 text-gray-400">
+            <div class="text-4xl mb-3">🎯</div>
+            <p class="text-sm">아직 검사 이력이 없습니다.<br>첫 검사를 시작해보세요!</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 검사 전 안내 -->
+<div class="bg-blue-50 border border-blue-200 rounded-xl p-5">
+    <h3 class="font-semibold text-gray-800 mb-3">검사 전 알아두세요</h3>
+    <ul class="space-y-1.5 text-sm text-gray-700">
+        <li>• 모든 질문에 솔직하게 답변해주세요. 정답은 없습니다.</li>
+        <li>• 45개 기본 질문 + 5개 비교 질문으로 구성되어 있습니다.</li>
+        <li>• 중간에 나가면 응답이 저장되지 않으니, 한 번에 완료해주세요.</li>
+        <li>• 결과는 나의 학습 스타일을 이해하고 개선하는 데 도움을 줍니다.</li>
+    </ul>
 </div>
 {% endblock %}

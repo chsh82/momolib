@@ -1,87 +1,91 @@
-{% extends 'base.html' %}
+{% extends 'student_base.html' %}
 {% block title %}도서 탐색{% endblock %}
 
 {% block content %}
-<div class="mb-6">
-    <h2 class="text-2xl font-bold text-gray-800">도서 탐색</h2>
-    <p class="text-sm text-gray-500 mt-1">마음에 드는 책을 선택해 학습을 시작해보세요.</p>
+
+<!-- 헤더 -->
+<div class="mb-5">
+    <h2 class="text-2xl font-black text-gray-800">📚 도서 탐색</h2>
+    <p class="text-base text-gray-400 mt-1">마음에 드는 책을 찾아보세요!</p>
 </div>
 
 <!-- 검색/필터 -->
-<form method="GET" class="flex flex-wrap gap-2 mb-6">
+<form method="GET" class="s-card p-4 mb-5 flex flex-wrap gap-3">
     <input type="text" name="q" value="{{ q }}" placeholder="제목, 저자 검색..."
-           class="border border-gray-200 rounded-lg px-3 py-2 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-indigo-400">
-    <select name="genre" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+           class="flex-1 min-w-40 border-2 border-gray-200 rounded-2xl px-4 py-3 text-base
+                  focus:outline-none focus:border-orange-400">
+    <select name="genre"
+            class="border-2 border-gray-200 rounded-2xl px-4 py-3 text-base focus:outline-none focus:border-orange-400">
         <option value="">전체 장르</option>
         {% for val, label in genre_choices %}
         <option value="{{ val }}" {% if genre == val %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
     </select>
-    <select name="level" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+    <select name="level"
+            class="border-2 border-gray-200 rounded-2xl px-4 py-3 text-base focus:outline-none focus:border-orange-400">
         <option value="">전체 수준</option>
         {% for val, label in level_choices %}
         <option value="{{ val }}" {% if level == val %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
     </select>
-    <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm">검색</button>
+    <button type="submit" class="s-btn-primary px-6">🔍 검색</button>
 </form>
 
-<!-- 내 독서 목록으로 이동 -->
-<div class="flex gap-3 mb-6">
-    <a href="{{ url_for('library.my_books') }}"
-       class="inline-flex items-center gap-1 bg-indigo-50 text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg text-sm hover:bg-indigo-100">
-        📚 내 독서 목록
-    </a>
-    <a href="{{ url_for('library.my_analytics') }}"
-       class="inline-flex items-center gap-1 bg-purple-50 text-purple-600 border border-purple-200 px-4 py-2 rounded-lg text-sm hover:bg-purple-100">
-        📊 학습 분석
-    </a>
-    <a href="{{ url_for('library.mbti_intro') }}"
-       class="inline-flex items-center gap-1 bg-green-50 text-green-600 border border-green-200 px-4 py-2 rounded-lg text-sm hover:bg-green-100">
-        🧠 독서MBTI
-    </a>
-</div>
-
+<!-- 도서 목록 -->
 {% if books %}
-<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
     {% for book in books %}
     {% set record = my_records.get(book.book_id) %}
-    <div class="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition overflow-hidden flex flex-col">
+    <div class="s-card flex flex-col overflow-hidden hover:scale-[1.02] transition-transform">
+        <!-- 표지 -->
         {% if book.cover_image_url %}
         <img src="{{ book.cover_image_url }}" alt="{{ book.title }}"
-             class="w-full h-40 object-cover bg-gray-100">
+             class="w-full h-44 object-cover">
         {% else %}
-        <div class="w-full h-40 bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-4xl">
+        <div class="w-full h-44 flex items-center justify-center text-5xl"
+             style="background: linear-gradient(135deg, #ddd6fe 0%, #c7d2fe 100%);">
             📚
         </div>
         {% endif %}
+
+        <!-- 정보 -->
         <div class="p-3 flex-1 flex flex-col">
-            <div class="font-medium text-gray-800 text-xs line-clamp-2 leading-tight">{{ book.title }}</div>
-            <div class="text-xs text-gray-400 mt-0.5">{{ book.author or '-' }}</div>
-            <div class="mt-auto pt-2">
-                {% if record %}
-                <a href="{{ url_for('library.my_book', book_id=book.book_id) }}"
-                   class="block text-center text-xs py-1.5 rounded-lg
-                   {% if record.status == 'completed' %}bg-green-100 text-green-700{% else %}bg-indigo-600 text-white{% endif %}">
-                    {{ '✓ 완료' if record.status == 'completed' else '📖 계속 읽기' }}
-                </a>
-                {% else %}
-                <form method="POST" action="{{ url_for('library.start_reading', book_id=book.book_id) }}">
-                    <button type="submit"
-                            class="w-full text-xs py-1.5 rounded-lg bg-gray-100 hover:bg-indigo-600 hover:text-white text-gray-600 transition">
-                        읽기 시작
-                    </button>
-                </form>
-                {% endif %}
+            <div class="font-bold text-gray-800 text-sm line-clamp-2 leading-snug mb-0.5">
+                {{ book.title }}
             </div>
+            <div class="text-xs text-gray-400 mb-3">{{ book.author or '-' }}</div>
+            <!-- 액션 버튼 -->
+            {% if record %}
+            <a href="{{ url_for('library.my_book', book_id=book.book_id) }}"
+               class="block text-center text-sm font-bold py-2.5 rounded-2xl mt-auto
+                {% if record.status == 'completed' %}
+                    bg-green-100 text-green-700
+                {% else %}
+                    bg-orange-500 text-white
+                {% endif %}">
+                {{ '✓ 완료!' if record.status == 'completed' else '📖 계속 읽기' }}
+            </a>
+            {% else %}
+            <form method="POST" action="{{ url_for('library.start_reading', book_id=book.book_id) }}"
+                  class="mt-auto">
+                <button type="submit"
+                        class="w-full text-sm font-bold py-2.5 rounded-2xl
+                               bg-gray-100 hover:bg-orange-500 hover:text-white text-gray-600 transition">
+                    읽기 시작 🚀
+                </button>
+            </form>
+            {% endif %}
         </div>
     </div>
     {% endfor %}
 </div>
 {% else %}
-<div class="bg-white rounded-xl border border-gray-100 p-12 text-center text-gray-400">
-    <div class="text-4xl mb-2">📚</div>
-    <div>검색 결과가 없습니다.</div>
+<div class="s-card p-12 text-center">
+    <img src="{{ url_for('static', filename='img/characters/old_professor_nobg.png') }}"
+         alt="" class="h-28 mx-auto mb-4 object-contain opacity-50">
+    <p class="text-xl font-bold text-gray-500 mb-2">검색 결과가 없어요</p>
+    <p class="text-sm text-gray-400">다른 검색어로 찾아보세요!</p>
 </div>
 {% endif %}
+
 {% endblock %}

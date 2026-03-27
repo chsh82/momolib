@@ -1,20 +1,25 @@
-{% extends 'base.html' %}
+{% extends 'student_base.html' %}
 {% block title %}{{ assignment.package.title }}{% endblock %}
 {% block content %}
 
-<div class="mb-6">
-    <a href="{{ url_for('learn.index') }}" class="text-sm text-gray-400 hover:text-indigo-600">← 내 학습</a>
-    <h2 class="text-xl font-bold text-gray-800 mt-2">{{ assignment.package.title }}</h2>
-    {% if assignment.package.description %}
-    <p class="text-sm text-gray-500 mt-0.5">{{ assignment.package.description }}</p>
-    {% endif %}
-    {% if assignment.end_date %}
-    <span class="text-xs text-gray-400">학습 기간: ~{{ assignment.end_date.strftime('%Y.%m.%d') }}</span>
-    {% endif %}
+<!-- 뒤로가기 + 헤더 -->
+<div class="flex items-center gap-3 mb-5">
+    <a href="{{ url_for('learn.index') }}"
+       class="w-10 h-10 rounded-full bg-white shadow flex items-center justify-center text-gray-500 hover:text-orange-500 shrink-0">
+        ←
+    </a>
+    <div class="flex-1 min-w-0">
+        <h2 class="text-xl font-black text-gray-800 truncate">{{ assignment.package.title }}</h2>
+        {% if assignment.end_date %}
+        <p class="text-xs text-gray-400 mt-0.5">📅 ~{{ assignment.end_date.strftime('%m월 %d일') }}까지</p>
+        {% endif %}
+    </div>
 </div>
 
 {% if assignment.package.curricula %}
-<div class="space-y-3">
+
+<!-- 주차 카드 목록 -->
+<div class="space-y-4">
 {% for pc in assignment.package.curricula %}
 {% set c = pc.curriculum %}
 {% set prog = curriculum_progress.get(c.curriculum_id) %}
@@ -24,54 +29,69 @@
 {% set completed = (done == total and total > 0) %}
 
 <a href="{{ url_for('learn.curriculum_view', assignment_id=assignment.id, curriculum_id=c.curriculum_id) }}"
-   class="block bg-white rounded-xl border shadow-sm p-4 hover:shadow-md hover:border-indigo-200 transition
-          {% if completed %}border-green-200{% else %}border-gray-100{% endif %}">
-    <div class="flex items-center gap-4">
-        <!-- 순번/완료 뱃지 -->
-        <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-bold
-                    {% if completed %}bg-green-100 text-green-600{% else %}bg-indigo-50 text-indigo-600{% endif %}">
-            {% if completed %}✓{% else %}{{ loop.index }}{% endif %}
-        </div>
-        <div class="flex-1 min-w-0">
-            <div class="font-semibold text-gray-800 text-sm">{{ c.title }}</div>
-            {% if c.description %}
-            <div class="text-xs text-gray-400 truncate">{{ c.description }}</div>
-            {% endif %}
-            <div class="mt-2">
-                <div class="flex justify-between text-xs text-gray-400 mb-1">
-                    <span>{{ done }}/{{ total }} 완료</span>
-                    <span>{{ pct }}%</span>
-                </div>
-                <div class="w-full bg-gray-100 rounded-full h-1.5">
-                    <div class="h-1.5 rounded-full transition-all
-                                {% if completed %}bg-green-400{% else %}bg-indigo-400{% endif %}"
-                         style="width: {{ pct }}%"></div>
-                </div>
-            </div>
-        </div>
-        <div class="text-gray-300 shrink-0">›</div>
+   class="s-card flex items-center gap-4 p-5
+          hover:scale-[1.01] transition-transform active:scale-[0.99]
+          {% if completed %}ring-2 ring-green-300{% endif %}">
+
+    <!-- 번호 / 완료 뱃지 -->
+    <div class="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 text-2xl font-black
+                {% if completed %}bg-green-100 text-green-600
+                {% else %}bg-orange-100 text-orange-500{% endif %}">
+        {% if completed %}✓{% else %}{{ loop.index }}{% endif %}
     </div>
+
+    <!-- 정보 -->
+    <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 mb-1">
+            <span class="font-black text-gray-800 text-base truncate">{{ c.title }}</span>
+            {% if completed %}
+            <span class="done-badge shrink-0">완료!</span>
+            {% endif %}
+        </div>
+        {% if c.description %}
+        <div class="text-sm text-gray-400 truncate mb-2">{{ c.description }}</div>
+        {% endif %}
+        <!-- 진행률 -->
+        <div class="flex items-center gap-2">
+            <div class="flex-1 progress-bar">
+                <div class="progress-fill
+                            {% if completed %}bg-gradient-to-r from-green-400 to-emerald-500
+                            {% else %}bg-gradient-to-r from-orange-400 to-amber-400{% endif %}"
+                     style="width: {{ pct }}%"></div>
+            </div>
+            <span class="text-xs font-bold shrink-0
+                         {% if completed %}text-green-500{% else %}text-orange-500{% endif %}">
+                {{ done }}/{{ total }}
+            </span>
+        </div>
+    </div>
+
+    <!-- 화살표 -->
+    <div class="text-gray-300 text-xl shrink-0">›</div>
 </a>
 {% endfor %}
 </div>
+
 {% else %}
-<div class="bg-white rounded-xl border border-dashed border-gray-200 p-12 text-center text-gray-400 text-sm">
-    콘텐츠가 아직 없습니다.
+<div class="s-card p-12 text-center">
+    <div class="text-5xl mb-4">📭</div>
+    <p class="text-gray-400">아직 콘텐츠가 없어요.</p>
 </div>
 {% endif %}
 
+<!-- 완료 팝업 -->
 {% if request.args.get('completed') %}
-<div id="complete-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm text-center">
+<div id="complete-modal"
+     class="fixed inset-0 bg-black/50 z-[150] flex items-end sm:items-center justify-center p-4"
+     onclick="if(event.target===this)this.classList.add('hidden')">
+    <div class="s-card w-full max-w-sm p-8 text-center bounce-in">
         <div class="text-6xl mb-4">🎉</div>
-        <h2 class="text-xl font-bold text-gray-800 mb-2">학습 완료!</h2>
-        <p class="text-gray-500 text-sm mb-1">
-            <span class="font-semibold text-indigo-600">{{ assignment.package.title }}</span>
-        </p>
-        <p class="text-gray-400 text-sm mb-6">모든 학습을 완료했습니다. 수고하셨습니다!</p>
+        <h2 class="text-2xl font-black text-gray-800 mb-2">학습 완료!</h2>
+        <p class="text-gray-500 mb-1 font-semibold text-lg">{{ assignment.package.title }}</p>
+        <p class="text-gray-400 text-sm mb-6">모든 학습을 완료했어요. 정말 잘했어요!</p>
         <button onclick="document.getElementById('complete-modal').classList.add('hidden')"
-                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-sm">
-            확인
+                class="s-btn-primary w-full text-lg">
+            확인 🌟
         </button>
     </div>
 </div>

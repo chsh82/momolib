@@ -37,8 +37,10 @@ class ReadingMBTIQuestion(db.Model):
     level = db.Column(db.String(20), nullable=True)
 
     question_text = db.Column(db.Text, nullable=False)
-    # comparison 문항의 두 번째 항목 텍스트
+    # comparison 문항의 두 번째 항목 텍스트 (레거시, 신규는 options 사용)
     question_text_b = db.Column(db.Text, nullable=True)
+    # comparison 문항 선택지 JSON: [{'t': '선택지 텍스트', 'v': 'reading:beginner:2,...'}, ...]
+    options = db.Column(db.JSON, nullable=True)
     order_num = db.Column(db.Integer, default=0)
 
     test = db.relationship('ReadingMBTITest', back_populates='questions')
@@ -51,16 +53,24 @@ class ReadingMBTIType(db.Model):
     __tablename__ = 'reading_mbti_types'
 
     type_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    # 예: 독해력-중급, 사고력-초급, 서술력-고급 → "intermediate_beginner_advanced"
+    # "beginner-intermediate-advanced" 형식 (읽기-사고-서술)
     type_code = db.Column(db.String(50), unique=True, nullable=False)
     type_name = db.Column(db.String(100), nullable=False)
     reading_level = db.Column(db.String(20), nullable=False)   # beginner/intermediate/advanced
     thinking_level = db.Column(db.String(20), nullable=False)
     writing_level = db.Column(db.String(20), nullable=False)
 
+    combo_description = db.Column(db.String(200), nullable=True)
+    full_description = db.Column(db.Text, nullable=True)
+    reading_style = db.Column(db.Text, nullable=True)
+    speaking_style = db.Column(db.Text, nullable=True)
+    writing_style = db.Column(db.Text, nullable=True)
+    strengths = db.Column(db.JSON, nullable=True)   # ['강점1', '강점2', ...]
+    weaknesses = db.Column(db.JSON, nullable=True)  # ['약점1', ...]
+    tips = db.Column(db.JSON, nullable=True)        # ['팁1', ...]
+
+    # 하위호환 유지
     description = db.Column(db.Text, nullable=True)
-    strengths = db.Column(db.Text, nullable=True)
-    weaknesses = db.Column(db.Text, nullable=True)
     recommendation = db.Column(db.Text, nullable=True)
     emoji = db.Column(db.String(10), nullable=True)
 
@@ -102,6 +112,10 @@ class ReadingMBTIResult(db.Model):
     reading_level = db.Column(db.String(20), nullable=True)
     thinking_level = db.Column(db.String(20), nullable=True)
     writing_level = db.Column(db.String(20), nullable=True)
+
+    # 9개 세부 능력 점수 JSON
+    # {'reading': {'beginner': 0-25, 'intermediate': 0-25, 'advanced': 0-25}, ...}
+    scores = db.Column(db.JSON, nullable=True)
 
     type_code = db.Column(db.String(50), nullable=True)
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow)

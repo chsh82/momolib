@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'student_base.html' %}
 {% block title %}학습 분석{% endblock %}
 
 {% block content %}
@@ -71,6 +71,65 @@
     </div>
 </div>
 
+<!-- LMS 학습 현황 -->
+<div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6 mb-6">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-gray-700">LMS 학습 현황</h3>
+        <a href="{{ url_for('learn.index') }}" class="text-xs text-indigo-600 hover:underline">내 학습 →</a>
+    </div>
+
+    <!-- LMS 요약 -->
+    <div class="grid grid-cols-3 gap-3 mb-5">
+        <div class="bg-indigo-50 rounded-xl p-4 text-center">
+            <div class="text-2xl font-bold text-indigo-700">{{ lms_package_stats|length }}</div>
+            <div class="text-xs text-indigo-500 mt-1">배정 패키지</div>
+        </div>
+        <div class="bg-green-50 rounded-xl p-4 text-center">
+            <div class="text-2xl font-bold text-green-700">{{ lms_total_done }}</div>
+            <div class="text-xs text-green-500 mt-1">완료한 학습</div>
+        </div>
+        <div class="bg-purple-50 rounded-xl p-4 text-center">
+            <div class="text-2xl font-bold text-purple-700">{{ lms_avg_pct ~ '%' if lms_avg_pct is not none else '-' }}</div>
+            <div class="text-xs text-purple-500 mt-1">평균 퀴즈 점수</div>
+        </div>
+    </div>
+
+    {% if lms_package_stats %}
+    <!-- 패키지별 진도 -->
+    <div class="space-y-3 mb-5">
+        {% for stat in lms_package_stats %}
+        <div>
+            <div class="flex justify-between text-sm mb-1">
+                <span class="text-gray-700 font-medium truncate">{{ stat.title }}</span>
+                <span class="text-xs text-gray-400 shrink-0 ml-2">{{ stat.done }}/{{ stat.total }}
+                    {% if stat.completed %}<span class="text-green-600 font-semibold">완료</span>{% endif %}
+                </span>
+            </div>
+            <div class="w-full bg-gray-100 rounded-full h-2">
+                <div class="h-2 rounded-full {{ 'bg-green-400' if stat.completed else 'bg-indigo-400' }}"
+                     style="width: {{ stat.pct }}%"></div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if lms_type_counts %}
+    <!-- LMS 콘텐츠 유형별 -->
+    <div>
+        <div class="text-xs text-gray-500 font-medium mb-2">유형별 완료</div>
+        <div class="flex flex-wrap gap-2">
+            {% for ttype, count in lms_type_counts.items() %}
+            <span class="text-xs bg-indigo-50 text-indigo-600 px-2 py-1 rounded-lg">{{ ttype }} {{ count }}개</span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <p class="text-sm text-gray-400">배정된 패키지가 없습니다.</p>
+    {% endif %}
+</div>
+
 <!-- 독서MBTI 결과 -->
 <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
     <div class="flex items-center justify-between mb-4">
@@ -83,15 +142,21 @@
     {% if mbti_result %}
     {% set type_info = mbti_result.type_info %}
     <div class="flex items-center gap-4">
-        <div class="text-4xl">{{ type_info.emoji if type_info else '📚' }}</div>
+        <div class="text-4xl">🎯</div>
         <div>
             <div class="font-bold text-gray-800">{{ type_info.type_name if type_info else mbti_result.type_code }}</div>
-            <div class="text-xs text-gray-500 mt-1">
-                독해력 {{ mbti_result.level_display.reading }} · 사고력 {{ mbti_result.level_display.thinking }} · 서술력 {{ mbti_result.level_display.writing }}
+            {% if type_info and type_info.combo_description %}
+            <div class="text-xs text-gray-500 mt-0.5">{{ type_info.combo_description }}</div>
+            {% endif %}
+            <div class="flex gap-2 mt-1">
+                {% set ld = mbti_result.level_display %}
+                <span class="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded">독해 {{ ld.reading }}</span>
+                <span class="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded">사고 {{ ld.thinking }}</span>
+                <span class="text-xs bg-pink-50 text-pink-600 px-2 py-0.5 rounded">서술 {{ ld.writing }}</span>
             </div>
         </div>
         <a href="{{ url_for('library.mbti_result', result_id=mbti_result.result_id) }}"
-           class="ml-auto text-xs text-indigo-600 hover:underline">결과 보기</a>
+           class="ml-auto text-xs text-indigo-600 hover:underline shrink-0">결과 보기</a>
     </div>
     {% else %}
     <p class="text-sm text-gray-400">아직 독서MBTI를 측정하지 않았습니다. 테스트를 통해 나의 독서 유형을 알아보세요!</p>

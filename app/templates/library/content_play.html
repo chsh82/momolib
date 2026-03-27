@@ -1,148 +1,191 @@
-{% extends 'base.html' %}
+{% extends 'student_base.html' %}
 {% block title %}{{ content.title }}{% endblock %}
 
 {% block content %}
-<div class="mb-4">
-    <a href="{{ url_for('library.my_book', book_id=content.book_id) }}" class="text-sm text-gray-500 hover:text-indigo-600">← {{ content.book.title }}</a>
+
+<!-- 뒤로가기 -->
+<div class="flex items-center gap-3 mb-5">
+    <a href="{{ url_for('library.my_book', book_id=content.book_id) }}"
+       class="w-10 h-10 rounded-full bg-white shadow flex items-center justify-center text-gray-500 hover:text-orange-500 shrink-0">
+        ←
+    </a>
+    <div class="flex-1 min-w-0">
+        <div class="text-sm text-gray-400 truncate">{{ content.book.title }}</div>
+        <h2 class="font-black text-gray-800 text-lg leading-tight truncate">
+            {{ content.type_icon }} {{ content.title }}
+        </h2>
+    </div>
 </div>
 
-<div class="max-w-2xl">
-    <div class="flex items-center gap-2 mb-2">
-        <span class="text-2xl">{{ content.type_icon }}</span>
-        <h2 class="text-xl font-bold text-gray-800">{{ content.title }}</h2>
-    </div>
-    {% if content.description %}
-    <p class="text-sm text-gray-500 mb-6">{{ content.description }}</p>
-    {% endif %}
+{% if content.description %}
+<div class="s-card p-4 mb-5 text-base text-gray-600 leading-relaxed">
+    {{ content.description }}
+</div>
+{% endif %}
 
-    {% if completion %}
-    <div class="mb-4 bg-green-50 border border-green-200 rounded-xl p-3 text-sm text-green-700">
-        ✓ 이미 완료한 콘텐츠입니다.
+{% if completion %}
+<div class="s-card p-4 mb-5 flex items-center gap-3 bg-green-50 border-2 border-green-200">
+    <span class="text-2xl">✅</span>
+    <div>
+        <div class="font-black text-green-700">이미 완료한 콘텐츠예요!</div>
         {% if completion.score is not none %}
-        <strong>{{ completion.score|int }}/{{ completion.max_score|int }}점</strong>
+        <div class="text-sm text-green-600 mt-0.5 font-bold">
+            🏅 {{ completion.score|int }}/{{ completion.max_score|int }}점
+        </div>
         {% endif %}
     </div>
-    {% endif %}
+</div>
+{% endif %}
 
-    <!-- 영상 -->
-    {% if content.type == 'video' %}
-    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4 mb-6">
-        {% set video_url = (content.data or {}).get('url', '') %}
-        {% if 'youtube.com' in video_url or 'youtu.be' in video_url %}
-        <div class="aspect-video">
-            {% set vid_id = video_url.split('v=')[-1].split('&')[0] if 'v=' in video_url else video_url.split('/')[-1] %}
-            <iframe src="https://www.youtube.com/embed/{{ vid_id }}"
-                    class="w-full h-full rounded-xl" frameborder="0" allowfullscreen></iframe>
-        </div>
-        {% else %}
-        <video src="{{ video_url }}" controls class="w-full rounded-xl"></video>
-        {% endif %}
-    </div>
-    <form method="POST" action="{{ url_for('library.content_submit', content_id=content.content_id) }}">
-        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg text-sm font-medium">
-            시청 완료
-        </button>
-    </form>
-
-    <!-- 객관식 퀴즈 -->
-    {% elif content.type == 'quiz' %}
-    <form method="POST" action="{{ url_for('library.content_submit', content_id=content.content_id) }}">
-        <div class="space-y-6">
-            {% for q in content.questions %}
-            <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-                <div class="font-medium text-gray-800 mb-3">{{ loop.index }}. {{ q.question_text }}</div>
-                {% for choice in (q.choices or []) %}
-                <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer text-sm text-gray-700">
-                    <input type="radio" name="q_{{ q.question_id }}" value="{{ loop.index0 }}"
-                           class="text-indigo-600" {% if completion %}disabled{% endif %}>
-                    {{ choice.text }}
-                </label>
-                {% endfor %}
-            </div>
-            {% endfor %}
-        </div>
-        {% if not completion %}
-        <button type="submit" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg text-sm font-medium">
-            제출하기
-        </button>
-        {% endif %}
-    </form>
-
-    <!-- 초성 퀴즈 -->
-    {% elif content.type == 'initial_quiz' %}
-    <form method="POST" action="{{ url_for('library.content_submit', content_id=content.content_id) }}">
-        <div class="space-y-6">
-            {% for q in content.questions %}
-            <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-                <div class="font-medium text-gray-800 mb-1">{{ loop.index }}. {{ q.question_text }}</div>
-                {% if (q.choices or {}).get('hint') %}
-                <div class="text-xs text-gray-400 mb-3">힌트: {{ q.choices.hint }}</div>
-                {% endif %}
-                <input type="text" name="q_{{ q.question_id }}" placeholder="정답 입력..."
-                       {% if completion %}disabled{% endif %}
-                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
-            </div>
-            {% endfor %}
-        </div>
-        {% if not completion %}
-        <button type="submit" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg text-sm font-medium">
-            제출하기
-        </button>
-        {% endif %}
-    </form>
-
-    <!-- 어휘 퀴즈 -->
-    {% elif content.type == 'vocab_quiz' %}
-    <form method="POST" action="{{ url_for('library.content_submit', content_id=content.content_id) }}">
-        <div class="space-y-6">
-            {% for q in content.questions %}
-            {% set vc = q.choices or {} %}
-            <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-                <div class="font-medium text-gray-800 mb-1">{{ loop.index }}. {{ q.question_text }}</div>
-                {% if vc.get('word') %}
-                <div class="text-lg font-bold text-indigo-700 mb-3">{{ vc.word }}</div>
-                {% endif %}
-                {% for choice in (vc.get('choices') or []) %}
-                <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer text-sm text-gray-700">
-                    <input type="radio" name="q_{{ q.question_id }}" value="{{ loop.index0 }}"
-                           class="text-indigo-600" {% if completion %}disabled{% endif %}>
-                    {{ choice }}
-                </label>
-                {% endfor %}
-            </div>
-            {% endfor %}
-        </div>
-        {% if not completion %}
-        <button type="submit" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg text-sm font-medium">
-            제출하기
-        </button>
-        {% endif %}
-    </form>
-
-    <!-- 서술형 평가 -->
-    {% elif content.type == 'essay' %}
-    {% set prompt = (content.data or {}).get('prompt', '') %}
-    {% if prompt %}
-    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
-        <div class="text-sm font-medium text-amber-800 mb-1">문제</div>
-        <div class="text-sm text-amber-900">{{ prompt }}</div>
-    </div>
-    {% endif %}
-    {% if completion %}
-    <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-green-700">
-        제출 완료
-        {% if completion.score is not none %}· <strong>{{ completion.score|int }}/{{ completion.max_score|int }}점</strong>{% endif %}
+<!-- 영상 -->
+{% if content.type == 'video' %}
+<div class="s-card mb-5 overflow-hidden">
+    {% set video_url = (content.data or {}).get('url', '') %}
+    {% if 'youtube.com' in video_url or 'youtu.be' in video_url %}
+    {% set vid_id = video_url.split('v=')[-1].split('&')[0] if 'v=' in video_url else video_url.split('/')[-1] %}
+    <div class="relative pb-[56.25%] bg-black">
+        <iframe src="https://www.youtube.com/embed/{{ vid_id }}"
+                class="absolute inset-0 w-full h-full" frameborder="0" allowfullscreen></iframe>
     </div>
     {% else %}
-    <form method="POST" action="{{ url_for('library.content_submit', content_id=content.content_id) }}">
-        <textarea name="essay_text" rows="8" required
-                  placeholder="여기에 글을 작성하세요..."
-                  class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 mb-3"></textarea>
-        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg text-sm font-medium">
-            제출하기
-        </button>
-    </form>
-    {% endif %}
+    <video src="{{ video_url }}" controls class="w-full"></video>
     {% endif %}
 </div>
+<form method="POST" action="{{ url_for('library.content_submit', content_id=content.content_id) }}">
+    <button type="submit" class="s-btn-primary w-full text-xl py-5"
+            style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); box-shadow: 0 4px 12px rgba(34,197,94,0.35);">
+        👀 시청 완료!
+    </button>
+</form>
+
+<!-- 객관식 퀴즈 -->
+{% elif content.type == 'quiz' %}
+<form method="POST" action="{{ url_for('library.content_submit', content_id=content.content_id) }}">
+    <div class="space-y-4">
+        {% for q in content.questions %}
+        <div class="s-card p-5">
+            <div class="font-bold text-gray-800 text-base mb-4 leading-relaxed">
+                {{ loop.index }}. {{ q.question_text }}
+            </div>
+            {% for choice in (q.choices or []) %}
+            <label class="flex items-center gap-3 px-4 py-3 rounded-2xl border-2 border-gray-200
+                          cursor-pointer hover:border-orange-400 hover:bg-orange-50 transition mb-2
+                          text-base text-gray-700 font-medium
+                          has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50
+                          {% if completion %}opacity-70 cursor-not-allowed{% endif %}">
+                <input type="radio" name="q_{{ q.question_id }}" value="{{ loop.index0 }}"
+                       class="hidden" {% if completion %}disabled{% endif %}>
+                <span class="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-sm font-black shrink-0">
+                    {{ loop.index }}
+                </span>
+                {{ choice.text }}
+            </label>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+    {% if not completion %}
+    <button type="submit" class="mt-4 s-btn-primary w-full text-xl py-5">
+        ✅ 제출하기
+    </button>
+    {% endif %}
+</form>
+
+<!-- 초성 퀴즈 -->
+{% elif content.type == 'initial_quiz' %}
+<form method="POST" action="{{ url_for('library.content_submit', content_id=content.content_id) }}">
+    <div class="space-y-4">
+        {% for q in content.questions %}
+        <div class="s-card p-5">
+            <div class="font-bold text-gray-800 text-base mb-2 leading-relaxed">
+                {{ loop.index }}. {{ q.question_text }}
+            </div>
+            {% if (q.choices or {}).get('hint') %}
+            <div class="text-sm text-amber-600 bg-amber-50 rounded-xl px-3 py-2 mb-3 font-medium">
+                💡 힌트: {{ q.choices.hint }}
+            </div>
+            {% endif %}
+            <input type="text" name="q_{{ q.question_id }}" placeholder="정답을 입력하세요!"
+                   {% if completion %}disabled{% endif %}
+                   class="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-base
+                          focus:outline-none focus:border-orange-400">
+        </div>
+        {% endfor %}
+    </div>
+    {% if not completion %}
+    <button type="submit" class="mt-4 s-btn-primary w-full text-xl py-5">
+        ✅ 제출하기
+    </button>
+    {% endif %}
+</form>
+
+<!-- 어휘 퀴즈 -->
+{% elif content.type == 'vocab_quiz' %}
+<form method="POST" action="{{ url_for('library.content_submit', content_id=content.content_id) }}">
+    <div class="space-y-4">
+        {% for q in content.questions %}
+        {% set vc = q.choices or {} %}
+        <div class="s-card p-5">
+            <div class="font-bold text-gray-800 text-base mb-2 leading-relaxed">
+                {{ loop.index }}. {{ q.question_text }}
+            </div>
+            {% if vc.get('word') %}
+            <div class="text-2xl font-black text-indigo-700 mb-4 text-center">{{ vc.word }}</div>
+            {% endif %}
+            {% for choice in (vc.get('choices') or []) %}
+            <label class="flex items-center gap-3 px-4 py-3 rounded-2xl border-2 border-gray-200
+                          cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition mb-2
+                          text-base text-gray-700 font-medium
+                          has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50
+                          {% if completion %}opacity-70 cursor-not-allowed{% endif %}">
+                <input type="radio" name="q_{{ q.question_id }}" value="{{ loop.index0 }}"
+                       class="hidden" {% if completion %}disabled{% endif %}>
+                <span class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-black shrink-0">
+                    {{ ['①','②','③','④'][loop.index0] if loop.index0 < 4 else loop.index0+1 }}
+                </span>
+                {{ choice }}
+            </label>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+    {% if not completion %}
+    <button type="submit" class="mt-4 s-btn-primary w-full text-xl py-5">
+        ✅ 제출하기
+    </button>
+    {% endif %}
+</form>
+
+<!-- 서술형 -->
+{% elif content.type == 'essay' %}
+{% set prompt = (content.data or {}).get('prompt', '') %}
+{% if prompt %}
+<div class="s-card p-5 mb-4" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);">
+    <div class="text-sm font-bold text-amber-800 mb-2">📝 문제</div>
+    <div class="text-base text-amber-900 leading-relaxed">{{ prompt }}</div>
+</div>
+{% endif %}
+{% if completion %}
+<div class="s-card p-5 bg-green-50 border-2 border-green-200">
+    <div class="font-black text-green-700 mb-1">제출 완료 ✓</div>
+    {% if completion.score is not none %}
+    <div class="text-base text-green-600 font-bold">🏅 {{ completion.score|int }}/{{ completion.max_score|int }}점</div>
+    {% endif %}
+</div>
+{% else %}
+<form method="POST" action="{{ url_for('library.content_submit', content_id=content.content_id) }}">
+    <div class="s-card p-5 mb-4">
+        <textarea name="essay_text" rows="8" required
+                  placeholder="여기에 글을 자유롭게 작성해보세요 ✍️"
+                  class="w-full border-2 border-pink-200 rounded-2xl px-4 py-3 text-base
+                         focus:outline-none focus:border-pink-400 resize-none leading-relaxed"></textarea>
+    </div>
+    <button type="submit" class="s-btn-primary w-full text-xl py-5"
+            style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); box-shadow: 0 4px 12px rgba(236,72,153,0.35);">
+        ✏️ 제출하기
+    </button>
+</form>
+{% endif %}
+{% endif %}
+
 {% endblock %}

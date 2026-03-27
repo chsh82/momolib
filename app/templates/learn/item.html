@@ -1,131 +1,138 @@
-{% extends 'base.html' %}
+{% extends 'student_base.html' %}
 {% block title %}{{ item.content_title }}{% endblock %}
 {% block content %}
 
-<!-- 헤더 -->
-<div class="mb-5">
+<!-- 뒤로가기 + 헤더 -->
+<div class="flex items-center gap-3 mb-5">
     <a href="{{ url_for('learn.curriculum_view', assignment_id=assignment.id, curriculum_id=item.curriculum_id) }}"
-       class="text-sm text-gray-400 hover:text-indigo-600">← {{ item.curriculum.title }}</a>
-    <div class="flex items-center gap-2 mt-2">
-        <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">
-            {{ item.content_type_display }}
-        </span>
-        {% if progress.status == 'completed' %}
-        <span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">완료</span>
-        {% endif %}
+       class="w-10 h-10 rounded-full bg-white shadow flex items-center justify-center text-gray-500 hover:text-orange-500 shrink-0">
+        ←
+    </a>
+    <div class="flex-1 min-w-0">
+        <div class="flex flex-wrap items-center gap-2 mb-0.5">
+            <span class="text-sm font-bold px-3 py-1 rounded-full
+                {% if item.content_type == 'vocab_quiz' %}bg-blue-100 text-blue-700
+                {% elif item.content_type == 'book_quiz' %}bg-green-100 text-green-700
+                {% elif item.content_type == 'reading_quiz' %}bg-purple-100 text-purple-700
+                {% elif item.content_type == 'video' %}bg-orange-100 text-orange-700
+                {% elif item.content_type == 'essay' %}bg-pink-100 text-pink-700
+                {% else %}bg-gray-100 text-gray-600{% endif %}">
+                {{ item.content_type_display }}
+            </span>
+            {% if progress.status == 'completed' %}
+            <span class="done-badge">완료!</span>
+            {% endif %}
+        </div>
+        <h2 class="font-black text-gray-800 text-lg leading-snug truncate">{{ item.content_title }}</h2>
     </div>
-    <h2 class="text-lg font-bold text-gray-800 mt-1">{{ item.content_title }}</h2>
 </div>
 
 {% if not content %}
-<div class="bg-red-50 rounded-xl p-6 text-center text-red-500 text-sm">
-    콘텐츠를 불러올 수 없습니다.
+<div class="s-card p-8 text-center">
+    <div class="text-5xl mb-3">😅</div>
+    <p class="text-gray-500 font-semibold">콘텐츠를 불러올 수 없어요.</p>
 </div>
 
 {% elif item.content_type == 'video' %}
-<!-- ═══ 강의 영상 ═══ -->
-<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+<!-- ═══ 영상 ═══ -->
+<div class="s-card mb-4 overflow-hidden">
     {% if content.is_youtube and content.youtube_id %}
     <div class="relative pb-[56.25%] bg-black" id="player-wrapper">
         <div id="yt-player" class="absolute inset-0 w-full h-full"></div>
     </div>
     {% else %}
     <div class="p-6">
-        <a href="{{ content.url }}" target="_blank"
-           class="block text-center bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700">
-            영상 보러 가기 →
+        <a href="{{ content.url }}" target="_blank" class="s-btn-primary w-full text-lg">
+            🎬 영상 보러 가기
         </a>
     </div>
     {% endif %}
     {% if content.description %}
-    <div class="p-4 text-sm text-gray-600 border-t border-gray-50">{{ content.description }}</div>
+    <div class="px-5 py-4 text-base text-gray-600 border-t border-gray-50 leading-relaxed">
+        {{ content.description }}
+    </div>
     {% endif %}
 </div>
 
 {% if progress.status != 'completed' %}
 <form id="video-submit-form" method="POST"
-      action="{{ url_for('learn.item_submit', assignment_id=assignment.id, item_id=item.item_id) }}"
-      class="mt-4">
-    <button type="submit" id="video-done-btn"
-            class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl text-sm">
-        영상을 다 봤어요 →
+      action="{{ url_for('learn.item_submit', assignment_id=assignment.id, item_id=item.item_id) }}">
+    <button type="submit" id="video-done-btn" class="s-btn-primary w-full text-xl py-5">
+        👀 영상을 다 봤어요!
     </button>
 </form>
-
 {% if content.is_youtube and content.youtube_id %}
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
 const YT_VIDEO_ID = '{{ content.youtube_id }}';
 let ytPlayer;
-
 function onYouTubeIframeAPIReady() {
     ytPlayer = new YT.Player('yt-player', {
         videoId: YT_VIDEO_ID,
         playerVars: { rel: 0, modestbranding: 1 },
         events: {
             onStateChange: function(e) {
-                // YT.PlayerState.ENDED === 0
-                if (e.data === 0) {
-                    autoComplete();
-                }
+                if (e.data === 0) autoComplete();
             }
         }
     });
 }
-
 function autoComplete() {
     const btn = document.getElementById('video-done-btn');
     if (btn) {
-        btn.textContent = '✓ 시청 완료! 자동 저장 중...';
+        btn.textContent = '✓ 시청 완료! 저장 중...';
         btn.disabled = true;
-        btn.classList.remove('bg-green-600', 'hover:bg-green-700');
-        btn.classList.add('bg-indigo-500');
+        btn.style.opacity = '0.7';
     }
     document.getElementById('video-submit-form').submit();
 }
 </script>
 {% endif %}
 {% else %}
-<!-- 완료 상태 -->
-<div class="mt-4 text-center text-green-600 text-sm font-semibold py-3 bg-green-50 rounded-xl">
-    ✓ 시청 완료
+<div class="s-card p-5 text-center text-green-600 font-black text-lg bg-green-50">
+    ✅ 시청 완료!
 </div>
 {% if content.is_youtube and content.youtube_id %}
-<div class="relative pb-[56.25%] bg-black mt-4 rounded-2xl overflow-hidden hidden" id="replay-wrapper">
-    <iframe class="absolute inset-0 w-full h-full"
-            src="https://www.youtube.com/embed/{{ content.youtube_id }}?rel=0"
-            allowfullscreen></iframe>
-</div>
 <button onclick="document.getElementById('replay-wrapper').classList.toggle('hidden')"
-        class="mt-2 w-full text-sm text-gray-400 hover:text-indigo-600 py-2">
-    다시 보기
+        class="mt-3 w-full text-sm text-gray-400 hover:text-orange-500 py-2 font-medium">
+    🔁 다시 보기
 </button>
+<div class="hidden rounded-2xl overflow-hidden mt-2" id="replay-wrapper">
+    <div class="relative pb-[56.25%] bg-black">
+        <iframe class="absolute inset-0 w-full h-full"
+                src="https://www.youtube.com/embed/{{ content.youtube_id }}?rel=0"
+                allowfullscreen></iframe>
+    </div>
+</div>
 {% endif %}
 {% endif %}
 
 {% elif item.content_type == 'vocab_quiz' %}
 <!-- ═══ 어휘 퀴즈 ═══ -->
 {% set d = content.data %}
-<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-    <div class="text-center mb-6">
-        <div class="text-3xl font-bold text-gray-800 mb-2">{{ d.word }}</div>
+<div class="s-card p-6 mb-4">
+    <!-- 단어 표시 -->
+    <div class="text-center mb-8">
+        <div class="text-4xl font-black text-gray-800 mb-3">{{ d.word }}</div>
         {% if progress.status == 'completed' and d.definition %}
-        <div class="text-sm text-gray-500 bg-gray-50 rounded-lg px-4 py-2 inline-block">{{ d.definition }}</div>
+        <div class="inline-block text-base text-gray-600 bg-blue-50 rounded-2xl px-5 py-2 font-medium">
+            {{ d.definition }}
+        </div>
         {% endif %}
     </div>
 
     {% if progress.status == 'completed' %}
-    <div class="space-y-2 mb-4">
+    <!-- 결과 보기 -->
+    <div class="space-y-3 mb-5">
     {% for i, choice in enumerate(d.choices or []) %}
-    <div class="flex items-center gap-3 px-4 py-3 rounded-xl border text-sm
+    <div class="flex items-center gap-3 px-5 py-4 rounded-2xl border-2 text-base font-semibold
                 {% if i|string == progress.response_data.get('correct_idx','') %}
-                    border-green-400 bg-green-50 text-green-800 font-semibold
+                    border-green-400 bg-green-50 text-green-800
                 {% elif i|string == progress.response_data.get('chosen','') and progress.response_data.get('chosen') != progress.response_data.get('correct_idx') %}
                     border-red-300 bg-red-50 text-red-700
                 {% else %}
-                    border-gray-100 text-gray-600
-                {% endif %}">
-        <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0
+                    border-gray-100 text-gray-500{% endif %}">
+        <span class="w-9 h-9 rounded-full flex items-center justify-center text-base font-black shrink-0
                      {% if i|string == progress.response_data.get('correct_idx','') %}bg-green-500 text-white
                      {% else %}bg-gray-100 text-gray-500{% endif %}">
             {{ ['①','②','③','④'][i] if i < 4 else i+1 }}
@@ -134,28 +141,30 @@ function autoComplete() {
     </div>
     {% endfor %}
     </div>
-    <div class="text-center text-sm font-semibold
+    <div class="text-center text-xl font-black
                 {% if progress.score == 1.0 %}text-green-600{% else %}text-red-500{% endif %}">
-        {% if progress.score == 1.0 %}정답입니다! 🎉{% else %}틀렸습니다. 다음에 도전해보세요.{% endif %}
+        {% if progress.score == 1.0 %}🎉 정답이에요!{% else %}😅 아쉬워요, 다음엔 꼭!{% endif %}
     </div>
 
     {% else %}
-    <form method="POST" action="{{ url_for('learn.item_submit', assignment_id=assignment.id, item_id=item.item_id) }}">
-        <div class="space-y-2 mb-4">
+    <!-- 문제 풀기 -->
+    <form method="POST" action="{{ url_for('learn.item_submit', assignment_id=assignment.id, item_id=item.item_id) }}"
+          id="quiz-form">
+        <div class="space-y-3 mb-5" id="choices">
         {% for i, choice in enumerate(d.choices or []) %}
-        <label class="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200
-                      cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition text-sm">
-            <input type="radio" name="answer" value="{{ i }}" required class="accent-indigo-600 shrink-0">
-            <span class="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs shrink-0 text-gray-600">
+        <label class="flex items-center gap-3 px-5 py-4 rounded-2xl border-2 border-gray-200
+                      cursor-pointer transition text-base font-semibold text-gray-700
+                      hover:border-blue-400 hover:bg-blue-50 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+            <input type="radio" name="answer" value="{{ i }}" required class="hidden peer">
+            <span class="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-base font-black shrink-0">
                 {{ ['①','②','③','④'][i] if i < 4 else i+1 }}
             </span>
             {{ choice }}
         </label>
         {% endfor %}
         </div>
-        <button type="submit"
-                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-sm">
-            제출하기
+        <button type="submit" class="s-btn-primary w-full text-xl py-5">
+            ✅ 제출하기
         </button>
     </form>
     {% endif %}
@@ -165,30 +174,35 @@ function autoComplete() {
 <!-- ═══ 독서 퀴즈 ═══ -->
 {% set d = content.data %}
 {% set fmt = d.get('format', 'multiple') %}
-<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-    <p class="text-gray-800 font-medium mb-5 leading-relaxed">{{ d.get('question', '') }}</p>
+<div class="s-card p-6 mb-4">
+    <!-- 질문 -->
+    <div class="text-lg font-bold text-gray-800 mb-6 leading-relaxed">
+        {{ d.get('question', '') }}
+    </div>
 
     {% if progress.status == 'completed' %}
+    <!-- 결과 보기 -->
     {% if fmt == 'ox' %}
-    <div class="flex gap-3 mb-4">
-        {% for val, label in [('O','O'), ('X','X')] %}
-        <div class="flex-1 py-4 rounded-xl border text-center text-2xl font-bold
+    <div class="grid grid-cols-2 gap-3 mb-5">
+        {% for val, label, emoji in [('O','O','⭕'),('X','X','❌')] %}
+        <div class="py-6 rounded-2xl border-2 text-center text-3xl font-black
                     {% if val == d.get('correct') %}border-green-400 bg-green-50 text-green-600
                     {% elif val == progress.response_data.get('chosen') %}border-red-300 bg-red-50 text-red-500
-                    {% else %}border-gray-100 text-gray-400{% endif %}">
-            {{ label }}
+                    {% else %}border-gray-100 text-gray-300{% endif %}">
+            {{ emoji }}
         </div>
         {% endfor %}
     </div>
     {% elif fmt == 'multiple' %}
-    <div class="space-y-2 mb-4">
+    <div class="space-y-3 mb-5">
     {% for i, choice in enumerate(d.get('choices', [])) %}
-    <div class="flex items-center gap-3 px-4 py-3 rounded-xl border text-sm
-                {% if i|string == d.get('correct_idx','') | string %}border-green-400 bg-green-50 text-green-800 font-semibold
+    <div class="flex items-center gap-3 px-5 py-4 rounded-2xl border-2 text-base font-semibold
+                {% if i|string == d.get('correct_idx','') | string %}border-green-400 bg-green-50 text-green-800
                 {% elif i|string == progress.response_data.get('chosen','') %}border-red-300 bg-red-50 text-red-700
-                {% else %}border-gray-100 text-gray-600{% endif %}">
-        <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0
-                     {% if i|string == d.get('correct_idx','') | string %}bg-green-500 text-white{% else %}bg-gray-100 text-gray-500{% endif %}">
+                {% else %}border-gray-100 text-gray-500{% endif %}">
+        <span class="w-9 h-9 rounded-full flex items-center justify-center text-base font-black shrink-0
+                     {% if i|string == d.get('correct_idx','') | string %}bg-green-500 text-white
+                     {% else %}bg-gray-100 text-gray-500{% endif %}">
             {{ ['①','②','③','④'][i] if i < 4 else i+1 }}
         </span>
         {{ choice }}
@@ -196,45 +210,49 @@ function autoComplete() {
     {% endfor %}
     </div>
     {% else %}
-    <div class="bg-gray-50 rounded-xl px-4 py-3 mb-4 text-sm">
-        <div class="text-gray-500 mb-1">내 답변</div>
-        <div class="text-gray-800">{{ progress.response_data.get('answer', '') }}</div>
-        <div class="text-green-600 mt-2 text-xs">정답: {{ d.get('correct_answer', '') }}</div>
+    <div class="bg-gray-50 rounded-2xl px-5 py-4 mb-4">
+        <div class="text-sm text-gray-400 font-medium mb-1">내 답변</div>
+        <div class="text-gray-800 font-semibold">{{ progress.response_data.get('answer', '') }}</div>
+        <div class="text-green-600 mt-2 text-sm font-medium">정답: {{ d.get('correct_answer', '') }}</div>
     </div>
     {% endif %}
-    <div class="text-center text-sm font-semibold
+
+    <div class="text-center text-xl font-black
                 {% if progress.score == 1.0 %}text-green-600{% else %}text-red-500{% endif %}">
-        {% if progress.score == 1.0 %}정답! 🎉{% else %}오답{% endif %}
+        {% if progress.score == 1.0 %}🎉 정답이에요!{% else %}😅 아쉬워요!{% endif %}
     </div>
+
     {% if d.get('explanation') %}
-    <div class="mt-3 bg-blue-50 rounded-xl px-4 py-3 text-sm text-blue-700">
-        <span class="font-semibold">해설</span> {{ d.explanation }}
+    <div class="mt-4 bg-blue-50 rounded-2xl px-5 py-4 text-base text-blue-700 leading-relaxed">
+        <span class="font-bold">💡 해설</span> {{ d.explanation }}
     </div>
     {% endif %}
 
     {% else %}
+    <!-- 문제 풀기 -->
     <form method="POST" action="{{ url_for('learn.item_submit', assignment_id=assignment.id, item_id=item.item_id) }}">
         {% if fmt == 'ox' %}
-        <div class="flex gap-3 mb-4">
-            {% for val in ['O', 'X'] %}
-            <label class="flex-1">
+        <div class="grid grid-cols-2 gap-4 mb-5">
+            {% for val, emoji in [('O','⭕'),('X','❌')] %}
+            <label>
                 <input type="radio" name="answer" value="{{ val }}" required class="hidden peer">
-                <div class="py-4 rounded-xl border-2 border-gray-200 text-center text-2xl font-bold
-                            text-gray-400 cursor-pointer peer-checked:border-indigo-500
-                            peer-checked:bg-indigo-50 peer-checked:text-indigo-600 hover:border-indigo-300 transition">
-                    {{ val }}
+                <div class="py-8 rounded-2xl border-2 border-gray-200 text-center text-4xl font-black
+                            cursor-pointer peer-checked:border-green-500 peer-checked:bg-green-50
+                            hover:border-green-300 transition">
+                    {{ emoji }}
                 </div>
             </label>
             {% endfor %}
         </div>
         {% elif fmt == 'multiple' %}
-        <div class="space-y-2 mb-4">
+        <div class="space-y-3 mb-5">
         {% for i, choice in enumerate(d.get('choices', [])) %}
-        <label class="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-gray-200
-                      cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition text-sm
-                      has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50">
-            <input type="radio" name="answer" value="{{ i }}" required class="accent-indigo-600 shrink-0">
-            <span class="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs shrink-0 text-gray-600">
+        <label class="flex items-center gap-3 px-5 py-4 rounded-2xl border-2 border-gray-200
+                      cursor-pointer hover:border-green-400 hover:bg-green-50 transition
+                      text-base font-semibold text-gray-700
+                      has-[:checked]:border-green-500 has-[:checked]:bg-green-50">
+            <input type="radio" name="answer" value="{{ i }}" required class="hidden">
+            <span class="w-9 h-9 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-base font-black shrink-0">
                 {{ ['①','②','③','④'][i] if i < 4 else i+1 }}
             </span>
             {{ choice }}
@@ -242,50 +260,54 @@ function autoComplete() {
         {% endfor %}
         </div>
         {% else %}
-        <input type="text" name="answer" placeholder="답을 입력하세요" required
-               class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm mb-4
-                      focus:outline-none focus:border-indigo-400">
+        <input type="text" name="answer" placeholder="답을 써보세요!" required
+               class="w-full border-2 border-gray-200 rounded-2xl px-5 py-4 text-base font-medium mb-5
+                      focus:outline-none focus:border-green-400">
         {% endif %}
-        <button type="submit"
-                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-sm">
-            제출하기
+        <button type="submit" class="s-btn-primary w-full text-xl py-5"
+                style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); box-shadow: 0 4px 12px rgba(34,197,94,0.35);">
+            ✅ 제출하기
         </button>
     </form>
     {% endif %}
 </div>
 
 {% elif item.content_type == 'reading_quiz' %}
-<!-- ═══ 토론질문 ═══ -->
+<!-- ═══ 토론 질문 ═══ -->
 {% set d = content.data %}
-<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
+<div class="s-card p-6 mb-4 space-y-5">
     {% if d.get('passage') %}
-    <div class="bg-gray-50 rounded-xl p-4 text-sm text-gray-700 leading-relaxed max-h-60 overflow-y-auto">
+    <div class="bg-purple-50 rounded-2xl p-5 text-base text-gray-700 leading-relaxed max-h-64 overflow-y-auto border-l-4 border-purple-400">
         {{ d.passage }}
     </div>
     {% endif %}
-    <p class="font-semibold text-gray-800 leading-relaxed">{{ d.get('question', '') }}</p>
+    <div class="text-lg font-bold text-gray-800 leading-relaxed">
+        💬 {{ d.get('question', '') }}
+    </div>
 
     {% if progress.status == 'completed' %}
-    <div class="bg-indigo-50 rounded-xl px-4 py-3 text-sm text-gray-700">
-        <div class="text-xs text-indigo-500 mb-1 font-medium">내 답변</div>
-        <p class="whitespace-pre-wrap">{{ progress.response_data.get('answer', '') }}</p>
+    <div class="bg-purple-50 rounded-2xl px-5 py-4">
+        <div class="text-xs text-purple-500 font-bold mb-2 uppercase tracking-wide">내 답변</div>
+        <p class="text-base text-gray-700 whitespace-pre-wrap leading-relaxed">
+            {{ progress.response_data.get('answer', '') }}
+        </p>
     </div>
-    <div class="text-center text-green-600 text-sm font-semibold">제출 완료 ✓</div>
+    <div class="text-center text-green-600 font-black text-lg">제출 완료 ✓</div>
     {% else %}
     <form method="POST" action="{{ url_for('learn.item_submit', assignment_id=assignment.id, item_id=item.item_id) }}"
           id="discussion-form">
         <div class="relative">
             <textarea name="answer" id="discussion-answer" rows="5" required
-                      placeholder="자유롭게 생각을 써보세요..."
-                      class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm
-                             focus:outline-none focus:border-indigo-400 resize-none pr-14"></textarea>
+                      placeholder="자유롭게 생각을 써보세요... ✍️"
+                      class="w-full border-2 border-purple-200 rounded-2xl px-5 py-4 text-base
+                             focus:outline-none focus:border-purple-400 resize-none pr-14
+                             leading-relaxed"></textarea>
             <!-- 마이크 버튼 -->
-            <button type="button" id="stt-btn"
-                    onclick="toggleSTT()"
-                    class="absolute right-3 bottom-3 w-9 h-9 rounded-full bg-gray-100
-                           hover:bg-indigo-100 flex items-center justify-center transition"
+            <button type="button" id="stt-btn" onclick="toggleSTT()"
+                    class="absolute right-3 bottom-3 w-10 h-10 rounded-full bg-purple-100
+                           hover:bg-purple-200 flex items-center justify-center transition"
                     title="음성으로 입력">
-                <svg id="stt-icon-mic" class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg id="stt-icon-mic" class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-7a3 3 0 01-3-3V5a3 3 0 016 0v6a3 3 0 01-3 3z"/>
                 </svg>
@@ -294,127 +316,57 @@ function autoComplete() {
                 </svg>
             </button>
         </div>
-        <div id="stt-status" class="hidden text-xs text-red-500 mt-1 flex items-center gap-1">
+        <div id="stt-status" class="hidden text-sm text-red-500 mt-2 flex items-center gap-2">
             <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-            <span>음성 인식 중... 말씀해 주세요</span>
+            음성 인식 중... 말씀해 주세요
         </div>
         <div id="stt-unsupported" class="hidden text-xs text-gray-400 mt-1">
-            이 브라우저는 음성 입력을 지원하지 않습니다. (Chrome 권장)
+            이 브라우저는 음성 입력을 지원하지 않아요. (Chrome 추천)
         </div>
-        <button type="submit"
-                class="mt-3 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-sm">
-            제출하기
+        <button type="submit" class="mt-4 s-btn-primary w-full text-xl py-5"
+                style="background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%); box-shadow: 0 4px 12px rgba(168,85,247,0.35);">
+            💬 제출하기
         </button>
     </form>
-
-    <script>
-    let recognition = null;
-    let isListening = false;
-
-    function toggleSTT() {
-        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            document.getElementById('stt-unsupported').classList.remove('hidden');
-            return;
-        }
-        if (isListening) {
-            stopSTT();
-        } else {
-            startSTT();
-        }
-    }
-
-    function startSTT() {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        recognition = new SpeechRecognition();
-        recognition.lang = 'ko-KR';
-        recognition.continuous = true;
-        recognition.interimResults = true;
-
-        const textarea = document.getElementById('discussion-answer');
-        const baseText = textarea.value;
-
-        recognition.onresult = function(e) {
-            let interim = '';
-            let final = '';
-            for (let i = e.resultIndex; i < e.results.length; i++) {
-                const t = e.results[i][0].transcript;
-                if (e.results[i].isFinal) final += t;
-                else interim += t;
-            }
-            textarea.value = baseText + final + interim;
-        };
-
-        recognition.onerror = function(e) {
-            if (e.error !== 'aborted') {
-                console.error('STT error:', e.error);
-            }
-            stopSTT();
-        };
-
-        recognition.onend = function() {
-            if (isListening) stopSTT();
-        };
-
-        recognition.start();
-        isListening = true;
-        document.getElementById('stt-icon-mic').classList.add('hidden');
-        document.getElementById('stt-icon-stop').classList.remove('hidden');
-        document.getElementById('stt-status').classList.remove('hidden');
-        document.getElementById('stt-btn').classList.add('bg-red-50', 'hover:bg-red-100');
-        document.getElementById('stt-btn').classList.remove('bg-gray-100', 'hover:bg-indigo-100');
-    }
-
-    function stopSTT() {
-        if (recognition) {
-            recognition.stop();
-            recognition = null;
-        }
-        isListening = false;
-        document.getElementById('stt-icon-mic').classList.remove('hidden');
-        document.getElementById('stt-icon-stop').classList.add('hidden');
-        document.getElementById('stt-status').classList.add('hidden');
-        document.getElementById('stt-btn').classList.remove('bg-red-50', 'hover:bg-red-100');
-        document.getElementById('stt-btn').classList.add('bg-gray-100', 'hover:bg-indigo-100');
-    }
-
-    // 폼 제출 시 STT 중단
-    document.getElementById('discussion-form').addEventListener('submit', function() {
-        if (isListening) stopSTT();
-    });
-    </script>
     {% endif %}
 </div>
 
 {% elif item.content_type == 'essay' %}
 <!-- ═══ 글쓰기 ═══ -->
 {% set d = content.data %}
-<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
+<div class="s-card p-6 mb-4 space-y-4">
     {% if d.get('question') %}
-    <div class="bg-indigo-50 rounded-xl px-4 py-3">
-        <div class="text-xs text-indigo-500 font-semibold mb-1">문제 질문</div>
-        <p class="text-gray-800 font-medium">{{ d.question }}</p>
+    <div class="bg-pink-50 rounded-2xl px-5 py-4 border-l-4 border-pink-400">
+        <div class="text-xs text-pink-500 font-bold mb-1 uppercase tracking-wide">질문</div>
+        <p class="text-lg font-bold text-gray-800">{{ d.question }}</p>
     </div>
     {% endif %}
     {% if d.get('prompt') %}
-    <div class="bg-gray-50 rounded-xl px-4 py-3 text-sm text-gray-700 leading-relaxed">
-        <div class="text-xs text-gray-400 font-medium mb-1">지문</div>
+    <div class="bg-gray-50 rounded-2xl px-5 py-4 text-base text-gray-700 leading-relaxed">
+        <div class="text-xs text-gray-400 font-bold mb-1 uppercase tracking-wide">지문</div>
         {{ d.prompt }}
     </div>
     {% endif %}
+
     {% if progress.status == 'completed' %}
-    <div class="bg-indigo-50 rounded-xl px-4 py-3 text-sm text-gray-700">
-        <div class="text-xs text-indigo-500 mb-1 font-medium">내 글</div>
-        <p class="whitespace-pre-wrap">{{ progress.response_data.get('essay_text', '') }}</p>
+    <div class="bg-pink-50 rounded-2xl px-5 py-4">
+        <div class="text-xs text-pink-500 font-bold mb-2 uppercase tracking-wide">내 글</div>
+        <p class="text-base text-gray-700 whitespace-pre-wrap leading-relaxed">
+            {{ progress.response_data.get('essay_text', '') }}
+        </p>
     </div>
-    <div class="text-center text-green-600 text-sm font-semibold">제출 완료 ✓ (첨삭 대기 중)</div>
+    <div class="text-center text-green-600 font-black text-lg">
+        제출 완료 ✓ <span class="text-gray-400 text-sm font-normal">(첨삭 대기 중)</span>
+    </div>
     {% else %}
     <form method="POST" action="{{ url_for('learn.item_submit', assignment_id=assignment.id, item_id=item.item_id) }}">
-        <textarea name="essay_text" rows="8" required placeholder="글을 작성해주세요..."
-                  class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm
-                         focus:outline-none focus:border-indigo-400 resize-none"></textarea>
-        <button type="submit"
-                class="mt-3 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-sm">
-            제출하기
+        <textarea name="essay_text" rows="8" required
+                  placeholder="글을 자유롭게 작성해보세요 ✍️"
+                  class="w-full border-2 border-pink-200 rounded-2xl px-5 py-4 text-base
+                         focus:outline-none focus:border-pink-400 resize-none leading-relaxed"></textarea>
+        <button type="submit" class="mt-4 s-btn-primary w-full text-xl py-5"
+                style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); box-shadow: 0 4px 12px rgba(236,72,153,0.35);">
+            ✏️ 제출하기
         </button>
     </form>
     {% endif %}
@@ -422,21 +374,83 @@ function autoComplete() {
 {% endif %}
 
 <!-- 이전/다음 네비게이션 -->
-<div class="flex gap-3 mt-6">
+<div class="flex gap-3 mt-4">
     {% if prev_item %}
     <a href="{{ url_for('learn.item_view', assignment_id=assignment.id, item_id=prev_item.item_id) }}"
-       class="flex-1 text-center border border-gray-200 text-gray-600 hover:border-indigo-400
-              hover:text-indigo-600 py-2.5 rounded-xl text-sm transition">
+       class="s-btn-secondary flex-1 py-4 text-base">
         ← 이전
     </a>
     {% endif %}
     {% if next_item %}
     <a href="{{ url_for('learn.item_view', assignment_id=assignment.id, item_id=next_item.item_id) }}"
-       class="flex-1 text-center bg-indigo-600 hover:bg-indigo-700 text-white
-              py-2.5 rounded-xl text-sm font-semibold transition">
+       class="s-btn-primary flex-1 py-4 text-base">
         다음 →
     </a>
     {% endif %}
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
+{% if item.content_type == 'reading_quiz' and progress.status != 'completed' %}
+<script>
+let recognition = null;
+let isListening = false;
+
+function toggleSTT() {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        document.getElementById('stt-unsupported').classList.remove('hidden');
+        return;
+    }
+    isListening ? stopSTT() : startSTT();
+}
+
+function startSTT() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SR();
+    recognition.lang = 'ko-KR';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    const textarea = document.getElementById('discussion-answer');
+    const baseText = textarea.value;
+
+    recognition.onresult = function(e) {
+        let interim = '', final = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+            const t = e.results[i][0].transcript;
+            if (e.results[i].isFinal) final += t;
+            else interim += t;
+        }
+        textarea.value = baseText + final + interim;
+    };
+    recognition.onerror = function(e) {
+        if (e.error !== 'aborted') stopSTT();
+    };
+    recognition.onend = function() { if (isListening) stopSTT(); };
+    recognition.start();
+
+    isListening = true;
+    document.getElementById('stt-icon-mic').classList.add('hidden');
+    document.getElementById('stt-icon-stop').classList.remove('hidden');
+    document.getElementById('stt-status').classList.remove('hidden');
+    document.getElementById('stt-btn').classList.add('bg-red-100', 'hover:bg-red-200');
+    document.getElementById('stt-btn').classList.remove('bg-purple-100', 'hover:bg-purple-200');
+}
+
+function stopSTT() {
+    if (recognition) { recognition.stop(); recognition = null; }
+    isListening = false;
+    document.getElementById('stt-icon-mic').classList.remove('hidden');
+    document.getElementById('stt-icon-stop').classList.add('hidden');
+    document.getElementById('stt-status').classList.add('hidden');
+    document.getElementById('stt-btn').classList.remove('bg-red-100', 'hover:bg-red-200');
+    document.getElementById('stt-btn').classList.add('bg-purple-100', 'hover:bg-purple-200');
+}
+
+document.getElementById('discussion-form').addEventListener('submit', function() {
+    if (isListening) stopSTT();
+});
+</script>
+{% endif %}
 {% endblock %}

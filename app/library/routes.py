@@ -699,10 +699,52 @@ def my_analytics():
                    .filter_by(user_id=current_user.user_id)
                    .order_by(ReadingMBTIResult.submitted_at.desc()).first())
 
+    # LMS 학습 데이터
+    from app.models.lms import StudentPackageAssignment, StudentItemProgress
+    lms_assignments = StudentPackageAssignment.query.filter_by(
+        student_id=current_user.user_id, is_active=True
+    ).all()
+
+    lms_progresses = StudentItemProgress.query.filter_by(
+        student_id=current_user.user_id, status='completed'
+    ).all()
+
+    # 패키지별 진도
+    lms_package_stats = []
+    for a in lms_assignments:
+        total = sum(len(pc.curriculum.items) for pc in a.package.curricula)
+        done = StudentItemProgress.query.filter_by(
+            student_id=current_user.user_id,
+            assignment_id=a.id,
+            status='completed'
+        ).count()
+        pct = round(done / total * 100) if total > 0 else 0
+        lms_package_stats.append({
+            'title': a.package.title,
+            'done': done,
+            'total': total,
+            'pct': pct,
+            'completed': done == total and total > 0,
+        })
+
+    # LMS 콘텐츠 유형별 완료수
+    lms_type_counts = {}
+    for p in lms_progresses:
+        t = p.item.content_type_display if p.item else '기타'
+        lms_type_counts[t] = lms_type_counts.get(t, 0) + 1
+
+    # LMS 평균 퀴즈 점수
+    lms_scored = [p for p in lms_progresses if p.score is not None]
+    lms_avg_pct = round(sum(p.score for p in lms_scored) / len(lms_scored) * 100) if lms_scored else None
+
     return render_template('library/my_analytics.html',
                            records=records, completions=completions,
                            genre_counts=genre_counts, type_counts=type_counts,
-                           avg_pct=avg_pct, mbti_result=mbti_result)
+                           avg_pct=avg_pct, mbti_result=mbti_result,
+                           lms_package_stats=lms_package_stats,
+                           lms_type_counts=lms_type_counts,
+                           lms_avg_pct=lms_avg_pct,
+                           lms_total_done=len(lms_progresses))
 
 
 # ─────────────────────────────────────────────
@@ -750,11 +792,16 @@ def parent_child_analytics(child_id):
 def mbti_intro():
     test = ReadingMBTITest.query.filter_by(is_active=True).first()
     my_result = None
+    all_results = []
     if current_user.role in ('student',):
         my_result = (ReadingMBTIResult.query
                      .filter_by(user_id=current_user.user_id)
                      .order_by(ReadingMBTIResult.submitted_at.desc()).first())
-    return render_template('library/mbti_intro.html', test=test, my_result=my_result)
+        all_results = (ReadingMBTIResult.query
+                       .filter_by(user_id=current_user.user_id)
+                       .order_by(ReadingMBTIResult.submitted_at.desc()).all())
+    return render_template('library/mbti_intro.html', test=test,
+                           my_result=my_result, all_results=all_results)
 
 
 @library_bp.route('/mbti/test')
@@ -764,8 +811,12 @@ def mbti_test():
     if not test:
         flash('테스트가 준비되지 않았습니다.', 'warning')
         return redirect(url_for('library.mbti_intro'))
-    questions = test.questions
-    return render_template('library/mbti_test.html', test=test, questions=questions)
+    all_questions = test.questions
+    absolute_questions = [q for q in all_questions if q.question_type == 'absolute']
+    comparison_questions = [q for q in all_questions if q.question_type == 'comparison']
+    return render_template('library/mbti_test.html', test=test,
+                           absolute_questions=absolute_questions,
+                           comparison_questions=comparison_questions)
 
 
 @library_bp.route('/mbti/submit', methods=['POST'])
@@ -775,36 +826,41 @@ def mbti_submit():
     if not test:
         abort(404)
 
-    result = ReadingMBTIResult(user_id=current_user.user_id, test_id=test.test_id)
-    db.session.add(result)
-    db.session.flush()
+    # 응답 수집
+    responses = {}
+    for i in range(1, 46):
+        val = request.form.get(f'q{i}')
+        if val:
+            responses[f'q{i}'] = val
+    for i in range(1, 6):
+        val = request.form.get(f'comp{i}')
+        if val:
+            responses[f'comp{i}'] = val
 
-    responses = []
-    for q in test.questions:
-        val = request.form.get(f'q_{q.question_id}')
-        if val is None:
-            flash('모든 문항에 응답해주세요.', 'warning')
-            db.session.rollback()
-            return redirect(url_for('library.mbti_test'))
-        responses.append(ReadingMBTIResponse(
-            result_id=result.result_id,
-            question_id=q.question_id,
-            score=int(val),
-        ))
-
-    db.session.add_all(responses)
+    # 유효성 검사
+    from app.utils.mbti_calculator import calculate_mbti_scores, determine_mbti_type, validate_responses
+    is_valid, err_msg = validate_responses(responses)
+    if not is_valid:
+        flash('모든 문항에 응답해주세요.', 'warning')
+        return redirect(url_for('library.mbti_test'))
 
     # 점수 계산
-    from app.utils.mbti_calculator import calculate_mbti_scores
-    scores = calculate_mbti_scores(test.questions, responses)
-    result.reading_score = scores['reading']['score']
-    result.thinking_score = scores['thinking']['score']
-    result.writing_score = scores['writing']['score']
-    result.reading_level = scores['reading']['level']
-    result.thinking_level = scores['thinking']['level']
-    result.writing_level = scores['writing']['level']
-    result.type_code = f"{scores['reading']['level']}_{scores['thinking']['level']}_{scores['writing']['level']}"
+    scores = calculate_mbti_scores(responses)
+    reading_level, thinking_level, writing_level, type_code = determine_mbti_type(scores)
 
+    result = ReadingMBTIResult(
+        user_id=current_user.user_id,
+        test_id=test.test_id,
+        reading_score=sum(scores['reading'].values()),
+        thinking_score=sum(scores['thinking'].values()),
+        writing_score=sum(scores['writing'].values()),
+        reading_level=reading_level,
+        thinking_level=thinking_level,
+        writing_level=writing_level,
+        type_code=type_code,
+        scores=scores,
+    )
+    db.session.add(result)
     db.session.commit()
     return redirect(url_for('library.mbti_result', result_id=result.result_id))
 

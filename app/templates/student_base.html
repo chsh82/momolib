@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>{% block title %}MOMOLIB{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            font-size: 18px;
+            background: linear-gradient(135deg, #FFFBEF 0%, #F5F0FF 50%, #EFF6FF 100%);
+            min-height: 100vh;
+            min-height: 100dvh;
+        }
+
+        /* 스크롤바 스타일 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d8b4fe; border-radius: 3px; }
+
+        /* 탭 네비게이션 */
+        .tab-nav {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: white;
+            border-top: 2px solid #f3f0ff;
+            display: flex;
+            z-index: 100;
+            padding-bottom: env(safe-area-inset-bottom);
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+        }
+        .tab-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 4px 8px;
+            gap: 3px;
+            text-decoration: none;
+            color: #9ca3af;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .tab-item.active {
+            color: #f97316;
+        }
+        .tab-item .tab-icon {
+            font-size: 22px;
+            line-height: 1;
+            transition: transform 0.2s;
+        }
+        .tab-item.active .tab-icon {
+            transform: scale(1.15);
+        }
+        .tab-item:active .tab-icon {
+            transform: scale(0.9);
+        }
+
+        /* 헤더 */
+        .student-header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: white;
+            border-bottom: 2px solid #fef3c7;
+            box-shadow: 0 2px 12px rgba(249,115,22,0.08);
+        }
+
+        /* 컨텐츠 카드 기본 */
+        .s-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.07);
+            overflow: hidden;
+        }
+
+        /* 버튼 */
+        .s-btn-primary {
+            background: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
+            color: white;
+            font-weight: 700;
+            font-size: 17px;
+            padding: 14px 28px;
+            border-radius: 16px;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(249,115,22,0.35);
+            transition: transform 0.15s, box-shadow 0.15s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+        .s-btn-primary:active {
+            transform: scale(0.96);
+            box-shadow: 0 2px 6px rgba(249,115,22,0.3);
+        }
+        .s-btn-secondary {
+            background: white;
+            color: #6b7280;
+            font-weight: 600;
+            font-size: 16px;
+            padding: 13px 24px;
+            border-radius: 16px;
+            border: 2px solid #e5e7eb;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+        .s-btn-secondary:active { transform: scale(0.97); }
+
+        /* 마일리지 칩 */
+        .mileage-chip {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            color: white;
+            font-weight: 700;
+            font-size: 13px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            box-shadow: 0 2px 8px rgba(245,158,11,0.4);
+        }
+
+        /* 애니메이션 */
+        @keyframes bounce-in {
+            0% { transform: scale(0.8); opacity: 0; }
+            60% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+        .bounce-in { animation: bounce-in 0.4s ease; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+        .float-anim { animation: float 3s ease-in-out infinite; }
+
+        /* 내용 영역 */
+        .student-main {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 20px 16px 100px;
+        }
+
+        /* 진행률 바 */
+        .progress-bar {
+            height: 10px;
+            background: #f3f4f6;
+            border-radius: 99px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            border-radius: 99px;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* 보물상자 느낌 완료 뱃지 */
+        .done-badge {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: white;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- 플래시 메시지 -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="fixed top-4 right-4 z-[200] space-y-2 max-w-sm">
+    {% for category, message in messages %}
+    <div class="px-5 py-3 rounded-2xl shadow-xl text-base font-semibold animate-bounce
+        {% if category == 'error' %}bg-red-100 text-red-700 border-2 border-red-200
+        {% elif category == 'success' %}bg-green-100 text-green-700 border-2 border-green-200
+        {% elif category == 'warning' %}bg-yellow-100 text-yellow-700 border-2 border-yellow-200
+        {% else %}bg-blue-100 text-blue-700 border-2 border-blue-200{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+<!-- 상단 헤더 -->
+<header class="student-header">
+    <div class="max-w-[960px] mx-auto px-4 py-3 flex items-center justify-between gap-3">
+        <!-- 로고 + 마스코트 -->
+        <div class="flex items-center gap-2">
+            <img src="{{ url_for('static', filename='img/characters/momo_girl_nobg.png') }}"
+                 alt="모모"
+                 class="h-10 w-10 object-contain">
+            <span class="text-xl font-black text-orange-500 tracking-tight">MOMOLIB</span>
+        </div>
+
+        <!-- 오른쪽: 이름 + 마일리지 + 알림 + 로그아웃 -->
+        <div class="flex items-center gap-3">
+            <!-- 마일리지 -->
+            <div class="mileage-chip">
+                🪙 <span>{{ current_user.mileage if current_user.mileage is defined else 0 }}</span>
+            </div>
+
+            <!-- 학생 이름 -->
+            <span class="text-sm font-bold text-gray-700 hidden sm:block">
+                {{ current_user.name }}
+            </span>
+
+            <!-- 알림 -->
+            <div class="relative" id="notif-wrapper">
+                <button onclick="toggleNotifDropdown()"
+                        class="relative p-2 text-gray-400 hover:text-orange-500 focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                    </svg>
+                    <span id="notif-badge"
+                          class="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center hidden text-[10px]">
+                    </span>
+                </button>
+                <!-- 알림 드롭다운 -->
+                <div id="notif-dropdown"
+                     class="hidden absolute right-0 mt-2 w-80 bg-white border border-gray-100 rounded-2xl shadow-2xl z-50">
+                    <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                        <span class="font-bold text-gray-700 text-sm">알림</span>
+                        <button onclick="markAllRead()" class="text-xs text-orange-500 hover:underline">모두 읽음</button>
+                    </div>
+                    <div id="notif-list" class="max-h-64 overflow-y-auto divide-y divide-gray-50">
+                        <div class="px-4 py-6 text-center text-xs text-gray-400">로딩 중...</div>
+                    </div>
+                    <a href="{{ url_for('notif.index') }}"
+                       class="block text-center text-xs text-orange-500 hover:bg-orange-50 py-3 border-t border-gray-100 rounded-b-2xl">
+                        전체 알림 보기
+                    </a>
+                </div>
+            </div>
+
+            <!-- 로그아웃 -->
+            <a href="{{ url_for('auth.logout') }}"
+               class="text-xs text-gray-400 hover:text-red-400 hidden sm:block">나가기</a>
+        </div>
+    </div>
+</header>
+
+<!-- 메인 콘텐츠 -->
+<main class="student-main">
+    {% block content %}{% endblock %}
+</main>
+
+<!-- 하단 탭 네비게이션 -->
+{% set cur = request.endpoint or '' %}
+<nav class="tab-nav">
+    <a href="{{ url_for('essays.student_dashboard') }}"
+       class="tab-item {% if 'dashboard' in cur or cur == 'essays.student_dashboard' %}active{% endif %}">
+        <span class="tab-icon">🏠</span>
+        <span>홈</span>
+    </a>
+    <a href="{{ url_for('learn.index') }}"
+       class="tab-item {% if cur.startswith('learn.') %}active{% endif %}">
+        <span class="tab-icon">📚</span>
+        <span>학습</span>
+    </a>
+    <a href="{{ url_for('library.catalog') }}"
+       class="tab-item {% if cur.startswith('library.') %}active{% endif %}">
+        <span class="tab-icon">📖</span>
+        <span>도서관</span>
+    </a>
+    <a href="{{ url_for('library.my_analytics') }}"
+       class="tab-item {% if cur == 'library.my_analytics' %}active{% endif %}">
+        <span class="tab-icon">📊</span>
+        <span>분석</span>
+    </a>
+</nav>
+
+<script>
+// ── 알림 시스템 ──────────────────────────────────────────
+let notifOpen = false;
+
+function toggleNotifDropdown() {
+    notifOpen = !notifOpen;
+    document.getElementById('notif-dropdown').classList.toggle('hidden', !notifOpen);
+    if (notifOpen) loadNotifications();
+}
+
+document.addEventListener('click', function(e) {
+    const wrapper = document.getElementById('notif-wrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+        notifOpen = false;
+        document.getElementById('notif-dropdown').classList.add('hidden');
+    }
+});
+
+function loadNotifications() {
+    fetch('/notifications/api/recent')
+        .then(r => r.json())
+        .then(items => {
+            const list = document.getElementById('notif-list');
+            if (!items.length) {
+                list.innerHTML = '<div class="px-4 py-6 text-center text-xs text-gray-400">알림이 없습니다.</div>';
+                return;
+            }
+            list.innerHTML = items.map(n => `
+                <a href="${n.link_url || '#'}"
+                   onclick="readNotif('${n.id}', event)"
+                   class="flex gap-3 px-4 py-3 hover:bg-orange-50 transition ${n.is_read ? '' : 'bg-orange-50/50'}">
+                    <div class="flex-shrink-0 mt-1">
+                        <div class="w-2 h-2 rounded-full ${n.is_read ? 'bg-gray-200' : 'bg-orange-500'}"></div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-xs font-semibold text-gray-800 truncate">${n.title}</div>
+                        ${n.message ? `<div class="text-xs text-gray-400 truncate mt-0.5">${n.message}</div>` : ''}
+                        <div class="text-xs text-gray-300 mt-1">${n.created_at}</div>
+                    </div>
+                </a>
+            `).join('');
+        });
+}
+
+function readNotif(id, e) {
+    fetch(`/notifications/api/read/${id}`, {method: 'POST'});
+    updateBadge();
+}
+
+function markAllRead() {
+    fetch('/notifications/api/read-all', {method: 'POST'})
+        .then(() => { loadNotifications(); updateBadge(); });
+}
+
+function updateBadge() {
+    fetch('/notifications/api/unread-count')
+        .then(r => r.json())
+        .then(data => {
+            const badge = document.getElementById('notif-badge');
+            if (data.count > 0) {
+                badge.textContent = data.count > 9 ? '9+' : data.count;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        });
+}
+
+updateBadge();
+setInterval(updateBadge, 60000);
+</script>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

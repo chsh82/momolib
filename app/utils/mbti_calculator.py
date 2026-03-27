@@ -1,88 +1,123 @@
 # -*- coding: utf-8 -*-
-"""독서MBTI 점수 계산 유틸리티"""
+"""
+독서MBTI 점수 계산 유틸리티
+
+3대 영역(독해력/사고력/서술력) × 3단계 수준(초급/중급/고급) = 9개 세부 능력
+각 능력당 5문항, 각 문항 1-5점 → 각 능력 최대 25점
+비교 질문(5문항) 보너스 점수 추가
+"""
 
 
-LEVEL_THRESHOLDS = {
-    'beginner': (0, 33.3),
-    'intermediate': (33.3, 66.6),
-    'advanced': (66.6, 100),
-}
-
-
-def _score_to_level(pct):
-    if pct < 33.3:
-        return 'beginner'
-    elif pct < 66.6:
-        return 'intermediate'
-    return 'advanced'
-
-
-def calculate_mbti_scores(questions, responses):
+def calculate_mbti_scores(responses):
     """
-    45개 절대평가 문항(1~5점) + 5개 비교평가 문항(1=A, 2=B)
-    → 독해력/사고력/서술력 영역별 백분율 점수와 수준 반환
-    """
-    resp_map = {r.question_id: r.score for r in responses}
+    응답 dict → 9개 세부 능력 점수 계산
 
-    # 영역별 점수 누적
-    domain_scores = {
-        'reading': {'sum': 0, 'max': 0},
-        'thinking': {'sum': 0, 'max': 0},
-        'writing': {'sum': 0, 'max': 0},
-    }
-
-    COMPARISON_BONUS = 5  # 비교평가 승리 시 보너스 점수
-
-    for q in questions:
-        score = resp_map.get(q.question_id)
-        if score is None:
-            continue
-
-        if q.question_type == 'absolute':
-            domain = q.domain
-            if domain in domain_scores:
-                domain_scores[domain]['sum'] += score
-                domain_scores[domain]['max'] += 5  # 최대 5점
-
-        elif q.question_type == 'comparison':
-            # 비교평가: 1=A(domain), 2=B(다른 domain)
-            # domain 필드에 'reading_vs_thinking' 같은 형식으로 저장
-            if q.domain and '_vs_' in q.domain:
-                parts = q.domain.split('_vs_')
-                winner_domain = parts[0] if score == 1 else parts[1]
-                if winner_domain in domain_scores:
-                    domain_scores[winner_domain]['sum'] += COMPARISON_BONUS
-                    # 비교평가는 max에 포함하지 않음 (보너스로 처리)
-
-    result = {}
-    for domain, data in domain_scores.items():
-        if data['max'] > 0:
-            base_pct = data['sum'] / data['max'] * 100
-        else:
-            base_pct = 0
-        # 보너스 포함 시 100 초과 가능 → 클램핑
-        pct = min(100.0, base_pct)
-        result[domain] = {
-            'score': round(data['sum'], 2),
-            'max': data['max'],
-            'pct': round(pct, 1),
-            'level': _score_to_level(pct),
+    Args:
+        responses (dict): {
+            'q1': '3', ..., 'q45': '5',        # 절대평가 1-5점
+            'comp1': 'reading:beginner:2,...',  # 비교평가 보너스 명세
         }
 
-    return result
+    Returns:
+        dict: {
+            'reading':  {'beginner': 0-25, 'intermediate': 0-25, 'advanced': 0-25},
+            'thinking': {'beginner': 0-25, 'intermediate': 0-25, 'advanced': 0-25},
+            'writing':  {'beginner': 0-25, 'intermediate': 0-25, 'advanced': 0-25},
+        }
+    """
+    scores = {
+        'reading':  {'beginner': 0, 'intermediate': 0, 'advanced': 0},
+        'thinking': {'beginner': 0, 'intermediate': 0, 'advanced': 0},
+        'writing':  {'beginner': 0, 'intermediate': 0, 'advanced': 0},
+    }
+
+    # 문항 번호 → (domain, level) 매핑
+    # q1-5: reading beginner, q6-10: reading intermediate, q11-15: reading advanced
+    # q16-20: thinking beginner, q21-25: thinking intermediate, q26-30: thinking advanced
+    # q31-35: writing beginner, q36-40: writing intermediate, q41-45: writing advanced
+    question_mapping = {}
+    q_num = 1
+    for domain in ['reading', 'thinking', 'writing']:
+        for level in ['beginner', 'intermediate', 'advanced']:
+            for _ in range(5):
+                question_mapping[f'q{q_num}'] = (domain, level)
+                q_num += 1
+
+    # 절대평가 (q1-q45)
+    for q_key, response in responses.items():
+        if q_key.startswith('q') and q_key[1:].isdigit() and q_key in question_mapping:
+            try:
+                score = int(response)
+                if 1 <= score <= 5:
+                    domain, level = question_mapping[q_key]
+                    scores[domain][level] += score
+            except (ValueError, TypeError):
+                continue
+
+    # 비교평가 보너스 (comp1-comp5)
+    # 형식: "reading:beginner:2,reading:intermediate:3"
+    for i in range(1, 6):
+        comp_key = f'comp{i}'
+        if comp_key in responses and responses[comp_key]:
+            parts = responses[comp_key].split(',')
+            for part in parts:
+                try:
+                    domain, level, points = part.strip().split(':')
+                    bonus = int(points)
+                    if domain in scores and level in scores[domain]:
+                        scores[domain][level] += bonus
+                except (ValueError, IndexError):
+                    continue
+
+    return scores
 
 
 def determine_mbti_type(scores):
-    """scores dict → type_code 문자열 (예: 'intermediate_beginner_advanced')"""
-    return (f"{scores['reading']['level']}_"
-            f"{scores['thinking']['level']}_"
-            f"{scores['writing']['level']}")
+    """
+    9개 세부 능력 점수 → MBTI 유형 결정
+
+    Returns:
+        tuple: (reading_level, thinking_level, writing_level, type_code)
+               예: ('beginner', 'intermediate', 'advanced', 'beginner-intermediate-advanced')
+    """
+    level_priority = ['advanced', 'intermediate', 'beginner']
+
+    def dominant_level(area_scores):
+        max_score = max(area_scores.values())
+        for level in level_priority:
+            if area_scores[level] == max_score:
+                return level
+        return 'beginner'
+
+    reading_level = dominant_level(scores['reading'])
+    thinking_level = dominant_level(scores['thinking'])
+    writing_level = dominant_level(scores['writing'])
+    type_code = f"{reading_level}-{thinking_level}-{writing_level}"
+
+    return reading_level, thinking_level, writing_level, type_code
 
 
-def validate_responses(questions, form_data):
-    """모든 문항에 응답했는지 확인. 누락 question_id 목록 반환"""
-    missing = []
-    for q in questions:
-        if f'q_{q.question_id}' not in form_data:
-            missing.append(q.question_id)
-    return missing
+def validate_responses(responses):
+    """
+    응답 데이터 유효성 검증
+
+    Returns:
+        tuple: (is_valid, error_message)
+    """
+    for i in range(1, 46):
+        q_key = f'q{i}'
+        if q_key not in responses:
+            return False, f'질문 {i}에 응답이 없습니다.'
+        try:
+            score = int(responses[q_key])
+            if not (1 <= score <= 5):
+                return False, f'질문 {i}의 응답이 유효하지 않습니다 (1-5 범위).'
+        except (ValueError, TypeError):
+            return False, f'질문 {i}의 응답 형식이 올바르지 않습니다.'
+
+    for i in range(1, 6):
+        comp_key = f'comp{i}'
+        if comp_key not in responses or not responses[comp_key]:
+            return False, f'비교 질문 {45 + i}에 응답이 없습니다.'
+
+    return True, ''
