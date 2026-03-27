@@ -493,6 +493,8 @@ def parent_dashboard():
     from app.models.user import User
     links = ParentStudent.query.filter_by(
         parent_id=current_user.user_id, is_active=True).all()
+    from app.models.library import ReadingRecord
+    from app.models.essay import EssayResult
     children = []
     for link in links:
         student = User.query.get(link.student_id)
@@ -505,6 +507,19 @@ def parent_dashboard():
             student_id=student.user_id, status='draft').count()
         recent = Essay.query.filter_by(student_id=student.user_id)\
             .order_by(Essay.created_at.desc()).limit(3).all()
+
+        # 최근 점수 5개
+        recent_scores = db.session.query(EssayResult)\
+            .join(Essay, Essay.essay_id == EssayResult.essay_id)\
+            .filter(Essay.student_id == student.user_id,
+                    EssayResult.total_score.isnot(None))\
+            .order_by(Essay.created_at.desc()).limit(5).all()
+
+        # 독서 완료 수
+        books_read = ReadingRecord.query.filter_by(
+            user_id=student.user_id, is_finished=True).count()
+
+        profile = student.student_profile
         children.append({
             'student': student,
             'relation': link.relation,
@@ -512,6 +527,10 @@ def parent_dashboard():
             'completed': completed,
             'pending': pending,
             'recent': recent,
+            'recent_scores': recent_scores,
+            'books_read': books_read,
+            'streak': profile.streak_days if profile else 0,
+            'mileage': profile.mileage if profile else 0,
         })
     return render_template('essays/parent_dashboard.html', children=children)
 

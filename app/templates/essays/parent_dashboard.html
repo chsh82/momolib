@@ -38,10 +38,10 @@
         </div>
 
         <!-- 통계 -->
-        <div class="grid grid-cols-3 gap-3 mb-5">
+        <div class="grid grid-cols-3 gap-3 mb-4">
             <div class="bg-gray-50 rounded-lg p-3 text-center">
                 <div class="text-xl font-bold text-gray-700">{{ child.total }}</div>
-                <div class="text-xs text-gray-400 mt-0.5">전체</div>
+                <div class="text-xs text-gray-400 mt-0.5">전체 과제</div>
             </div>
             <div class="bg-green-50 rounded-lg p-3 text-center">
                 <div class="text-xl font-bold text-green-700">{{ child.completed }}</div>
@@ -52,6 +52,39 @@
                 <div class="text-xs text-yellow-400 mt-0.5">대기 중</div>
             </div>
         </div>
+
+        <!-- 학습 현황 -->
+        <div class="grid grid-cols-3 gap-3 mb-5">
+            <div class="bg-orange-50 rounded-lg p-3 text-center">
+                <div class="text-xl font-bold text-orange-600">🔥 {{ child.streak }}</div>
+                <div class="text-xs text-orange-400 mt-0.5">연속 출석일</div>
+            </div>
+            <div class="bg-yellow-50 rounded-lg p-3 text-center">
+                <div class="text-xl font-bold text-yellow-600">{{ child.mileage }}</div>
+                <div class="text-xs text-yellow-400 mt-0.5">🪙 마일리지</div>
+            </div>
+            <div class="bg-blue-50 rounded-lg p-3 text-center">
+                <div class="text-xl font-bold text-blue-600">{{ child.books_read }}</div>
+                <div class="text-xs text-blue-400 mt-0.5">📚 독서 완료</div>
+            </div>
+        </div>
+
+        <!-- 최근 점수 추이 -->
+        {% if child.recent_scores %}
+        <div class="mb-5">
+            <div class="text-xs font-medium text-gray-500 mb-2">최근 점수 추이</div>
+            <div class="flex items-end gap-2 h-16">
+                {% for result in child.recent_scores | reverse %}
+                {% set pct = (result.total_score / 100 * 100) | int %}
+                <div class="flex-1 flex flex-col items-center gap-1">
+                    <div class="text-xs font-bold text-indigo-700">{{ result.total_score }}</div>
+                    <div class="w-full rounded-t-md bg-indigo-400"
+                         style="height: {{ [result.total_score * 0.5, 4] | max }}px;"></div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
 
         <!-- 최근 과제 -->
         {% if child.recent %}
