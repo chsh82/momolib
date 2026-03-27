@@ -1,0 +1,61 @@
+{% extends 'student_base.html' %}
+{% block title %}독서MBTI{% endblock %}
+
+{% block content %}
+<div class="mb-5">
+    <h2 class="text-2xl font-black text-gray-800">📚 독서MBTI</h2>
+    <p class="text-sm text-gray-400 mt-1">나의 책 취향을 알아보고 맞춤 도서를 추천받아요!</p>
+</div>
+
+<!-- 소개 카드 -->
+<div class="s-card p-7 mb-5 text-center"
+     style="background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);">
+    <div class="text-5xl mb-3">📖</div>
+    <div class="text-white text-2xl font-black mb-2">나는 어떤 독서 유형?</div>
+    <div class="text-white/80 text-sm mb-5">9가지 문항으로 나의 책 취향을 찾아보세요</div>
+    <div class="flex justify-center gap-6 text-white/80 text-sm mb-6">
+        <div class="flex items-center gap-1">📝 <span>9문항</span></div>
+        <div class="flex items-center gap-1">⏱️ <span>3분</span></div>
+        <div class="flex items-center gap-1">🪙 <span>+30 마일리지</span></div>
+    </div>
+    <a href="{{ url_for('library.book_mbti_test') }}"
+       class="inline-block bg-white text-purple-700 font-black px-8 py-3 rounded-2xl text-base hover:bg-purple-50 transition">
+        테스트 시작하기 →
+    </a>
+</div>
+
+<!-- 이전 결과 -->
+{% if last_result %}
+{% set ti = last_result.type_info %}
+<div class="s-card p-5 mb-5">
+    <div class="text-sm font-bold text-gray-500 mb-3">내 독서 유형</div>
+    <div class="flex items-center gap-4">
+        <div class="text-4xl">{{ ti.emoji }}</div>
+        <div class="flex-1">
+            <div class="font-black text-lg text-gray-800">{{ ti.name }}</div>
+            <div class="text-sm text-gray-500">{{ ti.desc }}</div>
+            <div class="flex flex-wrap gap-1 mt-2">
+                {% for g in ti.genres %}
+                <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">{{ g }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        <a href="{{ url_for('library.book_mbti_result', result_id=last_result.result_id) }}"
+           class="text-sm text-purple-600 font-bold shrink-0">결과 보기 →</a>
+    </div>
+</div>
+{% endif %}
+
+<!-- 9가지 유형 미리보기 -->
+<div class="mb-3">
+    <div class="text-base font-black text-gray-700 mb-3">9가지 독서 유형</div>
+    <div class="grid grid-cols-3 gap-2">
+        {% for code, t in types.items() %}
+        <div class="s-card p-3 text-center">
+            <div class="text-3xl mb-1">{{ t.emoji }}</div>
+            <div class="text-xs font-bold text-gray-700 leading-snug">{{ t.name }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

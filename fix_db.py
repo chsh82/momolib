@@ -65,5 +65,14 @@ with app.app_context():
             "ALTER TABLE student_profiles"
             " ADD COLUMN IF NOT EXISTS"
             " last_active_date DATE")
+        run(c, """
+            CREATE TABLE IF NOT EXISTS book_mbti_results (
+                result_id VARCHAR(36) PRIMARY KEY,
+                user_id VARCHAR(36) NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+                type_code VARCHAR(20) NOT NULL,
+                scores JSON,
+                taken_at TIMESTAMP DEFAULT NOW()
+            )""")
+        run(c, "CREATE INDEX IF NOT EXISTS ix_book_mbti_results_user_id ON book_mbti_results(user_id)")
         c.commit()
         print("완료!")

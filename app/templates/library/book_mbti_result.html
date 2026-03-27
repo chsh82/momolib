@@ -1,0 +1,75 @@
+{% extends 'student_base.html' %}
+{% block title %}독서MBTI 결과{% endblock %}
+
+{% block content %}
+{% set ti = result.type_info %}
+
+<div class="flex items-center justify-between mb-5">
+    <a href="{{ url_for('library.book_mbti_intro') }}" class="text-sm text-gray-400 hover:text-gray-600">← 독서MBTI</a>
+    <span class="text-xs text-gray-400">{{ result.taken_at | kst('%Y.%m.%d') }}</span>
+</div>
+
+<!-- 결과 메인 카드 -->
+<div class="s-card p-8 mb-5 text-center"
+     style="background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);">
+    <div class="text-6xl mb-4">{{ ti.emoji }}</div>
+    <div class="text-white text-sm font-bold mb-1 opacity-80">나의 독서 유형</div>
+    <div class="text-white text-3xl font-black mb-3">{{ ti.name }}</div>
+    <div class="text-white/80 text-base mb-4">{{ ti.desc }}</div>
+    <div class="flex flex-wrap justify-center gap-2">
+        {% for g in ti.genres %}
+        <span class="bg-white/20 text-white text-sm font-bold px-3 py-1 rounded-full">{{ g }}</span>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- 대표 캐릭터 -->
+<div class="s-card p-5 mb-5 flex items-center gap-4">
+    <div class="text-4xl shrink-0">📖</div>
+    <div>
+        <div class="text-xs text-gray-400 font-medium">닮은 책 속 인물</div>
+        <div class="font-black text-gray-800 text-lg">{{ ti.character }}</div>
+        <div class="text-sm text-gray-500">{{ ti.work }}</div>
+    </div>
+</div>
+
+<!-- 타입별 점수 -->
+{% if result.scores %}
+<div class="s-card p-5 mb-5">
+    <div class="font-black text-gray-700 mb-4">유형별 점수</div>
+    {% set max_score = result.scores.values() | max %}
+    {% set type_names = {
+        'harry': '🧙 해리 포터형', 'nemo': '🌊 네모 선장형', 'lyra': '🌙 라이라형',
+        'alice': '🐇 앨리스형', 'holmes': '🔍 셜록 홈즈형', 'fogg': '🌍 필리어스 포그형',
+        'anne': '🍀 빨간 머리 앤형', 'pippi': '🎠 삐삐 롱스타킹형', 'mowgli': '🌿 모글리형'
+    } %}
+    <div class="space-y-2">
+        {% for code, score in result.scores.items() | sort(attribute='1', reverse=True) %}
+        <div class="flex items-center gap-2">
+            <div class="text-xs text-gray-500 w-32 shrink-0 truncate">{{ type_names.get(code, code) }}</div>
+            <div class="flex-1 bg-gray-100 rounded-full h-3">
+                <div class="h-3 rounded-full transition-all
+                            {% if code == result.type_code %}bg-purple-500{% else %}bg-gray-300{% endif %}"
+                     style="width: {{ (score / max_score * 100) | int if max_score > 0 else 0 }}%"></div>
+            </div>
+            <div class="text-xs font-bold text-gray-600 w-4 shrink-0">{{ score }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- 버튼 -->
+<div class="flex gap-3">
+    <a href="{{ url_for('library.book_mbti_test') }}"
+       class="flex-1 py-3 rounded-2xl font-bold text-center border-2 border-purple-300 text-purple-700 hover:bg-purple-50 transition">
+        다시 테스트
+    </a>
+    <a href="{{ url_for('library.catalog') }}"
+       class="flex-1 py-3 rounded-2xl font-black text-center text-white transition"
+       style="background: linear-gradient(135deg, #6366f1, #a855f7);">
+        도서관 보러가기 📚
+    </a>
+</div>
+
+{% endblock %}

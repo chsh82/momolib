@@ -1,0 +1,114 @@
+{% extends 'student_base.html' %}
+{% block title %}독서MBTI 테스트{% endblock %}
+
+{% block content %}
+<div class="mb-5 flex items-center gap-3">
+    <a href="{{ url_for('library.book_mbti_intro') }}" class="text-gray-400 hover:text-gray-600">←</a>
+    <div>
+        <h2 class="text-xl font-black text-gray-800">📚 독서MBTI 테스트</h2>
+        <p class="text-xs text-gray-400">총 {{ total }}문항 · 솔직하게 답해주세요!</p>
+    </div>
+</div>
+
+<!-- 진행 바 -->
+<div class="w-full bg-gray-100 rounded-full h-2 mb-6">
+    <div id="progress-bar" class="bg-purple-500 h-2 rounded-full transition-all duration-300"
+         style="width: 0%"></div>
+</div>
+
+<form method="POST" action="{{ url_for('library.book_mbti_submit') }}" id="mbti-form">
+
+{% for i, q in questions | enumerate %}
+<div class="question-block {% if i > 0 %}hidden{% endif %}" data-index="{{ i }}">
+    <!-- 문항 번호 -->
+    <div class="text-xs font-bold text-purple-500 mb-2">{{ i + 1 }} / {{ total }}</div>
+
+    <!-- 질문 -->
+    <div class="s-card p-5 mb-4"
+         style="background: linear-gradient(135deg, #faf5ff 0%, #ede9fe 100%);">
+        <div class="text-lg font-black text-gray-800">{{ q.q }}</div>
+    </div>
+
+    <!-- 선택지 -->
+    <div class="space-y-3">
+        {% for j, opt in q.options | enumerate %}
+        <label class="option-label s-card p-4 flex items-center gap-3 cursor-pointer
+                       border-2 border-transparent hover:border-purple-300 transition"
+               for="q{{ i }}_{{ j }}">
+            <input type="radio" name="q{{ i }}" id="q{{ i }}_{{ j }}" value="{{ j }}"
+                   class="hidden" onchange="selectOption(this)">
+            <div class="w-8 h-8 rounded-full border-2 border-gray-200 flex items-center justify-center
+                        shrink-0 option-circle font-bold text-sm text-gray-400
+                        transition">{{ ['A','B','C','D'][j] }}</div>
+            <div class="text-base font-medium text-gray-700">{{ opt.text }}</div>
+        </label>
+        {% endfor %}
+    </div>
+
+    <!-- 다음 버튼 -->
+    <div class="mt-5 flex justify-end">
+        {% if i < total - 1 %}
+        <button type="button" onclick="nextQuestion({{ i }})"
+                class="next-btn px-6 py-3 rounded-2xl font-black text-white
+                       bg-gray-200 text-gray-400 cursor-not-allowed transition"
+                disabled>
+            다음 →
+        </button>
+        {% else %}
+        <button type="submit"
+                id="submit-btn"
+                class="px-6 py-3 rounded-2xl font-black text-white
+                       bg-gray-200 text-gray-400 cursor-not-allowed transition"
+                disabled>
+            결과 보기 🎉
+        </button>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const total = {{ total }};
+let answered = new Array(total).fill(false);
+
+function selectOption(input) {
+    const idx = parseInt(input.name.replace('q', ''));
+    answered[idx] = true;
+
+    // 선택지 스타일 업데이트
+    const block = document.querySelector(`.question-block[data-index="${idx}"]`);
+    block.querySelectorAll('.option-label').forEach(el => {
+        el.classList.remove('border-purple-500', 'bg-purple-50');
+        el.classList.add('border-transparent');
+        el.querySelector('.option-circle').classList.remove('bg-purple-500', 'border-purple-500', 'text-white');
+        el.querySelector('.option-circle').classList.add('border-gray-200', 'text-gray-400');
+    });
+    const label = input.closest('.option-label');
+    label.classList.add('border-purple-500', 'bg-purple-50');
+    label.classList.remove('border-transparent');
+    label.querySelector('.option-circle').classList.add('bg-purple-500', 'border-purple-500', 'text-white');
+    label.querySelector('.option-circle').classList.remove('border-gray-200', 'text-gray-400');
+
+    // 버튼 활성화
+    const nextBtn = block.querySelector('.next-btn, #submit-btn');
+    if (nextBtn) {
+        nextBtn.disabled = false;
+        nextBtn.classList.remove('bg-gray-200', 'text-gray-400', 'cursor-not-allowed');
+        nextBtn.classList.add('bg-purple-600', 'text-white');
+    }
+}
+
+function nextQuestion(current) {
+    if (!answered[current]) return;
+    document.querySelector(`.question-block[data-index="${current}"]`).classList.add('hidden');
+    document.querySelector(`.question-block[data-index="${current + 1}"]`).classList.remove('hidden');
+    const pct = ((current + 1) / total * 100).toFixed(0);
+    document.getElementById('progress-bar').style.width = pct + '%';
+    window.scrollTo(0, 0);
+}
+</script>
+{% endblock %}

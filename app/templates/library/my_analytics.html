@@ -130,10 +130,10 @@
     {% endif %}
 </div>
 
-<!-- 독서MBTI 결과 -->
+<!-- 역량평가 결과 -->
 <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
     <div class="flex items-center justify-between mb-4">
-        <h3 class="font-semibold text-gray-700">독서MBTI</h3>
+        <h3 class="font-semibold text-gray-700">역량평가</h3>
         <a href="{{ url_for('library.mbti_intro') }}"
            class="text-xs text-indigo-600 hover:underline">
             {{ '다시 테스트' if mbti_result else '테스트 시작' }} →
@@ -159,7 +159,7 @@
            class="ml-auto text-xs text-indigo-600 hover:underline shrink-0">결과 보기</a>
     </div>
     {% else %}
-    <p class="text-sm text-gray-400">아직 독서MBTI를 측정하지 않았습니다. 테스트를 통해 나의 독서 유형을 알아보세요!</p>
+    <p class="text-sm text-gray-400">아직 역량평가를 측정하지 않았습니다. 테스트를 통해 나의 독서 유형을 알아보세요!</p>
     {% endif %}
 </div>
 {% endblock %}

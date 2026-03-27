@@ -8,6 +8,7 @@ from app.models.library import (Book, LearningContent, QuizQuestion,
                                   GENRE_CHOICES, LEVEL_CHOICES, CONTENT_TYPES)
 from app.models.reading_mbti import (ReadingMBTITest, ReadingMBTIQuestion,
                                       ReadingMBTIType, ReadingMBTIResponse, ReadingMBTIResult)
+from app.models.book_mbti import BookMBTIResult, BOOK_MBTI_TYPES, BOOK_MBTI_QUESTIONS
 from app.models.user import User
 from app.utils.mileage import award_mileage
 from app.models.avatar import MileageReason
@@ -888,3 +889,62 @@ def mbti_result(result_id):
     type_info = ReadingMBTIType.query.filter_by(type_code=result.type_code).first()
     return render_template('library/mbti_result.html',
                            result=result, type_info=type_info)
+
+
+# ── 독서MBTI (취향 테스트) ────────────────────────────────
+
+@library_bp.route('/book-mbti')
+@login_required
+def book_mbti_intro():
+    last = BookMBTIResult.query.filter_by(user_id=current_user.user_id)\
+        .order_by(BookMBTIResult.taken_at.desc()).first()
+    return render_template('library/book_mbti_intro.html',
+                           last_result=last,
+                           types=BOOK_MBTI_TYPES)
+
+
+@library_bp.route('/book-mbti/test')
+@login_required
+def book_mbti_test():
+    return render_template('library/book_mbti_test.html',
+                           questions=BOOK_MBTI_QUESTIONS,
+                           total=len(BOOK_MBTI_QUESTIONS))
+
+
+@library_bp.route('/book-mbti/submit', methods=['POST'])
+@login_required
+def book_mbti_submit():
+    scores = {k: 0 for k in BOOK_MBTI_TYPES}
+    for i, q in enumerate(BOOK_MBTI_QUESTIONS):
+        ans = request.form.get(f'q{i}', type=int)
+        if ans is not None and 0 <= ans < len(q['options']):
+            for type_key, pts in q['options'][ans]['scores'].items():
+                scores[type_key] = scores.get(type_key, 0) + pts
+
+    best_type = max(scores, key=lambda k: scores[k])
+
+    result = BookMBTIResult(
+        user_id=current_user.user_id,
+        type_code=best_type,
+        scores=scores,
+    )
+    db.session.add(result)
+
+    award_mileage(
+        student_id=current_user.user_id,
+        reason=MileageReason.MBTI_TEST,
+        description='독서MBTI 테스트 완료',
+        ref_type='book_mbti',
+        ref_id=result.result_id,
+    )
+    db.session.commit()
+    return redirect(url_for('library.book_mbti_result', result_id=result.result_id))
+
+
+@library_bp.route('/book-mbti/result/<result_id>')
+@login_required
+def book_mbti_result(result_id):
+    result = BookMBTIResult.query.get_or_404(result_id)
+    if result.user_id != current_user.user_id:
+        abort(403)
+    return render_template('library/book_mbti_result.html', result=result)

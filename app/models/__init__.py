@@ -24,3 +24,4 @@ from app.models.lms import (Curriculum, CurriculumItem, Package, PackageCurricul
 from app.models.avatar import (MileageLog, MileageReason,
                                 AvatarItem, StudentAvatar, StudentAvatarInventory)
 from app.models.push_subscription import PushSubscription
+from app.models.book_mbti import BookMBTIResult

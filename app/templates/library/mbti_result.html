@@ -1,10 +1,10 @@
 {% extends 'student_base.html' %}
-{% block title %}독서논술 MBTI 결과{% endblock %}
+{% block title %}역량평가 결과{% endblock %}
 
 {% block content %}
 <div class="max-w-3xl mx-auto">
     <div class="flex items-center justify-between mb-5">
-        <a href="{{ url_for('library.mbti_intro') }}" class="text-sm text-gray-400 hover:text-indigo-600">← 독서MBTI</a>
+        <a href="{{ url_for('library.mbti_intro') }}" class="text-sm text-gray-400 hover:text-indigo-600">← 역량평가</a>
         <span class="text-xs text-gray-400">{{ result.submitted_at | kst('%Y년 %m월 %d일') }}</span>
     </div>
 
