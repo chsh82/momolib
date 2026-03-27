@@ -21,6 +21,12 @@
                 {{ current_user.student_profile.grade_display }}
             </div>
             {% endif %}
+            {% if streak > 0 %}
+            <div class="inline-flex items-center gap-1 mt-3 px-3 py-1 rounded-full
+                        bg-white/20 text-white text-sm font-bold">
+                🔥 {{ streak }}일 연속 출석 중!
+            </div>
+            {% endif %}
         </div>
         <img src="{{ url_for('static', filename='img/characters/momo_girl_nobg.png') }}"
              alt="모모"

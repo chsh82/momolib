@@ -149,10 +149,18 @@ def student_dashboard():
     from app.models.credit import EssayCredit
     credit = EssayCredit.query.filter_by(
         student_id=current_user.user_id).first()
+
+    # 스트릭 업데이트
+    profile = current_user.student_profile
+    if profile:
+        profile.update_streak()
+        db.session.commit()
+
     return render_template('essays/student_dashboard.html',
                            total=total, completed=completed,
                            reviewing=reviewing, draft=draft,
-                           recent=recent, credit=credit)
+                           recent=recent, credit=credit,
+                           streak=profile.streak_days if profile else 0)
 
 
 @essays_bp.route('/my')

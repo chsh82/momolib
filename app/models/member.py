@@ -64,6 +64,9 @@ class StudentProfile(db.Model):
     status = db.Column(db.String(20), default='active')     # active / inactive / graduated
     mileage = db.Column(db.Integer, nullable=False, default=0)  # 마일리지 잔액
 
+    streak_days = db.Column(db.Integer, nullable=False, default=0)   # 연속 출석일
+    last_active_date = db.Column(db.Date, nullable=True)             # 마지막 출석일
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -77,6 +80,18 @@ class StudentProfile(db.Model):
         super().__init__(**kwargs)
         if not self.profile_id:
             self.profile_id = str(uuid.uuid4())
+
+    def update_streak(self):
+        """오늘 접속 시 연속 출석일 갱신"""
+        from datetime import date, timedelta
+        today = date.today()
+        if self.last_active_date == today:
+            return  # 오늘 이미 체크
+        if self.last_active_date == today - timedelta(days=1):
+            self.streak_days += 1  # 연속
+        else:
+            self.streak_days = 1   # 초기화
+        self.last_active_date = today
 
     @property
     def grade_display(self):

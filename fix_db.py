@@ -57,5 +57,13 @@ with app.app_context():
             "ALTER TABLE reading_mbti_types"
             " ALTER COLUMN weaknesses"
             " TYPE JSON USING weaknesses::json")
+        run(c,
+            "ALTER TABLE student_profiles"
+            " ADD COLUMN IF NOT EXISTS"
+            " streak_days INTEGER NOT NULL DEFAULT 0")
+        run(c,
+            "ALTER TABLE student_profiles"
+            " ADD COLUMN IF NOT EXISTS"
+            " last_active_date DATE")
         c.commit()
         print("완료!")
