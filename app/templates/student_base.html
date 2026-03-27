@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>{% block title %}MOMOLIB{% endblock %}</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#f97316">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="모모립">
+    <link rel="apple-touch-icon" href="/static/img/icon-192.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
@@ -360,5 +367,65 @@ setInterval(updateBadge, 60000);
 </script>
 
 {% block extra_js %}{% endblock %}
+
+<!-- PWA 설치 배너 -->
+<div id="pwa-banner" class="hidden fixed bottom-20 left-4 right-4 z-[300]">
+    <div class="bg-white rounded-2xl shadow-2xl border-2 border-orange-100 p-4 flex items-center gap-3">
+        <img src="/static/img/icon-192.png" alt="모모립" class="w-12 h-12 rounded-xl shrink-0">
+        <div class="flex-1 min-w-0">
+            <div class="font-black text-gray-800 text-sm">모모립 앱으로 설치하기</div>
+            <div class="text-xs text-gray-400 mt-0.5">홈 화면에 추가하면 앱처럼 사용할 수 있어요!</div>
+        </div>
+        <div class="flex flex-col gap-2 shrink-0">
+            <button id="pwa-install-btn"
+                    class="bg-orange-500 text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-orange-600 transition">
+                설치
+            </button>
+            <button id="pwa-dismiss-btn"
+                    class="text-gray-400 text-xs font-bold px-4 py-2 rounded-xl hover:bg-gray-100 transition">
+                닫기
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── PWA 서비스 워커 등록 ──────────────────────────────────
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/static/sw.js');
+}
+
+// ── 설치 배너 ─────────────────────────────────────────────
+let deferredPrompt = null;
+const banner = document.getElementById('pwa-banner');
+
+window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    // 이미 닫은 적 있으면 배너 안 보임
+    if (!sessionStorage.getItem('pwa-dismissed')) {
+        banner.classList.remove('hidden');
+    }
+});
+
+document.getElementById('pwa-install-btn').addEventListener('click', () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => {
+        deferredPrompt = null;
+        banner.classList.add('hidden');
+    });
+});
+
+document.getElementById('pwa-dismiss-btn').addEventListener('click', () => {
+    banner.classList.add('hidden');
+    sessionStorage.setItem('pwa-dismissed', '1');
+});
+
+// 이미 설치된 경우 배너 숨김
+window.addEventListener('appinstalled', () => {
+    banner.classList.add('hidden');
+});
+</script>
 </body>
 </html>
