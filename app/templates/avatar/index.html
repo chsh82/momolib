@@ -40,7 +40,21 @@
         <!-- 뱃지 -->
         {% if avatar.equipped and avatar.equipped.get('badge') %}
             {% for item in shop_items if item.item_id == avatar.equipped.badge %}
-            <div class="absolute -top-2 -right-2 text-2xl">{{ item.data.emoji if item.data else '⭐' }}</div>
+            {% set pos = item.data.pos if item.data and item.data.get('pos') else 'top-right' %}
+            <div class="absolute text-3xl pointer-events-none"
+                 style="
+                 {% if pos == 'top-center' %}
+                     top: -22px; left: 50%; transform: translateX(-50%);
+                 {% elif pos == 'top-right' %}
+                     top: -10px; right: -10px;
+                 {% elif pos == 'top-left' %}
+                     top: -10px; left: -10px;
+                 {% elif pos == 'bottom-right' %}
+                     bottom: -10px; right: -10px;
+                 {% elif pos == 'bottom-left' %}
+                     bottom: -10px; left: -10px;
+                 {% endif %}
+                 ">{{ item.data.emoji if item.data else '⭐' }}</div>
             {% endfor %}
         {% endif %}
     </div>
