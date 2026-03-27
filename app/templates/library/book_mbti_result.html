@@ -39,9 +39,9 @@
     <div class="font-black text-gray-700 mb-4">유형별 점수</div>
     {% set max_score = result.scores.values() | max %}
     {% set type_names = {
-        'harry': '🧙 해리 포터형', 'nemo': '🌊 네모 선장형', 'lyra': '🌙 라이라형',
+        'harry': '🌈 오즈의 도로시형', 'nemo': '🌊 네모 선장형', 'lyra': '🧪 지킬 박사형',
         'alice': '🐇 앨리스형', 'holmes': '🔍 셜록 홈즈형', 'fogg': '🌍 필리어스 포그형',
-        'anne': '🍀 빨간 머리 앤형', 'pippi': '🎠 삐삐 롱스타킹형', 'mowgli': '🌿 모글리형'
+        'anne': '🍀 빨간 머리 앤형', 'pippi': '🎣 톰 소여형', 'mowgli': '🌿 모글리형'
     } %}
     <div class="space-y-2">
         {% for code, score in result.scores.items() | sort(attribute='1', reverse=True) %}
