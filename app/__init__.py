@@ -68,6 +68,14 @@ def create_app(config_name='default'):
     from flask import redirect, url_for
     from flask_login import current_user
 
+    @app.route('/sw.js')
+    def service_worker():
+        from flask import send_from_directory, current_app
+        response = send_from_directory(current_app.static_folder, 'sw.js')
+        response.headers['Service-Worker-Allowed'] = '/'
+        response.headers['Content-Type'] = 'application/javascript'
+        return response
+
     @app.route('/')
     def index():
         if current_user.is_authenticated:
