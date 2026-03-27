@@ -4,7 +4,7 @@
   "description": "모모립 독서 학습 플랫폼",
   "start_url": "/",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "any",
   "background_color": "#FFFBEF",
   "theme_color": "#f97316",
   "icons": [
