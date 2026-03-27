@@ -20,5 +20,7 @@ jobs:
             git pull origin main
             source venv/bin/activate
             pip install -r requirements.txt -q
+            chmod -R 755 ~/momolib/app/static
+            chmod o+x /home/chsh82
             sudo systemctl restart momolib
             echo "배포 완료"
