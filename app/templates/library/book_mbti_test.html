@@ -18,7 +18,8 @@
 
 <form method="POST" action="{{ url_for('library.book_mbti_submit') }}" id="mbti-form">
 
-{% for i, q in questions | enumerate %}
+{% for q in questions %}
+{% set i = loop.index0 %}
 <div class="question-block {% if i > 0 %}hidden{% endif %}" data-index="{{ i }}">
     <!-- 문항 번호 -->
     <div class="text-xs font-bold text-purple-500 mb-2">{{ i + 1 }} / {{ total }}</div>
@@ -31,7 +32,8 @@
 
     <!-- 선택지 -->
     <div class="space-y-3">
-        {% for j, opt in q.options | enumerate %}
+        {% for opt in q.options %}
+        {% set j = loop.index0 %}
         <label class="option-label s-card p-4 flex items-center gap-3 cursor-pointer
                        border-2 border-transparent hover:border-purple-300 transition"
                for="q{{ i }}_{{ j }}">
