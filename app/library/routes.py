@@ -900,7 +900,8 @@ def book_mbti_intro():
         .order_by(BookMBTIResult.taken_at.desc()).first()
     return render_template('library/book_mbti_intro.html',
                            last_result=last,
-                           types=BOOK_MBTI_TYPES)
+                           types=BOOK_MBTI_TYPES,
+                           total=len(BOOK_MBTI_QUESTIONS))
 
 
 @library_bp.route('/book-mbti/test')
@@ -921,7 +922,10 @@ def book_mbti_submit():
             for type_key, pts in q['options'][ans]['scores'].items():
                 scores[type_key] = scores.get(type_key, 0) + pts
 
-    best_type = max(scores, key=lambda k: scores[k])
+    import random
+    max_score = max(scores.values())
+    tied = [k for k, v in scores.items() if v == max_score]
+    best_type = random.choice(tied) if len(tied) > 1 else tied[0]
 
     result = BookMBTIResult(
         user_id=current_user.user_id,

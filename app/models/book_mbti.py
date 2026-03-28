@@ -199,6 +199,45 @@ BOOK_MBTI_QUESTIONS = [
              'scores': {'holmes': 1, 'harry': 1, 'lyra': 1}},
         ]
     },
+    {
+        'q': '책 속 세상에 들어간다면 어디서 살고 싶어?',
+        'options': [
+            {'text': '🌊 깊은 바다 속 잠수함에서 과학 탐험',
+             'scores': {'nemo': 3}},
+            {'text': '🌿 동물들과 함께 우거진 정글 속에서',
+             'scores': {'mowgli': 3}},
+            {'text': '🗺️ 세계 각지를 기차와 배로 여행하며',
+             'scores': {'fogg': 3}},
+            {'text': '🌑 어둡고 신비로운 비밀이 가득한 곳에서',
+             'scores': {'lyra': 2, 'alice': 1}},
+        ]
+    },
+    {
+        'q': '책을 고를 때 가장 끌리는 것은?',
+        'options': [
+            {'text': '🔬 과학적 발견과 새로운 지식',
+             'scores': {'nemo': 2, 'holmes': 1, 'fogg': 1}},
+            {'text': '🐾 자연과 동물이 중심이 되는 이야기',
+             'scores': {'mowgli': 2, 'alice': 1}},
+            {'text': '😱 긴장감과 공포, 소름 돋는 분위기',
+             'scores': {'lyra': 2, 'holmes': 1}},
+            {'text': '💃 자유롭고 신나는 에너지',
+             'scores': {'pippi': 2, 'harry': 1}},
+        ]
+    },
+    {
+        'q': '친구들에게 어떤 사람으로 보이고 싶어?',
+        'options': [
+            {'text': '🌊 지식이 풍부하고 탐구적인 사람',
+             'scores': {'nemo': 2, 'holmes': 1}},
+            {'text': '🌿 자연을 사랑하는 자유로운 영혼',
+             'scores': {'mowgli': 2, 'pippi': 1}},
+            {'text': '🌍 다양한 경험과 이야기가 많은 사람',
+             'scores': {'fogg': 2, 'anne': 1}},
+            {'text': '🌙 신비롭고 깊이 있는 사람',
+             'scores': {'lyra': 2, 'alice': 1}},
+        ]
+    },
 ]
 
 
