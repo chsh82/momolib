@@ -6,8 +6,16 @@ bank_questions/quiz_questions/curriculum* 등 어떤 기존 테이블도 수정�
 확인). downgrade()는 이 5개 테이블만 제거하므로 기존 데이터에 영향 없음.
 
 Revision ID: 37b334ba3fc8
-Revises: c3d4e5f6a7b8
+Revises: 63723761586a
 Create Date: 2026-09-28 00:20:42.956649
+
+수정(2026-09-28): 원래 down_revision을 c3d4e5f6a7b8로 잘못 잡았었다 -
+운영 서버에는 그 뒤로 e04b5513c0ba/d6cf3cef8abd/63723761586a 세 리비전이
+이미 커밋 없이 직접 적용돼 있었고(운영 DB의 실제 head), 그 사실을 이번
+단계에서 서버를 직접 조사해 발견했다. 세 파일을 원본 그대로(SHA-256
+확인) 이 저장소에 추가하고, 이 마이그레이션의 down_revision을 실제
+운영 head인 63723761586a로 수정했다 - 기존 세 파일의 upgrade/downgrade
+내용은 한 글자도 바꾸지 않았다.
 
 """
 from alembic import op
@@ -16,7 +24,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '37b334ba3fc8'
-down_revision = 'c3d4e5f6a7b8'
+down_revision = '63723761586a'
 branch_labels = None
 depends_on = None
 
