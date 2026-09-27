@@ -148,6 +148,11 @@ def main() -> bool:
             "correct_option": removed_item.correct_option, "options_json": removed_item.options_json,
             "public_payload_json": removed_item.public_payload_json, "explanation": removed_item.explanation,
             "lemma": removed_item.lemma, "pos": removed_item.pos,
+            # source_content_id/source_content_ids_json도 반드시 보존해야 한다 - 빠뜨리면
+            # 복원된 행이 원본과 미세하게 달라져(내용 해시 불일치) importer 재실행 시
+            # 거짓 CONFLICT를 유발한다(실제로 이 버그를 배포 리허설에서 발견함).
+            "source_content_id": removed_item.source_content_id,
+            "source_content_ids_json": removed_item.source_content_ids_json,
         }
         db.session.delete(removed_item)
         db.session.commit()
