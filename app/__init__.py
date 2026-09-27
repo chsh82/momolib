@@ -64,6 +64,9 @@ def create_app(config_name='default'):
     from app.avatar import avatar_bp
     app.register_blueprint(avatar_bp, url_prefix='/avatar')
 
+    from app.vocab_quiz import vocab_quiz_bp
+    app.register_blueprint(vocab_quiz_bp, url_prefix='/vocab-quiz')
+
     # 메인 라우트
     from flask import redirect, url_for
     from flask_login import current_user

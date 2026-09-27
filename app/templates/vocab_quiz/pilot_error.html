@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}파일럿 오류{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto py-6">
+    <div class="bg-red-50 border border-red-200 rounded-xl p-6 text-red-700 text-sm">
+        <div class="font-semibold mb-2">파일럿({{ pilot_key }}) 매니페스트 오류</div>
+        <div>{{ error }}</div>
+    </div>
+</div>
+{% endblock %}

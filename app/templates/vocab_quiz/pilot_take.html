@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block title %}파일럿 응시 중{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto py-6">
+    <h2 class="text-lg font-bold text-gray-800 mb-4">{{ session.pilot_key }} 파일럿 - {{ session.question_count }}문항</h2>
+    <div id="quiz-root"></div>
+    <div class="mt-4 text-right">
+        <button id="finish-btn" class="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-lg text-sm">
+            제출하고 결과 보기
+        </button>
+    </div>
+</div>
+<script>
+const QUESTIONS = {{ questions | tojson }};
+const SESSION_ID = "{{ session.id }}";
+const ANSWER_URL = (id) => `/vocab-quiz/pilot/session/${SESSION_ID}/answer`;
+const COMPLETE_URL = `/vocab-quiz/pilot/session/${SESSION_ID}/complete`;
+const RESULT_URL = `/vocab-quiz/pilot/session/${SESSION_ID}/result`;
+
+function render() {
+    const root = document.getElementById('quiz-root');
+    root.innerHTML = QUESTIONS.map((q, i) => {
+        const opts = (q.public_payload && q.public_payload.options) || [];
+        const optHtml = opts.map((o, idx) => `
+            <label class="block border rounded-lg px-3 py-2 mb-2 cursor-pointer
+                ${q.selected_option === idx + 1 ? 'border-indigo-400 bg-indigo-50' : 'border-gray-200'}">
+                <input type="radio" name="q${i}" value="${idx + 1}" class="mr-2"
+                    ${q.selected_option === idx + 1 ? 'checked' : ''}
+                    onchange="submitAnswer('${q.item_id}', ${idx + 1}, ${i})">
+                ${o}
+            </label>`).join('');
+        const fb = q.is_correct === true ? '<span class="text-green-600 text-xs ml-2">정답</span>'
+                 : q.is_correct === false ? '<span class="text-red-600 text-xs ml-2">오답</span>' : '';
+        return `<div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4 mb-3">
+            <div class="text-sm text-gray-500 mb-1">문항 ${i + 1} - ${q.lemma}${fb}</div>
+            <div class="text-gray-800 font-medium mb-3">${q.prompt}</div>
+            ${optHtml}
+        </div>`;
+    }).join('');
+}
+
+async function submitAnswer(itemId, selected, idx) {
+    const r = await fetch(ANSWER_URL(itemId), {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({item_id: itemId, selected_option: selected}),
+    });
+    const data = await r.json();
+    QUESTIONS[idx].selected_option = selected;
+    QUESTIONS[idx].is_correct = data.is_correct;
+    render();
+}
+
+document.getElementById('finish-btn').addEventListener('click', async () => {
+    await fetch(COMPLETE_URL, {method: 'POST'});
+    window.location.href = RESULT_URL;
+});
+
+render();
+</script>
+{% endblock %}

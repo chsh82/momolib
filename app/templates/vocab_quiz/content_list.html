@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}어휘 콘텐츠 목록{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto py-6">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-gray-800">어휘 콘텐츠 목록</h2>
+        <a href="{{ url_for('vocab_quiz.index') }}" class="text-sm text-indigo-600 hover:underline">← 대시보드</a>
+    </div>
+
+    <form method="GET" class="mb-4">
+        <select name="source_version" onchange="this.form.submit()"
+                class="border border-gray-200 rounded-lg px-3 py-2 text-sm">
+            <option value="">전체 source_version</option>
+            {% for v in all_versions %}
+            <option value="{{ v }}" {% if v == source_version %}selected{% endif %}>{{ v }}</option>
+            {% endfor %}
+        </select>
+    </form>
+
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50 border-b border-gray-100">
+                <tr>
+                    <th class="text-left px-4 py-2 text-gray-600">표제어</th>
+                    <th class="text-left px-4 py-2 text-gray-600">품사</th>
+                    <th class="text-left px-4 py-2 text-gray-600">source_version</th>
+                    <th class="text-center px-4 py-2 text-gray-600">비공개</th>
+                    <th class="text-center px-4 py-2 text-gray-600">관리</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+                {% for c in contents %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-2 font-medium text-gray-800">{{ c.lemma }}</td>
+                    <td class="px-4 py-2 text-gray-500">{{ c.pos or '-' }}</td>
+                    <td class="px-4 py-2 text-xs text-gray-500">{{ c.source_version }}</td>
+                    <td class="px-4 py-2 text-center">
+                        {% if not c.student_exposure and not c.public_ready %}
+                        <span class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600">비공개</span>
+                        {% else %}
+                        <span class="text-xs px-2 py-0.5 rounded bg-red-100 text-red-700">노출 상태 확인 필요</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-2 text-center">
+                        <a href="{{ url_for('vocab_quiz.content_preview', content_id=c.content_id) }}"
+                           class="text-indigo-600 hover:underline text-xs">미리보기</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="text-xs text-gray-400 mt-3">총 {{ contents|length }}건</div>
+</div>
+{% endblock %}

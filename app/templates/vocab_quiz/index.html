@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}어휘 퀴즈 이식(관리자 전용){% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto py-6">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-gray-800">어휘 퀴즈 이식 - 관리자 전용 미리보기</h2>
+        <span class="text-xs px-2 py-1 rounded bg-yellow-100 text-yellow-700">비공개 - 학생 노출 없음</span>
+    </div>
+    <div class="text-sm text-gray-500 mb-6">
+        aprolabs 연구 사이트에서 이식한 콘텐츠 {{ total }}건. 아직 학생에게 노출되지 않으며,
+        기존 어휘 퀴즈(CMS)와는 무관한 별도 데이터입니다.
+    </div>
+
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5 mb-6">
+        <h3 class="font-semibold text-gray-700 mb-3">source_version별 건수</h3>
+        <table class="w-full text-sm">
+            {% for version, count in by_source %}
+            <tr class="border-b border-gray-50">
+                <td class="py-2 text-gray-600">{{ version }}</td>
+                <td class="py-2 text-right font-medium">{{ count }}건</td>
+                <td class="py-2 text-right">
+                    <a href="{{ url_for('vocab_quiz.content_list', source_version=version) }}"
+                       class="text-indigo-600 hover:underline text-xs">목록 보기</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+        {% for key, label in [('l4l5', 'L4·L5 파일럿'), ('l6', 'L6 파일럿')] %}
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+            <h3 class="font-semibold text-gray-700 mb-2">{{ label }}</h3>
+            {% set st = pilot_status[key] %}
+            {% if st.error %}
+            <div class="text-red-600 text-sm">{{ st.error }}</div>
+            {% else %}
+            <div class="text-sm text-gray-500 mb-3">
+                DB {{ st.db_count }}건 / 매니페스트 {{ st.expected_count }}건
+                {% if st.ok %}<span class="text-green-600 font-medium">일치</span>
+                {% else %}<span class="text-red-600 font-medium">불일치</span>{% endif %}
+            </div>
+            <a href="{{ url_for('vocab_quiz.pilot_info', pilot_key=key) }}"
+               class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                파일럿 응시하기
+            </a>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
