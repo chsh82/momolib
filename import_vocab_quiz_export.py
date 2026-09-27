@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -218,7 +219,7 @@ def main() -> int:
         print("FAIL: 파일럿 매니페스트가 40건이 아닙니다 - 중단.")
         return 1
 
-    app = create_app("development")
+    app = create_app(os.environ.get("FLASK_ENV", "production"))
     with app.app_context():
         try:
             n_c_ins, n_c_skip = _sync_contents(contents)
