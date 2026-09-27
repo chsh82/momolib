@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}승격 dry-run{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto py-6">
+    <a href="{{ url_for('vocab_quiz.publish_review_index') }}" class="text-sm text-indigo-600 hover:underline">← 공개검토 목록</a>
+    <h2 class="text-xl font-bold text-gray-800 mt-3 mb-1">승격 dry-run</h2>
+    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800 mb-6">
+        <strong>읽기 전용입니다.</strong> 이 화면은 아무 데이터도 바꾸지 않습니다.
+        "승격 실행" 버튼이나 API는 이 시스템에 존재하지 않습니다 - 실제 공개 전환은
+        이번 작업 범위 밖입니다.
+    </div>
+
+    <div class="text-sm text-gray-600 mb-4">
+        1순위 {{ total }}건 중 <span class="font-bold text-indigo-600">{{ would_promote_count }}건</span>이
+        지금 승격 조건을 전부 충족합니다(관리자 판정=승인후보·최신 버전, 콘텐츠/문항 품질 이상 없음).
+    </div>
+
+    <div class="space-y-3">
+        {% for row in rows %}
+        <div class="bg-white rounded-xl border shadow-sm p-4
+            {% if row.would_promote %}border-green-200{% else %}border-gray-100{% endif %}">
+            <div class="flex items-center justify-between mb-2">
+                <span class="font-medium text-gray-800">{{ row.content.lemma }}</span>
+                <span class="text-xs text-gray-400">{{ row.content.content_id }}</span>
+            </div>
+            {% if row.would_promote %}
+            <div class="text-xs text-green-700 font-bold mb-1">승격 대상 - 변경 예정 필드:</div>
+            <ul class="text-xs text-gray-600 list-disc list-inside mb-1">
+                {% for change in row.planned_changes %}
+                <li>{{ change }}</li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="text-xs text-gray-400 font-bold mb-1">승격 불가 - 사유:</div>
+            <ul class="text-xs text-gray-500 list-disc list-inside">
+                {% for reason in row.blocking %}
+                <li>{{ reason }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

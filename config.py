@@ -23,6 +23,12 @@ class Config:
     # Redis
     REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 
+    # 어휘 퀴즈 학생용 기능 플래그 - 기본 OFF. 환경변수를 명시적으로
+    # 'true'로 설정해야만 app/vocab_quiz_student 라우트가 응답한다(꺼져
+    #있으면 로그인/역할과 무관하게 전부 404). 운영에는 이 값을 설정하지
+    # 않았으므로 이 브랜치가 배포되더라도 학생 화면은 열리지 않는다.
+    VOCAB_QUIZ_STUDENT_ENABLED = os.environ.get('VOCAB_QUIZ_STUDENT_ENABLED', 'false').lower() == 'true'
+
     # 세션
     PERMANENT_SESSION_LIFETIME = timedelta(days=30)
     REMEMBER_COOKIE_DURATION = timedelta(days=30)

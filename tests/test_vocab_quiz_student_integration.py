@@ -175,6 +175,13 @@ def main() -> bool:
         student_id = make_user("it_student@test.local", "student")
         user_ids = [teacher_id, student_id]
 
+    # 학생용 블루프린트는 기능 플래그 기본 OFF(app/vocab_quiz_student/
+    # __init__.py의 before_request) - 이 통합 테스트는 그 플래그를 켜야만
+    # 의미가 있으므로 테스트 안에서만 명시적으로 켠다. 플래그 자체의
+    # 기본값/on-off 동작은 tests/test_vocab_quiz_publish_review.py가
+    # 별도로 검증한다.
+    app.config["VOCAB_QUIZ_STUDENT_ENABLED"] = True
+
     # --- 여기서부터 클라이언트 요청은 app_context 밖에서 수행한다 ---
     client = app.test_client()
 
@@ -267,6 +274,8 @@ def main() -> bool:
 
         post_user_count = User.query.count()
         check(pre_user_count == post_user_count, f"테스트 계정 정리 후 users 원상복구({pre_user_count} -> {post_user_count})")
+
+    app.config["VOCAB_QUIZ_STUDENT_ENABLED"] = False
 
     ok = all(r for r, _ in _results)
     n_pass = sum(1 for r, _ in _results if r)

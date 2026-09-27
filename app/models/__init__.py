@@ -29,3 +29,4 @@ from app.models.vocab_quiz import (VocabQuizContent, VocabQuizContentLevel,
                                     VocabQuizPilotItem, VocabQuizPilotSession,
                                     VocabQuizPilotAttempt)
 from app.models.vocab_quiz_student import (VocabQuizStudentSession, VocabQuizStudentAttempt)
+from app.models.vocab_quiz_review import VocabQuizAdminReview

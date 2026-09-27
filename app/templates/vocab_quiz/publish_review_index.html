@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block title %}공개검토{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto py-6">
+    <a href="{{ url_for('vocab_quiz.index') }}" class="text-sm text-indigo-600 hover:underline">← 대시보드</a>
+    <div class="flex items-center justify-between mt-3 mb-1">
+        <h2 class="text-xl font-bold text-gray-800">공개검토</h2>
+        <a href="{{ url_for('vocab_quiz.promote_dry_run') }}"
+           class="text-sm bg-gray-700 hover:bg-gray-800 text-white px-3 py-1.5 rounded-lg">승격 dry-run 보기</a>
+    </div>
+    <p class="text-sm text-gray-500 mb-6">
+        판정을 저장해도 student_exposure/public_ready/REVIEW_BOUNDARY는 바뀌지 않습니다.
+        실제 공개 전환은 이 화면에서 하지 않습니다(별도 승격 dry-run 참고).
+    </p>
+
+    <h3 class="text-sm font-bold text-gray-700 mb-2">1순위 - {{ tier1_rows|length }}건(관리자 파일럿 온라인 QA까지 통과)</h3>
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm divide-y divide-gray-50 mb-8">
+        {% for row in tier1_rows %}
+        <a href="{{ url_for('vocab_quiz.publish_review_detail', content_id=row.content.content_id) }}"
+           class="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
+            <div>
+                <span class="font-medium text-gray-800">{{ row.content.lemma }}</span>
+                <span class="text-xs text-gray-400 ml-2">{{ row.content.content_id }}</span>
+            </div>
+            <div class="text-xs">
+                {% if row.review %}
+                    {% if row.stale %}
+                    <span class="text-amber-600 font-medium">판정 있음(신선도 만료)</span>
+                    {% else %}
+                    <span class="text-indigo-600 font-medium">{{ verdict_labels[row.review.verdict] }}</span>
+                    {% endif %}
+                {% else %}
+                <span class="text-gray-400">판정 없음</span>
+                {% endif %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+
+    <h3 class="text-sm font-bold text-gray-700 mb-2">2순위 대기열 - {{ tier2|length }}건(독립 출처 근거 등급 통과, 온라인 QA 없음)</h3>
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm divide-y divide-gray-50 mb-8">
+        {% for c in tier2 %}
+        <a href="{{ url_for('vocab_quiz.publish_review_detail', content_id=c.content_id) }}"
+           class="block px-4 py-2 text-sm text-gray-600 hover:bg-gray-50">
+            {{ c.lemma }} <span class="text-xs text-gray-400">{{ c.content_id }}</span>
+        </a>
+        {% endfor %}
+    </div>
+
+    <h3 class="text-sm font-bold text-gray-700 mb-2">3순위 대기열 - {{ tier3_count }}건(literacy.db 기반 자동검사만)</h3>
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-sm text-gray-500 mb-8">
+        {{ tier3_count }}건은 아직 개별 검토 화면을 제공하지 않습니다(자동 승인 없음, 대기열로만 표시).
+        콘텐츠 목록에서 개별 확인하려면
+        <a href="{{ url_for('vocab_quiz.content_list') }}" class="text-indigo-600 hover:underline">전체 콘텐츠 목록</a>을 이용하세요.
+    </div>
+</div>
+{% endblock %}

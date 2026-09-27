@@ -27,6 +27,13 @@
         </table>
     </div>
 
+    <div class="mb-6">
+        <a href="{{ url_for('vocab_quiz.publish_review_index') }}"
+           class="inline-block bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium">
+            📋 공개검토
+        </a>
+    </div>
+
     <div class="grid grid-cols-2 gap-4">
         {% for key, label in [('l4l5', 'L4·L5 파일럿'), ('l6', 'L6 파일럿')] %}
         <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
