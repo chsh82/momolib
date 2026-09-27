@@ -1,0 +1,23 @@
+{% extends 'student_base.html' %}
+{% block title %}연습 결과{% endblock %}
+{% block content %}
+<a href="{{ url_for('vocab_quiz_student.index') }}" class="text-sm text-indigo-500 hover:underline">← 어휘 연습으로</a>
+<div class="s-card p-6 mt-3 mb-5 text-center">
+    <div class="text-3xl font-black text-indigo-600">{{ session.correct_count }} / {{ session.item_count }}</div>
+    <div class="text-sm text-gray-400 mt-1">{{ session.completed_at.strftime('%Y-%m-%d %H:%M') }} 완료</div>
+</div>
+{% for row in rows %}
+<div class="s-card p-5 mb-3">
+    <div class="text-sm text-gray-400 mb-1">
+        {{ row.item.lemma if row.item else row.attempt.item_id }}
+        {% if row.attempt.is_correct %}<span class="text-green-600 text-xs ml-2 font-bold">정답</span>
+        {% else %}<span class="text-red-500 text-xs ml-2 font-bold">오답</span>{% endif %}
+    </div>
+    <div class="text-gray-800 font-bold mb-2 leading-relaxed">{{ row.item.prompt if row.item else '' }}</div>
+    <div class="text-xs text-gray-400">선택: {{ row.attempt.selected_option }} / 정답: {{ row.attempt.correct_option }}</div>
+    {% if row.item and row.item.explanation %}
+    <div class="text-sm text-gray-500 mt-2 bg-gray-50 rounded-xl px-3 py-2">{{ row.item.explanation }}</div>
+    {% endif %}
+</div>
+{% endfor %}
+{% endblock %}

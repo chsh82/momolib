@@ -1,0 +1,62 @@
+{% extends 'student_base.html' %}
+{% block title %}어휘 연습{% endblock %}
+{% block content %}
+<div class="mb-5">
+    <h2 class="font-black text-gray-800 text-lg">📖 어휘 연습</h2>
+    <p class="text-sm text-gray-400 mt-1">공개된 문항 중에서 무작위로 문제를 풀어봐요.</p>
+</div>
+
+{% if pool_count == 0 %}
+<div class="s-card p-6 text-center">
+    <div class="text-3xl mb-2">🌱</div>
+    <div class="font-bold text-gray-600">아직 공개된 문항이 없어요.</div>
+    <div class="text-sm text-gray-400 mt-1">곧 새로운 문제가 열릴 예정이에요!</div>
+</div>
+{% else %}
+<div class="s-card p-5 mb-5 text-center">
+    <div class="text-sm text-gray-400">지금 풀 수 있는 문항</div>
+    <div class="text-3xl font-black text-indigo-600 mt-1">{{ pool_count }}개</div>
+    <div class="text-xs text-gray-400 mt-2">한 번에 {{ session_item_count }}문제씩 무작위로 나와요.</div>
+</div>
+<form method="POST" action="{{ url_for('vocab_quiz_student.start') }}" id="start-form">
+    <button type="submit" class="s-btn-primary w-full text-xl py-5">
+        🚀 연습 시작하기
+    </button>
+</form>
+<div id="start-error" class="hidden mt-3 text-sm text-red-500 text-center"></div>
+<script>
+document.getElementById('start-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errEl = document.getElementById('start-error');
+    errEl.classList.add('hidden');
+    const r = await fetch("{{ url_for('vocab_quiz_student.start') }}", {method: 'POST'});
+    const data = await r.json();
+    if (!r.ok) {
+        errEl.textContent = data.detail || '문제를 시작할 수 없습니다.';
+        errEl.classList.remove('hidden');
+        return;
+    }
+    window.location.href = `/practice/vocab-quiz/session/${data.session_id}`;
+});
+</script>
+{% endif %}
+
+{% if my_sessions %}
+<div class="mt-8">
+    <div class="text-sm font-bold text-gray-500 mb-2">최근 기록</div>
+    <div class="space-y-2">
+        {% for s in my_sessions %}
+        <a href="{{ url_for('vocab_quiz_student.result' if s.status == 'completed' else 'vocab_quiz_student.take', session_id=s.id) }}"
+           class="s-card p-4 flex items-center justify-between">
+            <span class="text-sm text-gray-600">{{ s.started_at.strftime('%m/%d %H:%M') }}</span>
+            {% if s.status == 'completed' %}
+            <span class="text-sm font-bold text-indigo-600">{{ s.correct_count }} / {{ s.item_count }}</span>
+            {% else %}
+            <span class="text-xs text-amber-500 font-bold">진행 중</span>
+            {% endif %}
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

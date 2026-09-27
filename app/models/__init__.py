@@ -28,3 +28,4 @@ from app.models.book_mbti import BookMBTIResult
 from app.models.vocab_quiz import (VocabQuizContent, VocabQuizContentLevel,
                                     VocabQuizPilotItem, VocabQuizPilotSession,
                                     VocabQuizPilotAttempt)
+from app.models.vocab_quiz_student import (VocabQuizStudentSession, VocabQuizStudentAttempt)
