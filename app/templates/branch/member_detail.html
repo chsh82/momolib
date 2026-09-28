@@ -19,6 +19,12 @@
             {% endif %}
         </div>
         <div class="flex gap-2">
+            {% if member.role == 'student' %}
+            <a href="{{ url_for('branch.student_overview', student_id=member.user_id) }}"
+               class="text-sm px-4 py-2 rounded-lg border border-indigo-200 text-indigo-600 hover:bg-indigo-50">
+                📊 전체 학습 현황
+            </a>
+            {% endif %}
             <button onclick="resetPassword('{{ member.user_id }}')"
                     class="text-sm px-4 py-2 rounded-lg border border-yellow-200 text-yellow-700 hover:bg-yellow-50">
                 비밀번호 초기화

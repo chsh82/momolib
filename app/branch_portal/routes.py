@@ -756,10 +756,22 @@ def revenue_report():
 
 @branch_bp.route('/lms/')
 @login_required
-@requires_role('branch_owner', 'branch_manager', 'teacher')
+@requires_role('branch_owner', 'branch_manager', 'teacher',
+                'super_admin', 'hq_manager', 'hq_essay_manager')
 def lms_dashboard():
-    """학생별 패키지 진도 현황"""
-    branch_id = current_user.branch_id
+    """학생별 패키지 진도 현황
+
+    2026-09-28: 예전엔 지점 역할만 볼 수 있었는데, HQ는 평균치 대시보드
+    (lms.hq_dashboard)만 볼 수 있고 "어느 학생이 뒤처지는지"는 전혀 알 수
+    없었다. HQ 계정은 지점을 골라서 같은 화면을 볼 수 있게 확장한다.
+    """
+    all_branches = None
+    if current_user.is_hq:
+        from app.models.branch import Branch
+        all_branches = Branch.query.filter_by(status='active').order_by(Branch.name).all()
+        branch_id = request.args.get('branch_id') or (all_branches[0].branch_id if all_branches else None)
+    else:
+        branch_id = current_user.branch_id
 
     # 지점에 배정된 패키지 목록
     branch_assignments = BranchPackageAssignment.query.filter_by(
@@ -818,17 +830,22 @@ def lms_dashboard():
     return render_template('branch/lms_dashboard.html',
                            packages=packages,
                            selected_pkg=selected_pkg,
-                           student_rows=student_rows)
+                           student_rows=student_rows,
+                           all_branches=all_branches,
+                           selected_branch_id=branch_id)
 
 
 @branch_bp.route('/lms/student/<int:assignment_id>/')
 @login_required
-@requires_role('branch_owner', 'branch_manager', 'teacher')
+@requires_role('branch_owner', 'branch_manager', 'teacher',
+                'super_admin', 'hq_manager', 'hq_essay_manager')
 def lms_student_detail(assignment_id):
     """학생 개별 진도 상세 (JSON API for modal)"""
-    branch_id = current_user.branch_id
-    sa = StudentPackageAssignment.query.filter_by(
-        id=assignment_id, branch_id=branch_id).first_or_404()
+    if current_user.is_hq:
+        sa = StudentPackageAssignment.query.filter_by(id=assignment_id).first_or_404()
+    else:
+        sa = StudentPackageAssignment.query.filter_by(
+            id=assignment_id, branch_id=current_user.branch_id).first_or_404()
 
     rows = []
     for pc in sa.package.curricula:
@@ -860,3 +877,68 @@ def lms_student_detail(assignment_id):
         'package_title': sa.package.title,
         'curricula': rows,
     })
+
+
+@branch_bp.route('/students/<student_id>/overview')
+@login_required
+@requires_role('branch_owner', 'branch_manager', 'teacher',
+                'super_admin', 'hq_manager', 'hq_essay_manager')
+def student_overview(student_id):
+    """2026-09-28: 학생 1명의 전체 학습 현황을 한 화면에서 본다.
+
+    지금까지 LMS 진도(StudentItemProgress)와 첨삭 점수(Essay/EssayResult)가
+    완전히 분리된 화면에만 있어서, 교사·지점·HQ 누구도 학생 한 명의 전체
+    그림을 한 화면에서 볼 수 없었다(review 2026-09-28 F번 항목).
+
+    확장 설계: lms_rows/essay_rows처럼 출처별로 섹션을 나눠 만들어둔다 -
+    나중에 aprolabs 답안 상세(교사용 인증 브릿지, 아직 미구현·보류)나
+    MOMOAI 평가가 연결되면, 여기에 같은 모양의 새 섹션만 추가하면 된다.
+    지금은 LMS·첨삭 두 소스만 채운다.
+    """
+    if current_user.is_hq:
+        student = User.query.filter_by(user_id=student_id, role='student').first_or_404()
+    else:
+        student = User.query.filter_by(
+            user_id=student_id, role='student', branch_id=current_user.branch_id
+        ).first_or_404()
+
+    # ── LMS 진도 섹션 ──
+    assignments = StudentPackageAssignment.query.filter_by(
+        student_id=student_id, is_active=True
+    ).all()
+    lms_rows = []
+    for sa in assignments:
+        total_items = sum(len(pc.curriculum.items) for pc in sa.package.curricula)
+        done = StudentItemProgress.query.filter_by(
+            student_id=student_id, assignment_id=sa.id, status='completed'
+        ).count()
+        last = StudentItemProgress.query.filter_by(
+            student_id=student_id, assignment_id=sa.id
+        ).filter(StudentItemProgress.completed_at.isnot(None)
+        ).order_by(StudentItemProgress.completed_at.desc()).first()
+        lms_rows.append({
+            'assignment_id': sa.id,
+            'package_title': sa.package.title,
+            'done': done,
+            'total': total_items,
+            'pct': round(done / total_items * 100) if total_items else 0,
+            'last_at': last.completed_at if last else None,
+        })
+
+    # ── 첨삭(essay) 섹션 ──
+    essays = Essay.query.filter_by(student_id=student_id).order_by(
+        Essay.created_at.desc()).all()
+    essay_rows = [{
+        'essay_id': e.essay_id,
+        'title': e.title,
+        'status_display': e.status_display,
+        'status_color': e.status_color,
+        'score': e.result.total_score if e.result else None,
+        'is_finalized': e.is_finalized,
+        'created_at': e.created_at,
+    } for e in essays]
+
+    return render_template('branch/student_overview.html',
+                           student=student,
+                           lms_rows=lms_rows,
+                           essay_rows=essay_rows)

@@ -92,7 +92,8 @@
                 {% for s in branch_stats %}
                 <tr class="hover:bg-gray-50">
                     <td class="px-4 py-3">
-                        <div class="font-medium text-gray-800">{{ s.branch.name }}</div>
+                        <a href="{{ url_for('branch.lms_dashboard', branch_id=s.branch.branch_id) }}"
+                           class="font-medium text-gray-800 hover:text-indigo-600">{{ s.branch.name }}</a>
                         <div class="text-xs text-gray-400">{{ s.branch.code }}</div>
                     </td>
                     <td class="px-3 py-3 text-center text-sm text-gray-600">{{ s.pkg_cnt }}</td>

@@ -9,18 +9,36 @@
     </div>
 </div>
 
+{% if all_branches is not none %}
+<!-- 2026-09-28: HQ 전용 - 지점 선택 (이 화면은 원래 지점 역할만 볼 수
+     있었어서, 지점 개념이 없음 - HQ는 직접 골라야 함) -->
+<div class="mb-4">
+    <label class="text-xs text-gray-500 mr-2">지점</label>
+    <select onchange="location.href='{{ url_for('branch.lms_dashboard') }}?branch_id=' + this.value"
+            class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm">
+        {% for b in all_branches %}
+        <option value="{{ b.branch_id }}" {% if b.branch_id == selected_branch_id %}selected{% endif %}>
+            {{ b.name }}
+        </option>
+        {% endfor %}
+    </select>
+</div>
+{% endif %}
+
 {% if not packages %}
 <div class="bg-white rounded-2xl border border-dashed border-gray-200 p-16 text-center">
     <div class="text-4xl mb-3">📦</div>
     <p class="text-gray-500 text-sm">배정된 학습 패키지가 없습니다.</p>
+    {% if all_branches is none %}
     <p class="text-gray-400 text-xs mt-1">본사에 패키지 배정을 요청해주세요.</p>
+    {% endif %}
 </div>
 {% else %}
 
 <!-- 패키지 탭 -->
 <div class="flex flex-wrap gap-2 mb-5">
 {% for pkg in packages %}
-<a href="{{ url_for('branch.lms_dashboard') }}?package_id={{ pkg.package_id }}"
+<a href="{{ url_for('branch.lms_dashboard') }}?package_id={{ pkg.package_id }}{% if selected_branch_id %}&branch_id={{ selected_branch_id }}{% endif %}"
    class="px-4 py-2 rounded-lg text-sm font-medium border transition
           {% if selected_pkg and selected_pkg.package_id == pkg.package_id %}
               bg-indigo-600 text-white border-indigo-600

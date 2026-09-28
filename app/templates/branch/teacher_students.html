@@ -79,6 +79,8 @@
                     {% endif %}
                 </td>
                 <td class="px-4 py-3 text-center">
+                    <a href="{{ url_for('branch.student_overview', student_id=s.user_id) }}"
+                       class="text-xs text-indigo-600 hover:underline mr-2">전체 현황</a>
                     <a href="{{ url_for('essays.manage') }}?q={{ s.name }}"
                        class="text-xs text-indigo-600 hover:underline">과제 보기</a>
                 </td>
