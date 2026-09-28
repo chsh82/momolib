@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import json
 
-from flask import abort, render_template, request
+from flask import abort, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.models.vocab_quiz import VocabQuizContent, VocabQuizContentLevel, VocabQuizPilotItem
@@ -95,10 +95,15 @@ def publish_review_save_verdict(content_id):
     rationale = request.form.get('rationale', '').strip()
     if verdict not in VERDICT_CHOICES:
         abort(400)
-    if not rationale:
-        abort(400, description='근거를 입력해야 합니다.')
     pr.save_review(content_id, verdict, rationale, current_user.user_id)
-    return publish_review_detail(content_id)
+
+    # 저장하면 같은 화면에 머무르지 않고 목록 순서상 다음 항목으로 자동
+    # 이동한다(40건을 순서대로 검토하는 작업 흐름 지원). 마지막 항목이면
+    # 목록으로.
+    next_id = pr.next_content_id(content_id)
+    if next_id:
+        return redirect(url_for('vocab_quiz.publish_review_detail', content_id=next_id))
+    return redirect(url_for('vocab_quiz.publish_review_index'))
 
 
 @vocab_quiz_bp.route('/publish-review/promote-dry-run')

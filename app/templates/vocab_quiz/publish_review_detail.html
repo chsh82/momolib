@@ -86,7 +86,7 @@
             <div class="mt-1 text-xs">⚠ 이 판정 이후 콘텐츠 또는 연결 문항이 수정되어, 현재 버전에는 더 이상 유효하지 않습니다. 다시 검토해 주세요.</div>
             {% endif %}
         </div>
-        <div class="text-sm text-gray-500 mb-4">근거: {{ latest.rationale }}</div>
+        <div class="text-sm text-gray-500 mb-4">근거: {{ latest.rationale if latest.rationale else '(입력 안 함)' }}</div>
         {% endif %}
 
         <form method="POST" action="{{ url_for('vocab_quiz.publish_review_save_verdict', content_id=content.content_id) }}">
@@ -98,7 +98,7 @@
                 </label>
                 {% endfor %}
             </div>
-            <textarea name="rationale" rows="3" required placeholder="판정 근거를 입력하세요(필수)"
+            <textarea name="rationale" rows="3" placeholder="판정 근거를 입력하세요(선택)"
                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-3"></textarea>
             <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 rounded-lg">
                 판정 저장
@@ -112,7 +112,7 @@
         {% for h in history %}
         <div class="px-4 py-2 text-xs text-gray-500">
             {{ h.reviewed_at.strftime('%Y-%m-%d %H:%M') }} · {{ verdict_labels[h.verdict] }} ·
-            {{ h.reviewer.name if h.reviewer else h.reviewer_user_id }} · {{ h.rationale }}
+            {{ h.reviewer.name if h.reviewer else h.reviewer_user_id }} · {{ h.rationale if h.rationale else '(근거 입력 안 함)' }}
         </div>
         {% endfor %}
     </div>

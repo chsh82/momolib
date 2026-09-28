@@ -15,6 +15,16 @@
      명시적으로 켰을 때만 정상 응답
   6. 비관리자(teacher)는 공개검토 화면에 들어갈 수 없음
 
+주의: `feat/vocab-quiz-close-rd-screens` 이후 `/vocab-quiz/*` 블루프린트
+등록 자체가 제거됐다(운영 R&D 화면 폐쇄, aprolabs로 일원화). 그래서
+이 파일의 HTTP 요청 검증(로그인/403/200 등)은 이 브랜치에서 실행하면
+전부 404로 실패한다 - 이는 회귀가 아니라 의도된 폐쇄 상태다. 순수
+로직 검증(판정 저장·해시·신선도·승격 dry-run 계산 함수를 직접 호출하는
+부분)은 블루프린트 등록과 무관하므로 여전히 그대로 통과한다. HTTP
+경로까지 다시 확인하려면 `app.register_blueprint(vocab_quiz_bp,
+url_prefix='/vocab-quiz')`를 이 스크립트 실행 프로세스 안에서만 임시로
+호출한 뒤 실행한다(운영 설정 파일은 건드리지 않음).
+
 실행:
     set DATABASE_URL=postgresql://postgres@localhost:55433/momolib_vocab_student_test
     set FLASK_ENV=development
@@ -196,9 +206,16 @@ def main() -> bool:
         check("온라인 QA".encode("utf-8") in r.data, "상세 화면에 온라인 QA 참고자료 표시")
 
         r = client.post(f"/vocab-quiz/publish-review/{cid}/verdict",
-                        data={"verdict": "HOLD", "rationale": "HTTP 경로로 저장한 판정"})
-        check(r.status_code == 200, f"판정 저장 POST 200(실제 {r.status_code})")
+                        data={"verdict": "HOLD", "rationale": "HTTP 경로로 저장한 판정"},
+                        follow_redirects=False)
+        check(r.status_code == 302, f"판정 저장 후 다음 항목/목록으로 리다이렉트(실제 {r.status_code})")
         check(pr.latest_review(cid).verdict == "HOLD", "HTTP로 저장한 판정이 실제로 반영됨")
+
+        # 근거 없이 저장해도(선택 항목) 정상 동작하는지
+        r_empty = client.post(f"/vocab-quiz/publish-review/{cid}/verdict",
+                              data={"verdict": "NEEDS_FIX"}, follow_redirects=False)
+        check(r_empty.status_code == 302, f"근거 없이 판정 저장도 정상(실제 {r_empty.status_code})")
+        check(pr.latest_review(cid).rationale == "", "근거 미입력 시 빈 문자열로 저장됨")
 
         content_after_http = VocabQuizContent.query.filter_by(content_id=cid).first()
         check(content_after_http.student_exposure is False and content_after_http.public_ready is False,
