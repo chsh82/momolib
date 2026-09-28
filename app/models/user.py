@@ -31,6 +31,12 @@ class User(UserMixin, db.Model):
     is_verified = db.Column(db.Boolean, default=False)  # 이메일 인증
     profile_image = db.Column(db.String(500), nullable=True)
 
+    # 2026-09-28: "회원 삭제"를 raw SQL DELETE(CASCADE로 첨삭·진도 기록까지
+    # 복구 불가능하게 사라짐)에서 소프트삭제+개인정보 익명화로 전환하며 추가.
+    # deleted_at이 있으면 삭제된 회원 - 목록 화면에서는 제외하되 연결된
+    # Essay/StudentItemProgress 등은 그대로 남아 있어 복구·감사가 가능하다.
+    deleted_at = db.Column(db.DateTime, nullable=True)
+
     last_login_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

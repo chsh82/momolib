@@ -102,7 +102,7 @@ def members():
     role_filter = request.args.get('role', '')
     search = request.args.get('q', '').strip()
 
-    query = User.query.filter_by(branch_id=branch_id)
+    query = User.query.filter_by(branch_id=branch_id).filter(User.deleted_at.is_(None))
     if role_filter == 'admin':
         query = query.filter(User.role.in_(['branch_owner', 'branch_manager']))
     elif role_filter:
@@ -115,11 +115,11 @@ def members():
     users = query.order_by(User.role_level, User.name).all()
 
     counts = {
-        'admin': User.query.filter(User.branch_id == branch_id,
+        'admin': User.query.filter(User.branch_id == branch_id, User.deleted_at.is_(None),
                                    User.role.in_(['branch_owner', 'branch_manager'])).count(),
-        'teacher': User.query.filter_by(branch_id=branch_id, role='teacher').count(),
-        'student': User.query.filter_by(branch_id=branch_id, role='student').count(),
-        'parent': User.query.filter_by(branch_id=branch_id, role='parent').count(),
+        'teacher': User.query.filter_by(branch_id=branch_id, role='teacher').filter(User.deleted_at.is_(None)).count(),
+        'student': User.query.filter_by(branch_id=branch_id, role='student').filter(User.deleted_at.is_(None)).count(),
+        'parent': User.query.filter_by(branch_id=branch_id, role='parent').filter(User.deleted_at.is_(None)).count(),
     }
 
     return render_template('branch/members.html',
@@ -297,17 +297,29 @@ def edit_member(user_id):
 @login_required
 @requires_role('branch_owner')
 def delete_member(user_id):
-    """회원 완전 삭제 (지점장 전용)"""
+    """회원 삭제 (지점장 전용)
+
+    2026-09-28: 예전엔 raw SQL DELETE로 CASCADE시켜서 첨삭·진도 기록까지
+    복구 불가능하게 사라졌다 - 소프트삭제+개인정보 익명화로 전환한다.
+    연결된 Essay/StudentItemProgress 등은 그대로 남아 다른 학생 통계나
+    감사에 영향을 주지 않고, 계정 자체는 목록에서 빠지고 로그인도 막힌다.
+    """
     user = User.query.filter_by(user_id=user_id, branch_id=current_user.branch_id).first_or_404()
     if user.role == 'branch_owner':
         flash('지점장 계정은 삭제할 수 없습니다.', 'error')
         return redirect(url_for('branch.member_detail', user_id=user_id))
+    if user.deleted_at is not None:
+        flash('이미 삭제된 계정입니다.', 'warning')
+        return redirect(url_for('branch.members'))
+
     name = user.name
-    # ORM 관계 처리를 우회하고 DB 레벨 CASCADE에 위임
-    from sqlalchemy import text
-    db.session.execute(text('DELETE FROM users WHERE user_id = :uid'), {'uid': user_id})
+    user.deleted_at = datetime.utcnow()
+    user.is_active = False
+    user.name = '삭제된 회원'
+    user.email = f'deleted-{user.user_id}@deleted.local'
+    user.phone = None
     db.session.commit()
-    flash(f'{name} 계정이 삭제되었습니다.', 'success')
+    flash(f'{name} 계정을 삭제했습니다.', 'success')
     return redirect(url_for('branch.members'))
 
 
