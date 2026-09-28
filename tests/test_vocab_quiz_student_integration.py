@@ -201,7 +201,7 @@ def main() -> bool:
 
     boundary_ever_appeared = False
     for _ in range(20):
-        r = client.post("/practice/vocab-quiz/start")
+        r = client.post("/practice/vocab-quiz/start", json={"vocab_level": 4})
         if r.status_code != 200:
             continue
         sid = r.get_json()["session_id"]
@@ -211,7 +211,7 @@ def main() -> bool:
     check(not boundary_ever_appeared,
           "REVIEW_BOUNDARY 문항이 20회 세션 생성 중 단 한 번도 등장하지 않음")
 
-    r = client.post("/practice/vocab-quiz/start")
+    r = client.post("/practice/vocab-quiz/start", json={"vocab_level": 4})
     check(r.status_code == 200, f"세션 시작 200(실제 {r.status_code})")
     session_id = r.get_json()["session_id"]
 

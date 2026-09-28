@@ -28,6 +28,7 @@ class VocabQuizStudentSession(db.Model):
     status = db.Column(db.String(20), nullable=False, default='in_progress')
     item_order_json = db.Column(db.Text, nullable=False)  # 세션 시작 시점에 뽑은 item_id 순서 고정 스냅샷
     gate_version = db.Column(db.String(40), nullable=False)  # 이 세션이 통과한 게이트 로직 버전(감사용)
+    vocab_level = db.Column(db.Integer, nullable=True, index=True)  # 학생이 명시적으로 고른 레벨(4/5/6) - 레벨 선택 도입 이전 세션은 NULL
     started_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime, nullable=True)
 

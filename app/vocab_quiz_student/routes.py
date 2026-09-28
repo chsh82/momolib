@@ -21,7 +21,8 @@ from flask_login import current_user, login_required
 from app.models import db
 from app.models.vocab_quiz import VocabQuizPilotItem
 from app.models.vocab_quiz_student import VocabQuizStudentAttempt, VocabQuizStudentSession
-from app.vocab_quiz.eligibility import GATE_VERSION, eligible_pilot_items
+from app.vocab_quiz.eligibility import (GATE_VERSION, VOCAB_LEVEL_LABELS, VOCAB_LEVELS,
+                                         eligible_pilot_items, eligible_pilot_items_by_level)
 from app.vocab_quiz_student import vocab_quiz_student_bp
 
 SESSION_ITEM_COUNT = 10
@@ -36,7 +37,7 @@ def _student_only() -> bool:
 def index():
     if not _student_only():
         abort(403)
-    pool = eligible_pilot_items()
+    pool_counts_by_level = {lv: len(eligible_pilot_items_by_level(lv)) for lv in VOCAB_LEVELS}
     my_sessions = (
         VocabQuizStudentSession.query
         .filter_by(user_id=current_user.user_id)
@@ -44,7 +45,9 @@ def index():
         .limit(10).all()
     )
     return render_template('vocab_quiz_student/index.html',
-                            pool_count=len(pool),
+                            pool_count=sum(pool_counts_by_level.values()),
+                            pool_counts_by_level=pool_counts_by_level,
+                            vocab_level_labels=VOCAB_LEVEL_LABELS,
                             session_item_count=SESSION_ITEM_COUNT,
                             my_sessions=my_sessions)
 
@@ -52,12 +55,32 @@ def index():
 @vocab_quiz_student_bp.route('/start', methods=['POST'])
 @login_required
 def start():
+    """vocab_level(4/5/6)을 명시적으로 받는다 - 요청에 실려 오는 값은
+    화이트리스트(VOCAB_LEVELS)로만 검증하고, 실제 문항 선택은 항상
+    eligible_pilot_items_by_level()을 거친다. 학생이 vocab_level 값을
+    조작해도(범위 밖 숫자, 문자열, 생략 등) 게이트를 통과하지 못한
+    콘텐츠나 다른 레벨의 문항은 절대 나올 수 없다."""
     if not _student_only():
         abort(403)
-    pool = eligible_pilot_items()
+
+    body = request.get_json(silent=True) or {}
+    raw_level = body.get('vocab_level', request.form.get('vocab_level'))
+    if raw_level is None:
+        return jsonify({'error': 'VOCAB_LEVEL_REQUIRED',
+                         'detail': 'vocab_level(4/5/6)을 지정해야 합니다.'}), 400
+    try:
+        vocab_level = int(raw_level)
+    except (TypeError, ValueError):
+        return jsonify({'error': 'INVALID_VOCAB_LEVEL',
+                         'detail': f'vocab_level은 {list(VOCAB_LEVELS)} 중 하나여야 합니다.'}), 400
+    if vocab_level not in VOCAB_LEVELS:
+        return jsonify({'error': 'INVALID_VOCAB_LEVEL',
+                         'detail': f'vocab_level은 {list(VOCAB_LEVELS)} 중 하나여야 합니다.'}), 400
+
+    pool = eligible_pilot_items_by_level(vocab_level)
     if not pool:
         return jsonify({'error': 'NO_ELIGIBLE_ITEMS',
-                         'detail': '아직 공개된 문항이 없습니다.'}), 409
+                         'detail': f'{VOCAB_LEVEL_LABELS[vocab_level]}(L{vocab_level})에 아직 공개된 문항이 없습니다.'}), 409
 
     n = min(SESSION_ITEM_COUNT, len(pool))
     chosen = random.sample(pool, n)
@@ -68,11 +91,12 @@ def start():
         item_count=len(order),
         item_order_json=json.dumps(order),
         gate_version=GATE_VERSION,
+        vocab_level=vocab_level,
         status='in_progress',
     )
     db.session.add(session)
     db.session.commit()
-    return jsonify({'session_id': session.id, 'item_count': len(order)})
+    return jsonify({'session_id': session.id, 'item_count': len(order), 'vocab_level': vocab_level})
 
 
 def _get_session_or_404(session_id: str) -> VocabQuizStudentSession:

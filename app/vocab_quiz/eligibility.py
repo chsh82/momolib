@@ -124,3 +124,66 @@ def eligible_pilot_items(pilot_key: str | None = None) -> list[VocabQuizPilotIte
 
 def eligible_pilot_item_count(pilot_key: str | None = None) -> int:
     return len(eligible_pilot_items(pilot_key=pilot_key))
+
+
+# 학생이 명시적으로 고를 수 있는 어휘 레벨과 화면 표시 라벨. 이 셋 밖의
+# 값은 전부 잘못된 요청으로 거부한다(안전 기본값 - 화이트리스트 방식).
+VOCAB_LEVELS = (4, 5, 6)
+VOCAB_LEVEL_LABELS = {4: '중3', 5: '고1', 6: '고2~3'}
+
+
+def eligible_content_ids_by_level(vocab_level: int) -> set[str]:
+    """단일 게이트(eligible_content_ids)를 통과한 콘텐츠 중, 연결된 레벨이
+    정확히 vocab_level인 것만 남긴다. 게이트를 우회하지 않고 그 결과
+    집합을 한 번 더 좁히기만 한다."""
+    base = eligible_content_ids()
+    if not base:
+        return set()
+    ids_at_level = {
+        cid for (cid,) in db.session.query(VocabQuizContentLevel.content_id)
+        .filter(VocabQuizContentLevel.vocab_level == vocab_level)
+        .filter(VocabQuizContentLevel.content_id.in_(base))
+        .distinct().all()
+    }
+    return ids_at_level
+
+
+def item_is_eligible_at_level(item: VocabQuizPilotItem, vocab_level: int,
+                               eligible_cids_at_level: set[str] | None = None) -> bool:
+    """item_is_eligible과 동일한 '전부 통과해야 노출' 원칙에, 참조하는
+    콘텐츠가 전부 해당 레벨이어야 한다는 조건을 더한다. 레벨 파라미터를
+    조작해도 게이트를 통과하지 못한 콘텐츠나 다른 레벨의 콘텐츠는 절대
+    나올 수 없다(둘 다 만족해야 하는 교집합)."""
+    if not item.is_active:
+        return False
+    if eligible_cids_at_level is None:
+        eligible_cids_at_level = eligible_content_ids_by_level(vocab_level)
+
+    referenced_cids = []
+    if item.source_content_id:
+        referenced_cids.append(item.source_content_id)
+    if item.source_content_ids_json:
+        try:
+            extra = json.loads(item.source_content_ids_json)
+        except (TypeError, ValueError):
+            return False
+        referenced_cids.extend(extra)
+
+    if not referenced_cids:
+        return False
+
+    return all(cid in eligible_cids_at_level for cid in referenced_cids)
+
+
+def eligible_pilot_items_by_level(vocab_level: int) -> list[VocabQuizPilotItem]:
+    """vocab_level(4/5/6)에서만 출제 가능한, 게이트를 통과한 문항 목록.
+    vocab_level이 VOCAB_LEVELS 밖이면 빈 리스트(호출부에서 먼저
+    400으로 거부하는 것이 원칙이지만, 이 함수 자체도 안전하게 빈 집합을
+    돌려준다)."""
+    if vocab_level not in VOCAB_LEVELS:
+        return []
+    cids = eligible_content_ids_by_level(vocab_level)
+    if not cids:
+        return []
+    q = VocabQuizPilotItem.query.filter_by(is_active=True)
+    return [it for it in q.all() if item_is_eligible_at_level(it, vocab_level, cids)]

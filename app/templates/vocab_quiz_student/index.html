@@ -13,23 +13,41 @@
     <div class="text-sm text-gray-400 mt-1">곧 새로운 문제가 열릴 예정이에요!</div>
 </div>
 {% else %}
-<div class="s-card p-5 mb-5 text-center">
-    <div class="text-sm text-gray-400">지금 풀 수 있는 문항</div>
-    <div class="text-3xl font-black text-indigo-600 mt-1">{{ pool_count }}개</div>
-    <div class="text-xs text-gray-400 mt-2">한 번에 {{ session_item_count }}문제씩 무작위로 나와요.</div>
-</div>
-<form method="POST" action="{{ url_for('vocab_quiz_student.start') }}" id="start-form">
-    <button type="submit" class="s-btn-primary w-full text-xl py-5">
-        🚀 연습 시작하기
+<div class="text-sm font-bold text-gray-500 mb-2">레벨을 선택하세요</div>
+<div class="space-y-2 mb-5" id="level-select">
+    {% for lv in [4, 5, 6] %}
+    <button type="button" class="level-option s-card p-4 w-full flex items-center justify-between text-left
+                {% if pool_counts_by_level.get(lv, 0) == 0 %}opacity-40{% endif %}"
+            data-level="{{ lv }}" {% if pool_counts_by_level.get(lv, 0) == 0 %}disabled{% endif %}>
+        <span class="font-bold text-gray-700">L{{ lv }} · {{ vocab_level_labels[lv] }}</span>
+        <span class="text-xs text-gray-400">{{ pool_counts_by_level.get(lv, 0) }}문항</span>
     </button>
-</form>
+    {% endfor %}
+</div>
+<button type="button" id="start-btn" class="s-btn-primary w-full text-xl py-5" disabled>
+    🚀 연습 시작하기
+</button>
 <div id="start-error" class="hidden mt-3 text-sm text-red-500 text-center"></div>
 <script>
-document.getElementById('start-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
+let selectedLevel = null;
+document.querySelectorAll('.level-option').forEach((btn) => {
+    btn.addEventListener('click', () => {
+        if (btn.disabled) return;
+        selectedLevel = parseInt(btn.dataset.level, 10);
+        document.querySelectorAll('.level-option').forEach((b) => b.classList.remove('ring-2', 'ring-indigo-500'));
+        btn.classList.add('ring-2', 'ring-indigo-500');
+        document.getElementById('start-btn').disabled = false;
+    });
+});
+document.getElementById('start-btn').addEventListener('click', async () => {
     const errEl = document.getElementById('start-error');
     errEl.classList.add('hidden');
-    const r = await fetch("{{ url_for('vocab_quiz_student.start') }}", {method: 'POST'});
+    if (selectedLevel === null) return;
+    const r = await fetch("{{ url_for('vocab_quiz_student.start') }}", {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({vocab_level: selectedLevel}),
+    });
     const data = await r.json();
     if (!r.ok) {
         errEl.textContent = data.detail || '문제를 시작할 수 없습니다.';
