@@ -15,7 +15,7 @@ import json
 import random
 from datetime import datetime
 
-from flask import abort, jsonify, render_template, request
+from flask import abort, current_app, jsonify, render_template, request
 from flask_login import current_user, login_required
 
 from app.models import db
@@ -31,6 +31,15 @@ SESSION_ITEM_COUNT = 10
 
 def _student_only() -> bool:
     return current_user.role == 'student'
+
+
+def _log_event(event: str, **fields) -> None:
+    """운영 중 집계할 최소 항목(시작/완료/오류 - 정답은 절대 포함하지
+    않음)만 표준 형식으로 남긴다. 문항별 정오답·item_id는 이미
+    vocab_quiz_student_attempts 테이블에 전부 기록되므로 로그에
+    중복해서 남기지 않는다 - 집계는 그 테이블을 직접 조회한다."""
+    parts = ' '.join(f'{k}={v}' for k, v in fields.items())
+    current_app.logger.info(f'[vocab_quiz_student] event={event} {parts}')
 
 
 @vocab_quiz_student_bp.route('/')
@@ -68,23 +77,28 @@ def start():
     body = request.get_json(silent=True) or {}
     raw_level = body.get('vocab_level', request.form.get('vocab_level'))
     if raw_level is None:
+        _log_event('start_error', user_id=current_user.user_id, error='VOCAB_LEVEL_REQUIRED')
         return jsonify({'error': 'VOCAB_LEVEL_REQUIRED',
                          'detail': 'vocab_level(4/5/6)을 지정해야 합니다.'}), 400
     try:
         vocab_level = int(raw_level)
     except (TypeError, ValueError):
+        _log_event('start_error', user_id=current_user.user_id, error='INVALID_VOCAB_LEVEL', raw_level=raw_level)
         return jsonify({'error': 'INVALID_VOCAB_LEVEL',
                          'detail': f'vocab_level은 {list(VOCAB_LEVELS)} 중 하나여야 합니다.'}), 400
     if vocab_level not in VOCAB_LEVELS:
+        _log_event('start_error', user_id=current_user.user_id, error='INVALID_VOCAB_LEVEL', vocab_level=vocab_level)
         return jsonify({'error': 'INVALID_VOCAB_LEVEL',
                          'detail': f'vocab_level은 {list(VOCAB_LEVELS)} 중 하나여야 합니다.'}), 400
 
     if vocab_level not in student_allowed_levels(current_user.user_id):
+        _log_event('start_error', user_id=current_user.user_id, error='LEVEL_NOT_ALLOWED', vocab_level=vocab_level)
         return jsonify({'error': 'LEVEL_NOT_ALLOWED',
                          'detail': '이 레벨은 파일럿 대상으로 허용되지 않았습니다.'}), 403
 
     pool = eligible_pilot_items_by_level(vocab_level)
     if not pool:
+        _log_event('start_error', user_id=current_user.user_id, error='NO_ELIGIBLE_ITEMS', vocab_level=vocab_level)
         return jsonify({'error': 'NO_ELIGIBLE_ITEMS',
                          'detail': f'{VOCAB_LEVEL_LABELS[vocab_level]}(L{vocab_level})에 아직 공개된 문항이 없습니다.'}), 409
 
@@ -102,6 +116,8 @@ def start():
     )
     db.session.add(session)
     db.session.commit()
+    _log_event('session_start', user_id=current_user.user_id, session_id=session.id,
+               vocab_level=vocab_level, item_count=len(order))
     return jsonify({'session_id': session.id, 'item_count': len(order), 'vocab_level': vocab_level})
 
 
@@ -204,6 +220,9 @@ def complete(session_id):
             session_id=session.id, is_correct=True
         ).count()
         db.session.commit()
+        _log_event('session_complete', user_id=current_user.user_id, session_id=session.id,
+                   vocab_level=session.vocab_level, correct_count=session.correct_count,
+                   item_count=session.item_count)
     return jsonify({'session_id': session.id, 'status': session.status,
                     'correct_count': session.correct_count, 'item_count': session.item_count})
 

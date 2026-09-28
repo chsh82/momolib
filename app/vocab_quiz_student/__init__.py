@@ -28,6 +28,9 @@ def _require_pilot_allowlist():
         return
     from app.vocab_quiz.eligibility import student_is_pilot_allowed
     if not student_is_pilot_allowed(current_user.user_id):
+        current_app.logger.info(
+            f'[vocab_quiz_student] event=access_denied user_id={current_user.user_id} reason=NOT_IN_ALLOWLIST'
+        )
         abort(403)
 
 

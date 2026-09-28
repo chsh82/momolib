@@ -336,6 +336,13 @@
         <span class="tab-icon">🎨</span>
         <span>아바타</span>
     </a>
+    {% if vocab_quiz_pilot_allowed %}
+    <a href="{{ url_for('vocab_quiz_student.index') }}"
+       class="tab-item {% if cur.startswith('vocab_quiz_student.') %}active{% endif %}">
+        <span class="tab-icon">📖</span>
+        <span>어휘</span>
+    </a>
+    {% endif %}
 </nav>
 
 <script>

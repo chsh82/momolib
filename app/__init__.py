@@ -123,4 +123,17 @@ def create_app(config_name='default'):
             value = value.replace(tzinfo=timezone.utc).astimezone(kst)
         return value.strftime(fmt)
 
+    @app.context_processor
+    def inject_vocab_quiz_pilot_allowed():
+        """학생 하단 탭 메뉴에 어휘 퀴즈 파일럿 항목을 보일지 결정한다.
+        feature flag가 꺼져 있거나(기본) allowlist에 없는 학생에게는
+        항상 False - URL을 직접 입력해도 라우트 쪽 게이트가 별도로
+        막지만, 메뉴 자체도 허용된 학생에게만 보이게 한다."""
+        if not app.config.get('VOCAB_QUIZ_STUDENT_ENABLED', False):
+            return {'vocab_quiz_pilot_allowed': False}
+        if not current_user.is_authenticated or current_user.role != 'student':
+            return {'vocab_quiz_pilot_allowed': False}
+        from app.vocab_quiz.eligibility import student_is_pilot_allowed
+        return {'vocab_quiz_pilot_allowed': student_is_pilot_allowed(current_user.user_id)}
+
     return app
