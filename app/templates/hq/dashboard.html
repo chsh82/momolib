@@ -8,6 +8,10 @@
         <p class="text-gray-500 text-sm mt-1">{{ now.strftime('%Y년 %m월') }} 기준</p>
     </div>
     <div class="flex gap-2">
+        <a href="{{ url_for('lms.hq_dashboard') }}"
+           class="text-sm font-semibold px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600">
+            📊 LMS 학습 현황 보기
+        </a>
         <a href="{{ url_for('hq.new_branch') }}"
            class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg">+ 지점 추가</a>
     </div>

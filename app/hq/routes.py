@@ -84,8 +84,14 @@ def dashboard():
 @login_required
 @requires_role('super_admin', 'hq_manager')
 def branches():
-    branches = Branch.query.order_by(Branch.code).all()
-    return render_template('hq/branches.html', branches=branches)
+    q = request.args.get('q', '').strip()
+    query = Branch.query
+    if q:
+        query = query.filter(
+            (Branch.name.ilike(f'%{q}%')) | (Branch.code.ilike(f'%{q}%'))
+        )
+    branches = query.order_by(Branch.code).all()
+    return render_template('hq/branches.html', branches=branches, q=q)
 
 
 @hq_bp.route('/branches/new', methods=['GET', 'POST'])
