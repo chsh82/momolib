@@ -8,6 +8,19 @@
        class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 rounded-lg">+ 회원 추가</a>
 </div>
 
+<!-- 2026-09-28: 학생 여러 명을 체크해 패키지 하나를 한 번에 배정 -
+     "반 전체 배정" 같은 매주 반복 작업 시간을 줄이기 위함 -->
+<div id="bulk-assign-bar" class="hidden mb-4 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 flex flex-wrap items-center gap-3">
+    <span class="text-sm font-medium text-indigo-700"><span id="bulk-selected-count">0</span>명 선택됨</span>
+    <select id="bulk-package-select" class="flex-1 min-w-[200px] border border-indigo-200 rounded-lg px-3 py-1.5 text-sm">
+        <option value="">배정할 패키지 선택...</option>
+    </select>
+    <button onclick="submitBulkAssign()" id="bulk-assign-btn" disabled
+            class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-1.5 rounded-lg">
+        선택 학생에게 배정
+    </button>
+</div>
+
 <!-- 역할 탭 -->
 <div class="flex gap-2 mb-5">
     <a href="{{ url_for('branch.members') }}"
@@ -53,6 +66,9 @@
     <table class="w-full text-sm">
         <thead class="bg-gray-50 border-b border-gray-100">
             <tr class="text-left text-gray-500">
+                <th class="px-3 py-3 font-medium">
+                    <input type="checkbox" id="bulk-select-all" onchange="toggleAllStudents(this.checked)" class="accent-indigo-600">
+                </th>
                 <th class="px-6 py-3 font-medium">이름</th>
                 <th class="px-6 py-3 font-medium">이메일</th>
                 <th class="px-6 py-3 font-medium">역할</th>
@@ -65,6 +81,11 @@
         <tbody class="divide-y divide-gray-100">
             {% for user in users %}
             <tr class="hover:bg-gray-50 {% if not user.is_active %}opacity-50{% endif %}">
+                <td class="px-3 py-4">
+                    {% if user.role == 'student' %}
+                    <input type="checkbox" class="student-select-cb accent-indigo-600" value="{{ user.user_id }}" onchange="updateBulkAssignBar()">
+                    {% endif %}
+                </td>
                 <td class="px-6 py-4 font-medium text-gray-800">{{ user.name }}</td>
                 <td class="px-6 py-4 text-gray-500">{{ user.email }}</td>
                 <td class="px-6 py-4">
@@ -98,7 +119,7 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="7" class="px-6 py-10 text-center text-gray-400">
+                <td colspan="8" class="px-6 py-10 text-center text-gray-400">
                     {% if search %}검색 결과가 없습니다.{% else %}등록된 회원이 없습니다.{% endif %}
                 </td>
             </tr>
@@ -106,4 +127,71 @@
         </tbody>
     </table>
 </div>
+
+<!-- 숨김 폼 (학생 일괄 패키지 배정용) -->
+<form id="bulk-assign-form" method="POST"
+      action="{{ url_for('lms.student_package_bulk_assign') }}">
+    <div id="bulk-assign-ids-container"></div>
+    <input type="hidden" name="package_id" id="bulk-assign-package-id">
+</form>
+
+<script>
+let bulkPackagesLoaded = false;
+
+function loadBulkPackages() {
+    if (bulkPackagesLoaded) return;
+    bulkPackagesLoaded = true;
+    fetch('/lms/branch-packages')
+        .then(r => r.json())
+        .then(items => {
+            const select = document.getElementById('bulk-package-select');
+            items.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = `${p.title} (${p.sub})`;
+                select.appendChild(opt);
+            });
+        });
+}
+
+function toggleAllStudents(checked) {
+    document.querySelectorAll('.student-select-cb').forEach(cb => cb.checked = checked);
+    updateBulkAssignBar();
+}
+
+function updateBulkAssignBar() {
+    const checked = document.querySelectorAll('.student-select-cb:checked');
+    const bar = document.getElementById('bulk-assign-bar');
+    bar.classList.toggle('hidden', checked.length === 0);
+    document.getElementById('bulk-selected-count').textContent = checked.length;
+    if (checked.length > 0) loadBulkPackages();
+    updateBulkAssignBtn();
+}
+
+document.getElementById('bulk-package-select').addEventListener('change', updateBulkAssignBtn);
+
+function updateBulkAssignBtn() {
+    const checked = document.querySelectorAll('.student-select-cb:checked').length;
+    const pkg = document.getElementById('bulk-package-select').value;
+    document.getElementById('bulk-assign-btn').disabled = !(checked > 0 && pkg);
+}
+
+function submitBulkAssign() {
+    const checked = [...document.querySelectorAll('.student-select-cb:checked')];
+    const pkg = document.getElementById('bulk-package-select').value;
+    if (!checked.length || !pkg) return;
+    if (!confirm(`학생 ${checked.length}명에게 이 패키지를 배정할까요?`)) return;
+    const container = document.getElementById('bulk-assign-ids-container');
+    container.innerHTML = '';
+    checked.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'student_ids';
+        input.value = cb.value;
+        container.appendChild(input);
+    });
+    document.getElementById('bulk-assign-package-id').value = pkg;
+    document.getElementById('bulk-assign-form').submit();
+}
+</script>
 {% endblock %}

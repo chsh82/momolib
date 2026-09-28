@@ -56,6 +56,10 @@
             <td class="px-3 py-3 text-center">
                 <a href="{{ url_for('lms.package_detail', package_id=p.package_id) }}"
                    class="text-xs text-indigo-600 hover:underline mr-2">편집</a>
+                <form method="POST" action="{{ url_for('lms.package_clone', package_id=p.package_id) }}"
+                      class="inline">
+                    <button class="text-xs text-gray-500 hover:underline mr-2">복제</button>
+                </form>
                 <form method="POST" action="{{ url_for('lms.package_delete', package_id=p.package_id) }}"
                       class="inline" onsubmit="return confirm('삭제할까요?')">
                     <button class="text-xs text-red-500 hover:underline">삭제</button>

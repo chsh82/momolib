@@ -178,6 +178,36 @@ def curriculum_delete(curriculum_id):
     return redirect(url_for('lms.curriculum_list'))
 
 
+@lms_bp.route('/curricula/<curriculum_id>/clone', methods=['POST'])
+@login_required
+def curriculum_clone(curriculum_id):
+    """2026-09-28: 매주 비슷한 구조의 커리큘럼을 매번 빈 화면에서 새로
+    만드는 게 반복 작업 시간을 많이 잡아먹어서 - 콘텐츠 아이템까지 통째로
+    복사한 새 커리큘럼을 만든다(원본은 그대로 둠)."""
+    if not _hq_only(): abort(403)
+    src = Curriculum.query.filter_by(curriculum_id=curriculum_id, is_active=True).first_or_404()
+
+    clone = Curriculum(
+        title=f'{src.title} (복사본)',
+        description=src.description,
+        created_by=current_user.user_id,
+    )
+    db.session.add(clone)
+    db.session.flush()
+
+    for item in src.items:
+        db.session.add(CurriculumItem(
+            curriculum_id=clone.curriculum_id,
+            order_num=item.order_num,
+            content_type=item.content_type,
+            content_id=item.content_id,
+            option_group=item.option_group,
+        ))
+    db.session.commit()
+    flash(f'"{src.title}"을(를) 복제했습니다.', 'success')
+    return redirect(url_for('lms.curriculum_detail', curriculum_id=clone.curriculum_id))
+
+
 # ── 아이템 추가/삭제/이동 ──────────────────────────
 
 @lms_bp.route('/curricula/<curriculum_id>/items/add', methods=['POST'])
@@ -364,6 +394,36 @@ def package_delete(package_id):
     return redirect(url_for('lms.package_list'))
 
 
+@lms_bp.route('/packages/<package_id>/clone', methods=['POST'])
+@login_required
+def package_clone(package_id):
+    """2026-09-28: 커리큘럼 구성만 복사 - 지점 배정은 일부러 복사하지
+    않는다(어느 지점에 내려줄지는 매번 새로 판단해야 하는 배포 결정이라,
+    구조 복제와 섞으면 실수로 잘못된 지점에 배정될 위험이 있음)."""
+    if not _hq_only(): abort(403)
+    src = Package.query.filter_by(package_id=package_id, is_active=True).first_or_404()
+
+    clone = Package(
+        title=f'{src.title} (복사본)',
+        description=src.description,
+        is_ordered=src.is_ordered,
+        created_by=current_user.user_id,
+    )
+    db.session.add(clone)
+    db.session.flush()
+
+    for pc in src.curricula:
+        db.session.add(PackageCurriculum(
+            package_id=clone.package_id,
+            curriculum_id=pc.curriculum_id,
+            curriculum_version=pc.curriculum_version,
+            order_num=pc.order_num,
+        ))
+    db.session.commit()
+    flash(f'"{src.title}"을(를) 복제했습니다. 지점 배정은 새로 해주세요.', 'success')
+    return redirect(url_for('lms.package_detail', package_id=clone.package_id))
+
+
 # ── 패키지 커리큘럼 추가/삭제/이동 ──────────────────
 
 @lms_bp.route('/packages/<package_id>/curricula/add', methods=['POST'])
@@ -371,20 +431,40 @@ def package_delete(package_id):
 def package_curriculum_add(package_id):
     if not _hq_only(): abort(403)
     p = Package.query.filter_by(package_id=package_id, is_active=True).first_or_404()
-    curriculum_id = request.form.get('curriculum_id')
-    c = Curriculum.query.filter_by(curriculum_id=curriculum_id, is_active=True).first_or_404()
+    # 2026-09-28: 예전엔 curriculum_id 하나만 받았음 - getlist로 바꿔서
+    # 여러 커리큘럼을 한 번에 추가(체크박스 다중선택). 단일값으로 와도
+    # getlist가 [값] 하나짜리 리스트를 주므로 그대로 동작한다.
+    curriculum_ids = request.form.getlist('curriculum_ids') or \
+        ([request.form['curriculum_id']] if request.form.get('curriculum_id') else [])
+    if not curriculum_ids:
+        flash('커리큘럼을 하나 이상 선택해주세요.', 'error')
+        return redirect(url_for('lms.package_detail', package_id=package_id))
 
+    already_in = {pc.curriculum_id for pc in p.curricula}
     max_order = max((pc.order_num for pc in p.curricula), default=-1)
-    pc = PackageCurriculum(
-        package_id=package_id,
-        curriculum_id=curriculum_id,
-        curriculum_version=c.version,
-        order_num=max_order + 1,
-    )
-    db.session.add(pc)
-    p.version   += 1
-    p.updated_at = datetime.utcnow()
-    db.session.commit()
+    added = 0
+    for idx, curriculum_id in enumerate(curriculum_ids):
+        if curriculum_id in already_in:
+            continue
+        c = Curriculum.query.filter_by(curriculum_id=curriculum_id, is_active=True).first()
+        if c is None:
+            continue
+        db.session.add(PackageCurriculum(
+            package_id=package_id,
+            curriculum_id=curriculum_id,
+            curriculum_version=c.version,
+            order_num=max_order + 1 + added,
+        ))
+        already_in.add(curriculum_id)
+        added += 1
+
+    if added:
+        p.version   += 1
+        p.updated_at = datetime.utcnow()
+        db.session.commit()
+        flash(f'{added}개 커리큘럼을 추가했습니다.', 'success')
+    else:
+        flash('이미 포함되어 있거나 유효하지 않은 커리큘럼입니다.', 'warning')
     return redirect(url_for('lms.package_detail', package_id=package_id))
 
 
@@ -434,15 +514,12 @@ def package_curriculum_move(package_id, pc_id):
 def package_branch_add(package_id):
     if not _hq_only(): abort(403)
     p = Package.query.filter_by(package_id=package_id, is_active=True).first_or_404()
-    branch_id = request.form.get('branch_id')
-    if not branch_id:
-        flash('지점을 선택해주세요.', 'error')
-        return redirect(url_for('lms.package_detail', package_id=package_id))
-
-    exists = BranchPackageAssignment.query.filter_by(
-        branch_id=branch_id, package_id=package_id, is_active=True).first()
-    if exists:
-        flash('이미 배정된 지점입니다.', 'warning')
+    # 2026-09-28: branch_id 단일값 → branch_ids 다중선택(체크박스)으로 확장.
+    # 예전 단일 select 폼이 남아있어도 getlist('branch_id')가 [값] 하나짜리
+    # 리스트를 주므로 호환된다.
+    branch_ids = request.form.getlist('branch_ids') or request.form.getlist('branch_id')
+    if not branch_ids:
+        flash('지점을 하나 이상 선택해주세요.', 'error')
         return redirect(url_for('lms.package_detail', package_id=package_id))
 
     expires_at = request.form.get('expires_at') or None
@@ -450,15 +527,25 @@ def package_branch_add(package_id):
         from datetime import date
         expires_at = date.fromisoformat(expires_at)
 
-    assignment = BranchPackageAssignment(
-        branch_id=branch_id,
-        package_id=package_id,
-        assigned_by=current_user.user_id,
-        expires_at=expires_at,
-    )
-    db.session.add(assignment)
-    db.session.commit()
-    flash('지점에 패키지를 배정했습니다.', 'success')
+    already = {a.branch_id for a in p.branch_assignments if a.is_active}
+    added = 0
+    for branch_id in branch_ids:
+        if branch_id in already:
+            continue
+        db.session.add(BranchPackageAssignment(
+            branch_id=branch_id,
+            package_id=package_id,
+            assigned_by=current_user.user_id,
+            expires_at=expires_at,
+        ))
+        already.add(branch_id)
+        added += 1
+
+    if added:
+        db.session.commit()
+        flash(f'{added}개 지점에 패키지를 배정했습니다.', 'success')
+    else:
+        flash('이미 배정된 지점들입니다.', 'warning')
     return redirect(url_for('lms.package_detail', package_id=package_id))
 
 
@@ -550,6 +637,65 @@ def student_package_assign(student_id):
     db.session.commit()
     flash('패키지를 배정했습니다.', 'success')
     return redirect(url_for('branch.member_detail', user_id=student_id))
+
+
+@lms_bp.route('/students/packages/bulk-assign', methods=['POST'])
+@login_required
+def student_package_bulk_assign():
+    """2026-09-28: 지점 회원 목록에서 학생 여러 명을 체크해 패키지 하나를
+    한 번에 배정 - 반 전체 배정처럼 매주 반복되는 작업 시간을 줄이기 위함.
+    학생별 로직은 student_package_assign()과 동일(지점 소속·배정권한·
+    중복배정 확인)하되 여러 명을 한 트랜잭션에서 처리한다."""
+    if not _branch_staff_only(): abort(403)
+    branch_id = current_user.branch_id
+
+    student_ids = request.form.getlist('student_ids')
+    package_id = request.form.get('package_id')
+    if not student_ids or not package_id:
+        flash('학생과 패키지를 모두 선택해주세요.', 'error')
+        return redirect(url_for('branch.members'))
+
+    branch_assignment = BranchPackageAssignment.query.filter_by(
+        branch_id=branch_id, package_id=package_id, is_active=True).first()
+    if not branch_assignment:
+        flash('해당 패키지를 사용할 권한이 없습니다.', 'error')
+        return redirect(url_for('branch.members'))
+
+    from datetime import date
+    start_date = request.form.get('start_date') or None
+    end_date   = request.form.get('end_date') or None
+    if start_date:
+        start_date = date.fromisoformat(start_date)
+    if end_date:
+        end_date = date.fromisoformat(end_date)
+
+    valid_student_ids = {
+        p.user_id for p in StudentProfile.query.filter(
+            StudentProfile.user_id.in_(student_ids), StudentProfile.branch_id == branch_id
+        ).all()
+    }
+    already = {
+        a.student_id for a in StudentPackageAssignment.query.filter_by(
+            package_id=package_id, is_active=True
+        ).filter(StudentPackageAssignment.student_id.in_(student_ids)).all()
+    }
+
+    added = 0
+    for student_id in student_ids:
+        if student_id not in valid_student_ids or student_id in already:
+            continue
+        db.session.add(StudentPackageAssignment(
+            student_id=student_id, package_id=package_id, branch_id=branch_id,
+            assigned_by=current_user.user_id, start_date=start_date, end_date=end_date,
+        ))
+        added += 1
+
+    if added:
+        db.session.commit()
+        flash(f'학생 {added}명에게 패키지를 배정했습니다.', 'success')
+    else:
+        flash('선택한 학생 모두 이미 배정되어 있거나 유효하지 않습니다.', 'warning')
+    return redirect(url_for('branch.members'))
 
 
 @lms_bp.route('/students/<student_id>/packages/<int:assignment_id>/revoke', methods=['POST'])
