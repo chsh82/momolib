@@ -48,6 +48,7 @@ from app.models.user import User  # noqa: E402
 from app.models.vocab_quiz import (VocabQuizContent, VocabQuizContentLevel, VocabQuizPilotItem,  # noqa: E402
                                     VocabQuizPilotSession, VocabQuizPilotAttempt)
 from app.models.vocab_quiz_student import VocabQuizStudentAttempt, VocabQuizStudentSession  # noqa: E402
+from app.models.vocab_quiz_pilot_allowlist import VocabQuizPilotAllowlist  # noqa: E402
 
 app = create_app("development")
 
@@ -68,6 +69,18 @@ def make_user(email: str, role: str) -> str:
     db.session.add(u)
     db.session.commit()
     return u.user_id
+
+
+def allow_pilot(user_id: str, levels: list[int]) -> None:
+    """파일럿 대상 allowlist에 등록(기본 차단이므로 학생 테스트는 이걸
+    거쳐야만 통과한다)."""
+    row = VocabQuizPilotAllowlist.query.filter_by(user_id=user_id).first()
+    if row is None:
+        row = VocabQuizPilotAllowlist(user_id=user_id, allowed_levels_json=json.dumps(levels))
+        db.session.add(row)
+    else:
+        row.allowed_levels_json = json.dumps(levels)
+    db.session.commit()
 
 
 def login(client, email: str, password: str = "testpass123"):
@@ -173,6 +186,7 @@ def main() -> bool:
         cids, iids, boundary_item_id = seed_items()
         teacher_id = make_user("it_teacher@test.local", "teacher")
         student_id = make_user("it_student@test.local", "student")
+        allow_pilot(student_id, [4])
         user_ids = [teacher_id, student_id]
 
     # 학생용 블루프린트는 기능 플래그 기본 OFF(app/vocab_quiz_student/
@@ -255,6 +269,7 @@ def main() -> bool:
 
     with app.app_context():
         other_student_id = make_user("it_student2@test.local", "student")
+        allow_pilot(other_student_id, [4])
         user_ids.append(other_student_id)
 
     client2 = app.test_client()

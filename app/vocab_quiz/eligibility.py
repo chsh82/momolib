@@ -31,6 +31,7 @@ import json
 
 from app.models import db
 from app.models.vocab_quiz import VocabQuizContent, VocabQuizContentLevel, VocabQuizPilotItem
+from app.models.vocab_quiz_pilot_allowlist import VocabQuizPilotAllowlist
 
 # 게이트 규칙이 바뀌면 올린다 - 세션에 기록해 두면 "이 세션이 그때
 # 어떤 규칙으로 걸러졌는지" 나중에 감사할 수 있다.
@@ -187,3 +188,31 @@ def eligible_pilot_items_by_level(vocab_level: int) -> list[VocabQuizPilotItem]:
         return []
     q = VocabQuizPilotItem.query.filter_by(is_active=True)
     return [it for it in q.all() if item_is_eligible_at_level(it, vocab_level, cids)]
+
+
+# ---------------------------------------------------------------------------
+# 파일럿 대상 제한(allowlist) - 콘텐츠 공개 게이트와는 완전히 별개의 축.
+# 콘텐츠 게이트는 "이 문항이 학생 누구에게든 노출 가능한 상태인가"를
+# 결정하고, allowlist는 "이 특정 학생이 파일럿에 참여할 수 있는가"를
+# 결정한다. 전역 feature flag(VOCAB_QUIZ_STUDENT_ENABLED)가 켜져도
+# allowlist에 없는 학생은 아무 것도 못 본다(기본 차단 - 행이 없으면
+# 빈 집합을 돌려주므로 자동으로 차단된다).
+
+def student_allowed_levels(user_id: str) -> set[int]:
+    """이 학생이 허용된 레벨 집합. allowlist에 행이 없으면 빈 집합
+    (= 완전 미허용). VOCAB_LEVELS 밖의 값이 저장돼 있어도 무시한다."""
+    row = VocabQuizPilotAllowlist.query.filter_by(user_id=user_id).first()
+    if row is None:
+        return set()
+    try:
+        levels = json.loads(row.allowed_levels_json)
+    except (TypeError, ValueError):
+        return set()
+    return {lv for lv in levels if lv in VOCAB_LEVELS}
+
+
+def student_is_pilot_allowed(user_id: str) -> bool:
+    """이 학생이 파일럿에 하나라도 참여 가능한 레벨을 허용받았는지.
+    allowlist 자체가 비어 있으면(테이블에 행이 하나도 없으면) 어떤
+    학생에 대해서도 항상 False - 기본 차단."""
+    return len(student_allowed_levels(user_id)) > 0

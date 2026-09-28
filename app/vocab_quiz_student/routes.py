@@ -22,7 +22,8 @@ from app.models import db
 from app.models.vocab_quiz import VocabQuizPilotItem
 from app.models.vocab_quiz_student import VocabQuizStudentAttempt, VocabQuizStudentSession
 from app.vocab_quiz.eligibility import (GATE_VERSION, VOCAB_LEVEL_LABELS, VOCAB_LEVELS,
-                                         eligible_pilot_items, eligible_pilot_items_by_level)
+                                         eligible_pilot_items, eligible_pilot_items_by_level,
+                                         student_allowed_levels)
 from app.vocab_quiz_student import vocab_quiz_student_bp
 
 SESSION_ITEM_COUNT = 10
@@ -37,7 +38,8 @@ def _student_only() -> bool:
 def index():
     if not _student_only():
         abort(403)
-    pool_counts_by_level = {lv: len(eligible_pilot_items_by_level(lv)) for lv in VOCAB_LEVELS}
+    allowed_levels = student_allowed_levels(current_user.user_id)
+    pool_counts_by_level = {lv: len(eligible_pilot_items_by_level(lv)) for lv in VOCAB_LEVELS if lv in allowed_levels}
     my_sessions = (
         VocabQuizStudentSession.query
         .filter_by(user_id=current_user.user_id)
@@ -76,6 +78,10 @@ def start():
     if vocab_level not in VOCAB_LEVELS:
         return jsonify({'error': 'INVALID_VOCAB_LEVEL',
                          'detail': f'vocab_level은 {list(VOCAB_LEVELS)} 중 하나여야 합니다.'}), 400
+
+    if vocab_level not in student_allowed_levels(current_user.user_id):
+        return jsonify({'error': 'LEVEL_NOT_ALLOWED',
+                         'detail': '이 레벨은 파일럿 대상으로 허용되지 않았습니다.'}), 403
 
     pool = eligible_pilot_items_by_level(vocab_level)
     if not pool:

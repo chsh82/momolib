@@ -37,6 +37,7 @@ from app.models import db  # noqa: E402
 from app.models.user import User  # noqa: E402
 from app.models.vocab_quiz import VocabQuizContent, VocabQuizContentLevel, VocabQuizPilotItem  # noqa: E402
 from app.models.vocab_quiz_student import VocabQuizStudentAttempt, VocabQuizStudentSession  # noqa: E402
+from app.models.vocab_quiz_pilot_allowlist import VocabQuizPilotAllowlist  # noqa: E402
 
 app = create_app("development")
 
@@ -57,6 +58,12 @@ def make_user(email: str, role: str) -> str:
     db.session.add(u)
     db.session.commit()
     return u.user_id
+
+
+def allow_pilot(user_id: str, levels: list[int]) -> None:
+    row = VocabQuizPilotAllowlist(user_id=user_id, allowed_levels_json=json.dumps(levels))
+    db.session.add(row)
+    db.session.commit()
 
 
 def login(client, email: str, password: str = "testpass123"):
@@ -158,6 +165,7 @@ def main() -> bool:
         cid5, iid5 = make_eligible_content(tag, "l5", 5, "l5")
         cid_ng4, iid_ng4 = make_ineligible_content_at_level(tag, "l4", 4, "l4")
         student_id = make_user(f"lvtest_{tag}@test.local", "student")
+        allow_pilot(student_id, [4, 5, 6])
         cids = [cid4, cid5, cid_ng4]
         iids = [iid4, iid5, iid_ng4]
         user_ids = [student_id]
