@@ -10,6 +10,7 @@ class MileageReason:
     LMS_QUIZ_PASS   = 'lms_quiz_pass'    # LMS 퀴즈 정답
     LMS_QUIZ_FAIL   = 'lms_quiz_fail'    # LMS 퀴즈 오답 (도전 보상)
     LMS_DISCUSSION  = 'lms_discussion'   # LMS 토론/글쓰기 제출
+    LMS_WORKBOOK    = 'lms_workbook'     # 태블릿 교재(aprolabs) 완료 - 2026-09-28
     LIBRARY_CONTENT = 'library_content'  # 도서 콘텐츠 완료
     BOOK_FINISH     = 'book_finish'      # 독서 완료
     MBTI_TEST       = 'mbti_test'        # 독서MBTI 검사 완료
@@ -22,6 +23,7 @@ class MileageReason:
         'lms_quiz_pass':   '🎯 퀴즈 정답',
         'lms_quiz_fail':   '💪 퀴즈 도전',
         'lms_discussion':  '💬 토론/글쓰기 제출',
+        'lms_workbook':    '📱 태블릿 교재 완료',
         'library_content': '📖 도서 콘텐츠 완료',
         'book_finish':     '📚 독서 완료',
         'mbti_test':       '🧠 독서MBTI 검사',
@@ -35,6 +37,7 @@ class MileageReason:
         'lms_quiz_pass':   20,
         'lms_quiz_fail':   5,
         'lms_discussion':  15,
+        'lms_workbook':    20,
         'library_content': 10,
         'book_finish':     20,
         'mbti_test':       30,

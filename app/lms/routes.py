@@ -11,8 +11,8 @@ from app.models.content_bank import BankQuestion, LectureVideo
 from app.models.branch import Branch
 from app.models.member import StudentProfile
 
-CONTENT_TYPES = ['vocab_quiz', 'book_quiz', 'reading_quiz', 'video', 'essay']
-DEFAULT_ORDER = ['vocab_quiz', 'book_quiz', 'reading_quiz', 'video', 'essay']
+CONTENT_TYPES = ['vocab_quiz', 'book_quiz', 'reading_quiz', 'video', 'essay', 'b2b_workbook']
+DEFAULT_ORDER = ['vocab_quiz', 'book_quiz', 'reading_quiz', 'video', 'essay', 'b2b_workbook']
 
 
 def _hq_only():
@@ -267,6 +267,19 @@ def content_search():
         for v in query.order_by(LectureVideo.title).limit(30).all():
             results.append({'id': v.video_id, 'title': v.title,
                             'sub': v.duration_display})
+    elif content_type == 'b2b_workbook':
+        # 2026-09-28: aprolabs가 진짜 목록을 갖고 있다 - momolib DB에는 없음.
+        from app.services.aprolabs_client import list_approved_editions, AprolabsError
+        try:
+            for e in list_approved_editions(q)[:30]:
+                sub = e.get('band', '')
+                if e.get('week'):
+                    sub += f" {e['week']}"
+                results.append({'id': str(e['edition_id']),
+                                 'title': f"{e.get('title', '')} ({e.get('doc_id', '')})",
+                                 'sub': sub.strip()})
+        except AprolabsError:
+            pass  # 목록 API 자체가 [] 반환 - 화면에 "검색 결과 없음"으로만 보임
     elif content_type in CONTENT_TYPES:
         query = BankQuestion.query.filter_by(type=content_type, is_active=True)
         if q:

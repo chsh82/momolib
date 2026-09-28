@@ -16,6 +16,7 @@
                 {% elif item.content_type == 'reading_quiz' %}bg-purple-100 text-purple-700
                 {% elif item.content_type == 'video' %}bg-orange-100 text-orange-700
                 {% elif item.content_type == 'essay' %}bg-pink-100 text-pink-700
+                {% elif item.content_type == 'b2b_workbook' %}bg-teal-100 text-teal-700
                 {% else %}bg-gray-100 text-gray-600{% endif %}">
                 {{ item.content_type_display }}
             </span>
@@ -27,7 +28,27 @@
     </div>
 </div>
 
-{% if not content %}
+{% if item.content_type == 'b2b_workbook' %}
+<!-- ═══ 태블릿 교재 (aprolabs) ═══ -->
+<div class="s-card p-8 text-center">
+    {% if b2b_error or not b2b_launch_url %}
+    <div class="text-5xl mb-3">😅</div>
+    <p class="text-gray-500 font-semibold">교재를 불러올 수 없어요. 잠시 후 다시 시도해주세요.</p>
+    {% else %}
+    <div class="text-5xl mb-3">📱</div>
+    <p class="text-gray-600 font-semibold mb-6">태블릿에서 필기하며 푸는 교재예요.<br>아래 버튼을 누르면 새 창에서 열려요.</p>
+    <a href="{{ b2b_launch_url }}" target="_blank" rel="noopener"
+       class="s-btn-primary w-full text-xl py-5 inline-block"
+       style="background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); box-shadow: 0 4px 12px rgba(20,184,166,0.35);">
+        📱 교재 열기 (새 창)
+    </a>
+    {% if progress.status == 'completed' %}
+    <p class="text-green-600 font-black mt-4">✅ 완료했어요!</p>
+    {% endif %}
+    {% endif %}
+</div>
+
+{% elif not content %}
 <div class="s-card p-8 text-center">
     <div class="text-5xl mb-3">😅</div>
     <p class="text-gray-500 font-semibold">콘텐츠를 불러올 수 없어요.</p>
@@ -355,9 +376,18 @@ function autoComplete() {
             {{ progress.response_data.get('essay_text', '') }}
         </p>
     </div>
+    {% if progress.response_data.get('essay_id') %}
+    <div class="text-center">
+        <a href="{{ url_for('essays.student_view', essay_id=progress.response_data.essay_id) }}"
+           class="text-pink-600 font-black text-lg underline">
+            제출 완료 ✓ 첨삭 결과 확인하러 가기 →
+        </a>
+    </div>
+    {% else %}
     <div class="text-center text-green-600 font-black text-lg">
         제출 완료 ✓ <span class="text-gray-400 text-sm font-normal">(첨삭 대기 중)</span>
     </div>
+    {% endif %}
     {% else %}
     <form method="POST" action="{{ url_for('learn.item_submit', assignment_id=assignment.id, item_id=item.item_id) }}">
         <textarea name="essay_text" rows="8" required

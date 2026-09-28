@@ -10,6 +10,7 @@ CONTENT_TYPE_DISPLAY = {
     'reading_quiz': '토론질문',
     'video':        '강의영상',
     'essay':        '글쓰기',
+    'b2b_workbook': '태블릿 교재',  # 2026-09-28: aprolabs(momo_b2b_tablet) 연동
 }
 
 
@@ -70,6 +71,16 @@ class CurriculumItem(db.Model):
     @property
     def content_object(self):
         from app.models.content_bank import BankQuestion, LectureVideo
+        if self.content_type == 'b2b_workbook':
+            # aprolabs가 진짜 데이터를 갖고 있고 momolib은 매번 물어만 본다
+            # ("같은 데이터를 두 곳에 쌓지 않는다", 2026-09-28 설계 문서) -
+            # 그래서 여기선 DB 조회가 아니라 aprolabs API 호출.
+            from types import SimpleNamespace
+            from app.services.aprolabs_client import get_edition_meta
+            meta = get_edition_meta(self.content_id)
+            if meta is None:
+                return None
+            return SimpleNamespace(title=meta['title'] or meta['doc_id'], meta=meta)
         if self.content_type == 'video':
             return LectureVideo.query.get(self.content_id)
         return BankQuestion.query.filter_by(
@@ -78,7 +89,10 @@ class CurriculumItem(db.Model):
     @property
     def content_title(self):
         obj = self.content_object
-        return obj.title if obj else f'(삭제된 콘텐츠)'
+        if obj is None:
+            return '(삭제된 콘텐츠)' if self.content_type != 'b2b_workbook' \
+                else '(aprolabs 교재 정보를 불러올 수 없음)'
+        return obj.title
 
 
 class Package(db.Model):

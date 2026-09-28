@@ -159,13 +159,33 @@ def item_view(assignment_id, item_id):
     prev_item = all_items[idx - 1] if idx and idx > 0 else None
     next_item = all_items[idx + 1] if idx is not None and idx < len(all_items) - 1 else None
 
+    # 2026-09-28: aprolabs 태블릿 교재 - 학생을 새 창으로 보낼 launch 주소를
+    # 매번 새로 발급한다(launch 토큰은 1회용·5분짜리라 캐시하면 안 됨).
+    # return_url은 지금 이 페이지(학습 목록의 이 항목)로 되돌아오게 한다.
+    b2b_launch_url = None
+    b2b_error = None
+    if item.content_type == 'b2b_workbook':
+        from app.services.aprolabs_client import create_launch_session, launch_viewer_url, AprolabsError
+        try:
+            session_info = create_launch_session(
+                partner_student_id=current_user.user_id,
+                edition_id=item.content_id,
+                return_url=url_for('learn.item_view', assignment_id=assignment_id,
+                                    item_id=item_id, _external=True),
+            )
+            b2b_launch_url = launch_viewer_url(session_info['launch_token'], item.content_id)
+        except AprolabsError as e:
+            b2b_error = str(e)
+
     return render_template('learn/item.html',
                            assignment=a,
                            item=item,
                            content=content,
                            progress=progress,
                            prev_item=prev_item,
-                           next_item=next_item)
+                           next_item=next_item,
+                           b2b_launch_url=b2b_launch_url,
+                           b2b_error=b2b_error)
 
 
 @learn_bp.route('/<int:assignment_id>/item/<int:item_id>/submit', methods=['POST'])
@@ -229,8 +249,27 @@ def item_submit(assignment_id, item_id):
         response_data = {}
 
     elif item.content_type == 'essay':
+        # 2026-09-28: 이전엔 여기서 response_data에만 저장하고 끝나서, 실제
+        # 첨삭 시스템(app.models.essay.Essay)으로는 절대 연결되지 않았다 -
+        # 그래서 화면엔 "첨삭 대기 중"이라 떠도 교사/HQ가 볼 방법이 없었다
+        # (essays.manage 큐에도 안 잡힘). 이제 진짜 Essay 레코드를 만들어서
+        # 그 큐에 들어가게 한다. LMS 커리큘럼으로 배정된 과제라서, 학생이
+        # 직접 신청하는 /essays/submit 과 달리 첨삭 크레딧은 차감하지 않는다.
+        from app.models.essay import Essay
         essay_text = request.form.get('essay_text', '').strip()
-        response_data = {'essay_text': essay_text}
+        grade = current_user.student_profile.grade if current_user.student_profile else ''
+        essay = Essay(
+            branch_id=current_user.branch_id,
+            student_id=current_user.user_id,
+            title=item.content_title,
+            original_text=essay_text,
+            grade=grade or '',
+            correction_model='standard',
+            status='draft',
+        )
+        db.session.add(essay)
+        db.session.flush()
+        response_data = {'essay_text': essay_text, 'essay_id': essay.essay_id}
 
     progress.status = 'completed'
     progress.score = score
