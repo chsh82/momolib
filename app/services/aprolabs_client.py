@@ -38,18 +38,18 @@ def _partner_key() -> str:
 
 def get_edition_meta(edition_id: str | int) -> dict | None:
     """{doc_id, title, week, band, status} 또는 None(없음/오류 - 화면에서
-    "(교재 정보를 불러올 수 없음)"으로 처리). 이 엔드포인트는 aprolabs
-    쪽에서 인증 없이 열려 있다(검수용 공개 조회, 2026-09-28 확인)."""
+    "(교재 정보를 불러올 수 없음)"으로 처리). /meta는 aprolabs 쪽에서 인증
+    없이 열려 있는 전용 공개 엔드포인트(2026-09-28) - 전문·정답 등 민감한
+    내용이 있는 전체 조회(/api/editions/{id})는 이제 로그인이 필요해져서
+    momolib은 그 대신 이 메타데이터 전용 경로를 쓴다."""
     try:
-        res = requests.get(f'{_base_url()}/api/editions/{edition_id}', timeout=_TIMEOUT)
+        res = requests.get(f'{_base_url()}/api/editions/{edition_id}/meta', timeout=_TIMEOUT)
         if res.status_code != 200:
             return None
         data = res.json()
-        book = (data.get('layout') or {}).get('book', {})
-        tone = (data.get('layout') or {}).get('tone', {})
         return {
-            'doc_id': data.get('doc_id'), 'title': book.get('title', ''),
-            'week': book.get('week', ''), 'band': tone.get('band', ''),
+            'doc_id': data.get('doc_id'), 'title': data.get('title', ''),
+            'week': data.get('week', ''), 'band': data.get('band', ''),
             'status': data.get('status'),
         }
     except requests.RequestException:
