@@ -64,8 +64,14 @@ def create_app(config_name='default'):
     from app.avatar import avatar_bp
     app.register_blueprint(avatar_bp, url_prefix='/avatar')
 
-    from app.vocab_quiz import vocab_quiz_bp
-    app.register_blueprint(vocab_quiz_bp, url_prefix='/vocab-quiz')
+    # 어휘 퀴즈 R&D 화면(관리자 파일럿 응시·공개검토)을 aprolabs로
+    # 일원화 - 이 블루프린트를 등록하지 않으면 /vocab-quiz/* 전체가
+    # 로그인·역할과 무관하게 항상 404가 된다(Werkzeug 라우팅 단계에서
+    # 매치되지 않음 - 애플리케이션 코드의 abort(404)가 아니라 진짜
+    # "이 경로가 없음"). 모듈 자체(app/vocab_quiz/eligibility.py 등)는
+    # 삭제하지 않았다 - vocab_quiz_pilot_items 등 기존 테이블 접근에는
+    # 영향 없음. BankQuestion/LMS는 별도 블루프린트라 전혀 영향 없다.
+    from app.vocab_quiz import vocab_quiz_bp  # noqa: F401 (하위 패키지 임포트 트리거용, 등록은 하지 않음)
 
     from app.vocab_quiz_student import vocab_quiz_student_bp
     app.register_blueprint(vocab_quiz_student_bp, url_prefix='/practice/vocab-quiz')
