@@ -159,13 +159,33 @@ def item_view(assignment_id, item_id):
     prev_item = all_items[idx - 1] if idx and idx > 0 else None
     next_item = all_items[idx + 1] if idx is not None and idx < len(all_items) - 1 else None
 
+    # 2026-09-28: aprolabs 태블릿 교재 - 학생을 새 창으로 보낼 launch 주소를
+    # 매번 새로 발급한다(launch 토큰은 1회용·5분짜리라 캐시하면 안 됨).
+    # return_url은 지금 이 페이지(학습 목록의 이 항목)로 되돌아오게 한다.
+    b2b_launch_url = None
+    b2b_error = None
+    if item.content_type == 'b2b_workbook':
+        from app.services.aprolabs_client import create_launch_session, launch_viewer_url, AprolabsError
+        try:
+            session_info = create_launch_session(
+                partner_student_id=current_user.user_id,
+                edition_id=item.content_id,
+                return_url=url_for('learn.item_view', assignment_id=assignment_id,
+                                    item_id=item_id, _external=True),
+            )
+            b2b_launch_url = launch_viewer_url(session_info['launch_token'], item.content_id)
+        except AprolabsError as e:
+            b2b_error = str(e)
+
     return render_template('learn/item.html',
                            assignment=a,
                            item=item,
                            content=content,
                            progress=progress,
                            prev_item=prev_item,
-                           next_item=next_item)
+                           next_item=next_item,
+                           b2b_launch_url=b2b_launch_url,
+                           b2b_error=b2b_error)
 
 
 @learn_bp.route('/<int:assignment_id>/item/<int:item_id>/submit', methods=['POST'])

@@ -35,7 +35,8 @@
         {% for item in curriculum.items %}
         {% set type_colors = {
             'vocab_quiz': 'blue', 'book_quiz': 'green',
-            'reading_quiz': 'purple', 'video': 'orange', 'essay': 'pink'
+            'reading_quiz': 'purple', 'video': 'orange', 'essay': 'pink',
+            'b2b_workbook': 'teal'
         } %}
         {% set col = type_colors.get(item.content_type, 'gray') %}
         <div class="bg-white rounded-lg border border-gray-100 shadow-sm flex items-center gap-3 px-4 py-2.5">
@@ -81,7 +82,7 @@
 
         <!-- 타입 탭 -->
         <div class="flex flex-wrap gap-1 mb-3">
-            {% for t, label in [('vocab_quiz','어휘'),('book_quiz','독서'),('reading_quiz','토론'),('video','영상'),('essay','글쓰기')] %}
+            {% for t, label in [('vocab_quiz','어휘'),('book_quiz','독서'),('reading_quiz','토론'),('video','영상'),('essay','글쓰기'),('b2b_workbook','태블릿 교재')] %}
             <button onclick="selectType('{{ t }}')" id="tab-{{ t }}"
                     class="type-tab px-3 py-1 rounded-lg text-xs font-medium border transition bg-white text-gray-600 border-gray-200 hover:border-indigo-400">
                 {{ label }}
